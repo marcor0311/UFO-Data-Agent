@@ -61,7 +61,8 @@ def download(path: Path, manifest: dict) -> None:
     if not part.exists() or not check_asset(part, manifest)["passed"]:
         subprocess.run([
             "curl", "--fail", "--location", "--retry", "3", "--continue-at", "-",
-            "--connect-timeout", "30", "--progress-bar", manifest["asset_url"],
+            "--connect-timeout", "30", "--progress-bar",
+            "--header", "Accept: application/octet-stream", manifest["asset_url"],
             "--output", str(part),
         ], check=True)
     if not check_asset(part, manifest)["passed"]:
