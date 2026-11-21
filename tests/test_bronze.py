@@ -46,7 +46,7 @@ class BronzeTests(unittest.TestCase):
                 INSERT INTO duplicate_candidate VALUES (1, 1, 1);
             """)
         self.manifest = {
-            "release": "test", "release_url": "https://example.invalid/release",
+            "dataset": "ufo", "version": 17,
             "asset_url": self.source.as_uri(),
             "expected_sources": {"UFOCAT": 1},
             "expected_metrics": {"total": 1, "coords": 1, "duplicate_candidates": 1},
@@ -63,6 +63,7 @@ class BronzeTests(unittest.TestCase):
         report = bronze.validate(self.source, self.manifest)
         self.assertTrue(report["passed"])
         self.assertEqual(report["layer"], "bronze")
+        self.assertEqual(report["version"], 17)
         self.assertEqual(before, self.source.read_bytes())
 
     def test_checksum_mismatch_is_rejected_before_opening_sqlite(self):
@@ -140,6 +141,29 @@ class BronzeTests(unittest.TestCase):
             self.source.write_bytes(b"bad")
             self.assertEqual(bronze.main(), 1)
             self.assertFalse(json.loads(report_path.read_text())["passed"])
+
+    def test_default_destination_keeps_dataset_versions_separate(self):
+        manifest_path = self.root / "manifest.json"
+        for version in (17, 18):
+            manifest = {**self.manifest, "version": version}
+            manifest_path.write_text(json.dumps(manifest))
+            with patch.object(bronze, "ROOT", self.root), patch.object(
+                bronze, "MANIFEST", manifest_path
+            ), patch("sys.argv", [str(SCRIPT)]):
+                self.assertEqual(bronze.main(), 0)
+            target = self.root / f"data/bronze/v{version}/ufo.db"
+            self.assertEqual(target.read_bytes(), self.source.read_bytes())
+            report = json.loads(target.with_suffix(".validation.json").read_text())
+            self.assertEqual(report["version"], version)
+        self.assertTrue((self.root / "data/bronze/v17/ufo.db").is_file())
+
+    def test_invalid_version_fails_before_downloading(self):
+        manifest_path = self.root / "manifest.json"
+        manifest_path.write_text(json.dumps({**self.manifest, "version": "../other"}))
+        with patch.object(bronze, "MANIFEST", manifest_path), patch(
+            "sys.argv", [str(SCRIPT)]
+        ), patch.object(bronze, "download", side_effect=AssertionError("unexpected download")):
+            self.assertEqual(bronze.main(), 1)
 
 
 if __name__ == "__main__":

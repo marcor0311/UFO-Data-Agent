@@ -19,4 +19,6 @@ Desde la raíz del repositorio:
 python3 scripts/build_bronze.py
 ```
 
-Descarga y verifica la base sin transformaciones en `data/bronze/ufo.db`.
+Descarga la base propia del proyecto desde el release `bronze-v17`, la verifica
+y la guarda en `data/bronze/v17/ufo.db`. La versión queda fijada en
+`config/bronze.v17.json`; los cambios futuros se publican como versiones nuevas.

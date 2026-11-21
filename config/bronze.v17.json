@@ -1,8 +1,7 @@
 {
-  "release": "v0.17.0",
-  "release_url": "https://api.github.com/repositories/1205971750/releases/386763706",
-  "published_at": "2026-09-11T03:21:01Z",
-  "asset_url": "https://api.github.com/repositories/1205971750/releases/assets/556369260",
+  "dataset": "ufo",
+  "version": 17,
+  "asset_url": "https://github.com/marcor0311/UFO-Data-Agent/releases/download/bronze-v17/ufo.db",
   "size_bytes": 733192192,
   "sha256": "0200337eb1eadabd337ac4f479fceceb5a810eec8ab072cd7a206523703820e0",
   "expected_sources": {
