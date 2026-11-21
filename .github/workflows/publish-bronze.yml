@@ -1,4 +1,4 @@
-name: Publicar base de datos Bronze
+name: Bronze Data Release Pipeline
 
 on:
   push:
@@ -15,24 +15,25 @@ concurrency:
 
 jobs:
   publish:
-    name: Validar y publicar Bronze
+    name: Validate and Publish Bronze Dataset
     runs-on: ubuntu-24.04
     timeout-minutes: 15
     steps:
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-      - name: Conservar las publicaciones existentes
+      - name: Check out repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - name: Verify release availability
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
           if gh release view bronze > /dev/null 2>&1; then
-            echo 'El release bronze ya existe; no se sobrescribe.'
+            echo 'The bronze release already exists; refusing to overwrite it.'
             exit 1
           fi
-      - name: Descargar y verificar Bronze
+      - name: Download and validate Bronze dataset
         env:
           BRONZE_SOURCE: ${{ secrets.BRONZE_IMPORT_URL }}
         run: python3 scripts/build_bronze.py
-      - name: Publicar la base verificada
+      - name: Publish Bronze release
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
