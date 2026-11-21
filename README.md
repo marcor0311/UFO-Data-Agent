@@ -19,4 +19,6 @@ Desde la raíz del repositorio:
 python3 scripts/build_bronze.py
 ```
 
-Descarga y verifica la base sin transformaciones en `data/bronze/ufo.db`.
+Descarga Bronze desde Releases de este mismo proyecto y verifica la base en
+`data/bronze/ufo.db`. Silver y Gold se generarán a partir de esta base mediante
+los scripts de transformación del repositorio.
