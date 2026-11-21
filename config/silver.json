@@ -1,0 +1,164 @@
+{
+  "version": 2,
+  "scope": "Silver depurada con trazabilidad por campo, fechas y precisión, geografía, tipos, reglas de calidad y agrupación conservadora de duplicados.",
+  "drop_columns": {
+    "crash_retrieval": [
+      "evidence_quality",
+      "source_confidence"
+    ],
+    "duplicate_candidate": [
+      "resolved_at"
+    ],
+    "location": [
+      "county",
+      "region",
+      "geoname_id"
+    ],
+    "sighting": [
+      "date_end",
+      "timezone",
+      "date_reported",
+      "date_posted",
+      "size_estimated",
+      "angular_size",
+      "distance",
+      "num_objects",
+      "elevation_angle",
+      "viewed_from",
+      "witness_age",
+      "witness_sex",
+      "witness_names",
+      "svp_rating",
+      "explanation",
+      "characteristics",
+      "page_volume",
+      "topic_id",
+      "nrc_positive",
+      "nrc_negative",
+      "reddit_post_id",
+      "reddit_url",
+      "llm_confidence",
+      "llm_anomaly_assessment",
+      "llm_prosaic_candidate",
+      "llm_strangeness_rating",
+      "llm_model",
+      "has_photo",
+      "has_video",
+      "audit_status",
+      "audit_geocode_check",
+      "audit_data_extracted",
+      "audit_quality_notes"
+    ],
+    "source_database": [
+      "record_count"
+    ],
+    "source_origin": [
+      "description"
+    ]
+  },
+  "quality": {
+    "reference_date": "2026-11-21",
+    "country_reference": "config/countries.json",
+    "deduplication": {
+      "method": "exact_datetime_coordinates_shape_and_descriptors_v1",
+      "minimum_additional_descriptors": 2,
+      "require_time_raw": true
+    },
+    "text_columns": {
+      "sighting": [
+        "shape",
+        "color",
+        "duration",
+        "sound",
+        "direction",
+        "weather",
+        "terrain",
+        "hynek",
+        "vallee",
+        "event_type",
+        "standardized_shape",
+        "primary_color",
+        "movement_type",
+        "duration_bucket"
+      ],
+      "location": [
+        "city",
+        "state",
+        "country",
+        "country_iso2",
+        "geocode_src"
+      ],
+      "crash_retrieval": [
+        "city",
+        "region",
+        "country",
+        "craft_type",
+        "recovery_status",
+        "crew_count"
+      ],
+      "nuclear_encounter": [
+        "base",
+        "city",
+        "region",
+        "country",
+        "weapon_system",
+        "incident_type",
+        "witness_credibility",
+        "evidence_quality",
+        "source_confidence"
+      ],
+      "facility": [
+        "facility_type",
+        "source"
+      ]
+    },
+    "enums": {
+      "duration_bucket": [
+        "instant",
+        "seconds",
+        "minutes",
+        "hours",
+        "days"
+      ],
+      "movement_type": [
+        "linear",
+        "hover",
+        "fast",
+        "stationary",
+        "erratic",
+        "unknown"
+      ],
+      "emotion_7_dominant": [
+        "neutral",
+        "surprise",
+        "fear",
+        "disgust",
+        "sadness",
+        "anger",
+        "joy"
+      ],
+      "emotion_28_group": [
+        "neutral",
+        "ambiguous",
+        "positive",
+        "negative"
+      ]
+    },
+    "missing_tokens": {
+      "location": {
+        "city": [
+          "null",
+          "none",
+          "n/a",
+          "nan"
+        ],
+        "state": [
+          "null",
+          "none",
+          "n/a",
+          "nan"
+        ]
+      }
+    }
+  }
+}
