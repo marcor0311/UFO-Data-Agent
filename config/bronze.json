@@ -1,6 +1,5 @@
 {
   "dataset": "ufo",
-  "asset_url": "https://github.com/marcor0311/UFO-Data-Agent/releases/download/bronze/ufo.db",
   "size_bytes": 733192192,
   "sha256": "0200337eb1eadabd337ac4f479fceceb5a810eec8ab072cd7a206523703820e0",
   "expected_sources": {
@@ -23,5 +22,6 @@
     "roberta": 506788,
     "nrc": 586741,
     "valid_coords": 493845
-  }
+  },
+  "asset_url": "https://github.com/marcor0311/UFO-Data-Agent/releases/download/bronze/ufo.db"
 }

@@ -1,0 +1,41 @@
+name: Publicar Bronze
+
+on:
+  push:
+    branches: [data/bronze]
+    paths: [.github/workflows/publish-bronze.yml]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: publish-bronze
+  cancel-in-progress: false
+
+jobs:
+  publish:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - name: Conservar las publicaciones existentes
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          if gh release view bronze > /dev/null 2>&1; then
+            echo 'El release bronze ya existe; no se sobrescribe.'
+            exit 1
+          fi
+      - name: Descargar y verificar Bronze
+        env:
+          BRONZE_SOURCE: ${{ secrets.BRONZE_IMPORT_URL }}
+        run: python3 scripts/build_bronze.py
+      - name: Publicar la base verificada
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release create bronze data/bronze/ufo.db \
+            --target "$GITHUB_SHA" \
+            --title Bronze \
+            --notes-file data/bronze/README.md

@@ -47,7 +47,6 @@ class BronzeTests(unittest.TestCase):
             """)
         self.manifest = {
             "dataset": "ufo",
-            "asset_url": self.source.as_uri(),
             "expected_sources": {"UFOCAT": 1},
             "expected_metrics": {"total": 1, "coords": 1, "duplicate_candidates": 1},
         }
@@ -97,25 +96,50 @@ class BronzeTests(unittest.TestCase):
 
     @unittest.skipUnless(shutil.which("curl"), "curl is required for download")
     def test_download_and_rerun_without_network(self):
-        bronze.download(self.target, self.manifest)
+        bronze.download(self.target, self.manifest, self.source.as_uri())
         self.assertEqual(self.target.read_bytes(), self.source.read_bytes())
         with patch.object(bronze.subprocess, "run", side_effect=AssertionError("unexpected download")):
-            bronze.download(self.target, self.manifest)
+            bronze.download(self.target, self.manifest, self.source.as_uri())
         self.assertFalse(self.target.with_suffix(".db.part").exists())
 
     def test_existing_different_database_is_never_overwritten(self):
         self.target.parent.mkdir()
         self.target.write_bytes(b"keep this")
         with self.assertRaises(RuntimeError):
-            bronze.download(self.target, self.manifest)
+            bronze.download(self.target, self.manifest, self.source.as_uri())
         self.assertEqual(self.target.read_bytes(), b"keep this")
+
+    def test_missing_source_cannot_create_an_empty_database(self):
+        with self.assertRaisesRegex(RuntimeError, "BRONZE_SOURCE"):
+            bronze.download(self.target, self.manifest)
+        self.assertFalse(self.target.exists())
+
+    @unittest.skipUnless(shutil.which("curl"), "curl is required for download")
+    def test_release_source_is_used_without_extra_configuration(self):
+        manifest = {**self.manifest, "asset_url": self.source.as_uri()}
+        bronze.download(self.target, manifest)
+        self.assertEqual(self.target.read_bytes(), self.source.read_bytes())
+
+    def test_local_input_builds_bronze_without_network(self):
+        with patch.object(bronze.subprocess, "run", side_effect=AssertionError("unexpected download")):
+            bronze.download(self.target, self.manifest, str(self.source))
+        self.assertEqual(self.target.read_bytes(), self.source.read_bytes())
+
+    def test_cli_uses_source_from_environment(self):
+        manifest_path = self.root / "manifest.json"
+        manifest_path.write_text(json.dumps(self.manifest))
+        with patch.object(bronze, "MANIFEST", manifest_path), patch.dict(
+            "os.environ", {"BRONZE_SOURCE": str(self.source)}
+        ), patch("sys.argv", [str(SCRIPT), "--database", str(self.target)]):
+            self.assertEqual(bronze.main(), 0)
+        self.assertEqual(self.target.read_bytes(), self.source.read_bytes())
 
     def test_completed_partial_is_recovered_without_downloading(self):
         self.target.parent.mkdir()
         part = self.target.with_suffix(".db.part")
         shutil.copyfile(self.source, part)
         with patch.object(bronze.subprocess, "run", side_effect=AssertionError("unexpected download")):
-            bronze.download(self.target, self.manifest)
+            bronze.download(self.target, self.manifest, self.source.as_uri())
         self.assertEqual(self.target.read_bytes(), self.source.read_bytes())
         self.assertFalse(part.exists())
 
@@ -124,7 +148,7 @@ class BronzeTests(unittest.TestCase):
         manifest = copy.deepcopy(self.manifest)
         manifest["sha256"] = "0" * 64
         with self.assertRaises(RuntimeError):
-            bronze.download(self.target, manifest)
+            bronze.download(self.target, manifest, self.source.as_uri())
         self.assertFalse(self.target.exists())
         self.assertTrue(self.target.with_suffix(".db.part").exists())
 

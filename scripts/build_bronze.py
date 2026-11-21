@@ -1,16 +1,19 @@
 #!/usr/bin/env python3
-"""Build the project Bronze database from its own release."""
+"""Download and verify the project's Bronze release as a local SQLite database."""
 from __future__ import annotations
 
 import argparse
 from contextlib import closing
 import hashlib
 import json
+import os
+import shutil
 import sqlite3
 import subprocess
 import sys
 from datetime import datetime, timezone
 from pathlib import Path
+from urllib.parse import urlparse
 
 ROOT = Path(__file__).resolve().parents[1]
 MANIFEST = ROOT / "config/bronze.json"
@@ -50,7 +53,8 @@ def check_asset(path: Path, manifest: dict) -> dict:
     }
 
 
-def download(path: Path, manifest: dict) -> None:
+def download(path: Path, manifest: dict, source: str | None = None) -> None:
+    source = source or manifest.get("asset_url")
     if path.exists():
         if check_asset(path, manifest)["passed"]:
             print("La base existente coincide con Bronze.", flush=True)
@@ -59,12 +63,17 @@ def download(path: Path, manifest: dict) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
     part = path.with_suffix(path.suffix + ".part")
     if not part.exists() or not check_asset(part, manifest)["passed"]:
-        subprocess.run([
-            "curl", "--fail", "--location", "--retry", "3", "--continue-at", "-",
-            "--connect-timeout", "30", "--progress-bar",
-            "--header", "Accept: application/octet-stream", manifest["asset_url"],
-            "--output", str(part),
-        ], check=True)
+        if not source:
+            raise RuntimeError("Indica --source RUTA_O_URL o configura BRONZE_SOURCE.")
+        if urlparse(source).scheme in ("https", "http", "file"):
+            subprocess.run([
+                "curl", "--fail", "--location", "--retry", "3", "--continue-at", "-",
+                "--connect-timeout", "30", "--progress-bar",
+                "--header", "Accept: application/octet-stream", source,
+                "--output", str(part),
+            ], check=True)
+        else:
+            shutil.copyfile(Path(source).expanduser(), part)
     if not check_asset(part, manifest)["passed"]:
         raise RuntimeError("La descarga no pasó tamaño/SHA-256; se conserva como .part.")
     part.rename(path)
@@ -160,6 +169,10 @@ def validate(path: Path, manifest: dict) -> dict:
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument(
+        "--source", default=os.environ.get("BRONZE_SOURCE"),
+        help="Archivo SQLite o URL de descarga; también admite BRONZE_SOURCE",
+    )
+    parser.add_argument(
         "--database", type=Path, default=ROOT / "data/bronze/ufo.db",
         help="Destino del snapshot Bronze (por defecto: data/bronze/ufo.db)",
     )
@@ -172,7 +185,7 @@ def main() -> int:
     try:
         manifest = json.loads(MANIFEST.read_text(encoding="utf-8"))
         if not args.verify_only:
-            download(args.database, manifest)
+            download(args.database, manifest, args.source)
         report = validate(args.database, manifest)
         report_path.write_text(json.dumps(report, indent=2, ensure_ascii=False) + "\n", encoding="utf-8")
     except (OSError, ValueError, RuntimeError, sqlite3.Error, subprocess.CalledProcessError) as exc:
