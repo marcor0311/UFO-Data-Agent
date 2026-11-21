@@ -1,6 +1,6 @@
 # Silver
 
-La política v2 de `config/silver.json` se aplica a Bronze v17. Conserva las 10
+La política v3 de `config/silver.json` se aplica a Bronze v17. Conserva las 10
 tablas originales, todas sus filas y sus identificadores. Omite las 41 columnas
 vacías aprobadas y cuatro índices asociados. Añade columnas de calidad, tablas
 de trazabilidad y vistas de eventos canónicos. Bronze permanece intacta.
@@ -39,7 +39,11 @@ También se puede construir otra copia con `--database RUTA`.
 - **Coordenadas:** solo publicar pares completos dentro de los límites
   geográficos. Los pares inválidos o incompletos pasan a NULL; se conserva el
   registro y se añade `coordinate_status`. Coordenadas obligatorias inválidas
-  detienen la construcción.
+  detienen la construcción. Una geocodificación `geonames_city_only` con países
+  contradictorios queda NULL con `coordinate_status='review'`. Se aplica también
+  a los informes vinculados que copian exactamente ese par original; otros pares
+  distintos se conservan. `coordinate_country_conflict` conserva el par original
+  y la evidencia del conflicto. Se evalúa antes de agrupar duplicados.
 - **Países:** normalizar nombres y códigos con el catálogo local versionado
   `config/countries.json`, derivado de [UN M49](https://unstats.un.org/unsd/methodology/m49/overview/).
   El código TW se documenta adicionalmente con el catálogo de UNCTAD. Si las
@@ -91,3 +95,23 @@ dominios y cobertura de todos los informes y candidatos.
 cambios sin modificar la base. Si cambian el código, la política o el catálogo,
 se requiere reconstruir Silver. La referencia temporal es explícita para que
 repetir la transformación no dependa del día de ejecución.
+
+## Revisión pendiente reproducible
+
+```bash
+python3 scripts/review_silver.py
+```
+
+Verifica la salida y genera `data/silver/ufo.review.json` sin modificar las bases.
+Incluye hashes, linaje, SQL ejecutado, conflictos por método de geocodificación,
+países no reconocidos y fechas pendientes junto con `date_event_raw` de Bronze.
+Para los candidatos ofrece conteos por fuentes, método y primer impedimento
+estricto, con un ID de ejemplo. El orden del `CASE` forma parte del contrato de
+ese resumen: cada par aparece una vez, aunque puede incumplir varios criterios.
+Un impedimento no demuestra que sean eventos distintos. Un
+`strict_match_unconfirmed` exige investigar una posible discrepancia del algoritmo.
+
+La revisión de esta iteración y sus límites están documentados en
+[docs/silver-review.md](../../docs/silver-review.md). Las coordenadas válidas por
+rango no acreditan por sí solas una ubicación correcta; los conflictos de país
+sin la evidencia específica de búsqueda solo por ciudad continúan pendientes.

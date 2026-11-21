@@ -54,3 +54,12 @@ python3 scripts/build_silver.py --database /tmp/ufo-silver.db
 
 Ver el [contrato de Silver](data/silver/README.md) para las reglas, tablas,
 vistas, tratamiento de incertidumbre y validaciones.
+
+Para diagnosticar los casos pendientes con consultas reproducibles:
+
+```bash
+python3 scripts/review_silver.py
+```
+
+Consulta la [revisión de Silver](docs/silver-review.md) para los hallazgos,
+correcciones y límites de interpretación de la política v3.

@@ -19,6 +19,7 @@ RULES = {
     "date_suspect": ("warning", "Fecha centinela UFOCAT 0019 o posterior a la referencia; requiere revisión."),
     "date_format": ("info", "Normalizar formato sin inventar precisión ni zona horaria."),
     "coordinate_invalid": ("error", "Par de coordenadas incompleto, no numérico o fuera de rango."),
+    "coordinate_country_conflict": ("warning", "Geocodificación solo por ciudad contradice el país; coordenadas en revisión."),
     "country_conflict": ("warning", "Las dos representaciones del país discrepan; país canónico desconocido."),
     "country_unrecognized": ("warning", "País ambiguo, histórico o fuera del catálogo; requiere revisión."),
     "country_normalized": ("info", "País normalizado mediante catálogo y alias explícitos."),
@@ -239,7 +240,7 @@ def valid_json(value, expected, emotion=False):
         return False
 
 
-def clean_table(conn, table, policy, countries, source_names):
+def clean_table(conn, table, policy, countries, source_names, coordinate_reviews=None):
     names = table_columns(conn, table)
     original_names = list(names)
     key_names = [name for name, col in names.items() if col[5]]
@@ -340,6 +341,15 @@ def clean_table(conn, table, policy, countries, source_names):
                     rules.update({lat_name: "coordinate_invalid", lng_name: "coordinate_invalid"})
                 else:
                     rules.update({lat_name: "numeric_cast", lng_name: "numeric_cast"})
+            if has_coords and row["coordinate_status"] == "valid" and key in (coordinate_reviews or {}):
+                if names[lat_name][3] or names[lng_name][3]:
+                    raise ValueError(f"Coordenadas obligatorias en conflicto: {table}.{key}")
+                row[lat_name], row[lng_name], row["coordinate_status"] = None, None, "review"
+                rule = "coordinate_country_conflict"
+                rules.update({lat_name: rule, lng_name: rule})
+                audit.issue(table, key, f"{lat_name},{lng_name}", rule,
+                            [original[lat_name], original[lng_name]],
+                            coordinate_reviews[key], "review")
             if "country_status" in extra:
                 row["country"], row["country_iso2"], status = countries.resolve(row["country"], row.get("country_iso2"))
                 row["country_status"] = status
@@ -529,7 +539,7 @@ def validate_quality(conn, policy, countries):
         if "coordinate_status" in cols:
             lat, lng = ("lat", "lng") if table == "sighting" else ("latitude", "longitude")
             zero(f"quality_coords_{table}", f"SELECT COUNT(*) FROM {quote(table)} WHERE ({quote(lat)} IS NULL)!=({quote(lng)} IS NULL) OR {quote(lat)} NOT BETWEEN -90 AND 90 OR {quote(lng)} NOT BETWEEN -180 AND 180 OR (coordinate_status='valid')!=({quote(lat)} IS NOT NULL AND {quote(lng)} IS NOT NULL)")
-            zero(f"quality_coordinate_status_{table}", f"SELECT COUNT(*) FROM {quote(table)} WHERE coordinate_status IS NULL OR coordinate_status NOT IN ('valid','missing','invalid','partial')")
+            zero(f"quality_coordinate_status_{table}", f"SELECT COUNT(*) FROM {quote(table)} WHERE coordinate_status IS NULL OR coordinate_status NOT IN ('valid','missing','invalid','partial','review')")
         for column, spec in numeric_specs(table, cols).items():
             low, high, integer = spec
             predicate = f"typeof({quote(column)}) NOT IN ('integer','real') OR {quote(column)}<{low}"
@@ -591,16 +601,44 @@ def validate_quality(conn, policy, countries):
     return checks
 
 
+def coordinate_conflicts(conn, countries):
+    """Snapshot evidence before cleaning; quarantine only copied, conflicting geocodes.
+
+    A different report coordinate is not presumed to originate from its location.
+    No country is selected and no replacement coordinates are inferred.
+    """
+    reviews = {"location": {}, "sighting": {}}
+    if "geocode_src" not in table_columns(conn, "location"):
+        return reviews
+    for key, country, code, lat, lng in conn.execute(
+            "SELECT id,country,country_iso2,latitude,longitude FROM location "
+            "WHERE geocode_src='geonames_city_only'"):
+        if countries.resolve(country, code)[2] != "conflict":
+            continue
+        reviews["location"][key] = encoded({"location_id": key, "country": country,
+            "country_iso2": code, "geocode_src": "geonames_city_only",
+            "reason": "Países contradictorios; búsqueda solo por ciudad no acredita ubicación."})
+    if "location_id" in table_columns(conn, "sighting"):
+        for key, location in conn.execute("""SELECT s.id,l.id FROM sighting s
+                JOIN location l ON l.id=s.location_id
+                WHERE l.geocode_src='geonames_city_only'
+                  AND s.lat=l.latitude AND s.lng=l.longitude"""):
+            if location in reviews["location"]:
+                reviews["sighting"][key] = reviews["location"][location]
+    return reviews
+
+
 def apply_quality(conn, policy, reference, lineage, layouts):
     countries = Countries(reference)
     create_audit(conn, lineage)
     source_names = dict(conn.execute("SELECT id,name FROM source_database"))
     tables = {}
+    coordinate_reviews = coordinate_conflicts(conn, countries)
     with conn:
         for table in layouts:
             names = table_columns(conn, table)
             if table in policy["text_columns"] or table in JSON_FIELDS or "date_event" in names:
-                tables[table] = clean_table(conn, table, policy, countries, source_names)
+                tables[table] = clean_table(conn, table, policy, countries, source_names, coordinate_reviews.get(table))
         deduplication = group_duplicates(conn, policy["deduplication"])
     changed = verify_change_ledger(conn, layouts)
     checks = validate_quality(conn, policy, countries)
