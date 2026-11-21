@@ -1,4 +1,4 @@
-name: Publicar Bronze
+name: Publicar base de datos Bronze
 
 on:
   push:
@@ -15,6 +15,7 @@ concurrency:
 
 jobs:
   publish:
+    name: Validar y publicar Bronze
     runs-on: ubuntu-24.04
     timeout-minutes: 15
     steps:
