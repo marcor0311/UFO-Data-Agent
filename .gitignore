@@ -1,0 +1,5 @@
+# Bronze data and validation output are generated locally.
+/data/
+__pycache__/
+*.pyc
+.DS_Store
