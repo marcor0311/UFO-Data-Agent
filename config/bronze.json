@@ -1,0 +1,29 @@
+{
+  "release": "v0.17.0",
+  "release_url": "https://github.com/UFOSINT/ufosint-explorer/releases/tag/v0.17.0",
+  "published_at": "2026-09-11T03:21:01Z",
+  "asset_url": "https://github.com/UFOSINT/ufosint-explorer/releases/download/v0.17.0/ufo_public.db",
+  "size_bytes": 733192192,
+  "sha256": "0200337eb1eadabd337ac4f479fceceb5a810eec8ab072cd7a206523703820e0",
+  "expected_sources": {
+    "UFOCAT": 320412,
+    "UPDB": 296956,
+    "UFO-search": 54751,
+    "Capella": 30453
+  },
+  "expected_metrics": {
+    "total": 702572,
+    "duplicate_candidates": 243318,
+    "coords": 493879,
+    "qs60": 33897,
+    "has_movement": 254415,
+    "movement_cats_non_empty": 254415,
+    "std_shape": 211940,
+    "emotion_28": 506788,
+    "emotion_7": 506788,
+    "vader": 506788,
+    "roberta": 506788,
+    "nrc": 586741,
+    "valid_coords": 493845
+  }
+}
