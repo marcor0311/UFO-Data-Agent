@@ -1,6 +1,6 @@
 # Silver
 
-La política v3 de `config/silver.json` se aplica a Bronze v17. Conserva las 10
+La política v4 de `config/silver.json` se aplica a Bronze v17. Conserva las 10
 tablas originales, todas sus filas y sus identificadores. Omite las 41 columnas
 vacías aprobadas y cuatro índices asociados. Añade columnas de calidad, tablas
 de trazabilidad y vistas de eventos canónicos. Bronze permanece intacta.
@@ -36,11 +36,21 @@ También se puede construir otra copia con `--database RUTA`.
   un offset conocido de una hora sin zona declarada. Fechas inválidas, futuras
   respecto de `quality.reference_date` y centinelas UFOCAT `0019-…` quedan NULL
   y registradas para revisión. No se altera `date_event_raw`.
+  La gramática explícita de `silver_analytics.py` recupera año/mes/día de
+  `date_event_raw` cuando no hay fecha canónica y retira precisiones inventadas
+  por el origen (p. ej., `Summer 1953 → 1953`, nunca `1953-07-01`). Los rangos
+  y décadas se conservan como intervalos en `temporal_evidence`, con
+  `date_status='range'`, sin fecha ni año puntual. `date_certainty` distingue
+  precisión procedente del origen, expresiones reducidas a su parte inequívoca, calificadas e
+  intervalos. Las expresiones calificadas se conservan para exploración,
+  excluidas de la vista de calendario y de confirmaciones automáticas.
+  Las fracciones de segundo conservan sus dígitos y la precisión
+  `fractional_second`; los offsets deben tener horas y minutos válidos.
 - **Coordenadas:** solo publicar pares completos dentro de los límites
   geográficos. Los pares inválidos o incompletos pasan a NULL; se conserva el
   registro y se añade `coordinate_status`. Coordenadas obligatorias inválidas
-  detienen la construcción. Una geocodificación `geonames_city_only` con países
-  contradictorios queda NULL con `coordinate_status='review'`. Se aplica también
+  detienen la construcción. Un par con países
+  reconocidos pero contradictorios queda NULL con `coordinate_status='review'`. Se aplica también
   a los informes vinculados que copian exactamente ese par original; otros pares
   distintos se conservan. `coordinate_country_conflict` conserva el par original
   y la evidencia del conflicto. Se evalúa antes de agrupar duplicados.
@@ -50,6 +60,11 @@ También se puede construir otra copia con `--database RUTA`.
   representaciones discrepan o son históricas/ambiguas, el país canónico queda
   NULL y `country_status` señala revisión. No se adivina un país por una ciudad
   ni se convierte automáticamente un país histórico en su sucesor actual.
+- **Dependencias geográficas:** la distancia y el sitio nuclear más cercano
+  quedan NULL si su par de coordenadas no es utilizable. Los valores de origen
+  se conservan con `geographic_dependency` y en `silver_rescued_value`.
+  `usable_for_nuclear_proximity` identifica los informes que conservan ambos
+  campos junto a coordenadas utilizables.
 - **Tipos y dominios:** validar números, booleanos, rangos, categorías y
   estructura JSON. Los valores no utilizables pasan a NULL y se registran.
   `craft_size_m` conserva las estimaciones como números acompañados de
@@ -77,8 +92,17 @@ También se puede construir otra copia con `--database RUTA`.
 | `quality_rule` / `quality_issue` | Contrato, gravedad, valor original y tratamiento de cada incidencia. |
 | `silver_change` | Valores anterior y nuevo y regla de cada campo original modificado. |
 | `silver_run` | Versión, hashes de código, política y catálogo, referencia temporal y procedencia. |
+| `sighting_analytical` | Una fila por informe, fuente, vínculo canónico y elegibilidad independiente para mapa, calendario y país. |
+| `sighting_reports_for_map` / `sighting_reports_for_time_analysis` | Vistas por informe; no eliminan duplicados al contar informes. |
+| `country_evidence` | Ambas representaciones originales del país y sus códigos reconocidos independientemente; no adjudica conflictos. |
+| `temporal_evidence` | Texto original, interpretación, precisión recuperada, intervalos y marca de aplicación. |
+| `silver_rescued_value` | Valores originales retirados de campos canónicos, en JSON y con su regla. |
+| `quality_quarantine` / `quality_summary` | Incidencias no utilizables o pendientes, y conteos por regla sin duplicar columnas del mismo registro. |
 
-La vista canónica facilita contar eventos sin perder los informes. La agrupación
+La vista canónica facilita contar representantes según una regla explícita.
+Los candidatos pendientes pueden corresponder al mismo evento: el conteo
+canónico no prueba que todos sean eventos diferentes. Para conservar todos los
+informes durante análisis se usa `sighting_analytical`. La agrupación
 automática sigue un criterio conservador; no acredita la veracidad del fenómeno
 ni resuelve por sí sola las coincidencias que requieren evaluación humana.
 
@@ -87,7 +111,8 @@ ni resuelve por sí sola las coincidencias que requieren evaluación humana.
 La salida y `ufo.validation.json` no se incluyen en Git. El informe diferencia
 la comprobación de la proyección previa a la limpieza de los controles finales.
 Registra reglas, incidencias, campos modificados, decisiones de deduplicación,
-conteos, esquema, métricas finales y SHA-256. Cada cambio se reconcilia contra
+conteos, esquema, métricas finales y SHA-256. `field_profile` conserva los
+denominadores y la cantidad de NULL, no NULL y texto vacío por campo original. Cada cambio se reconcilia contra
 Bronze y su registro de trazabilidad. Se verifican integridad, relaciones,
 dominios y cobertura de todos los informes y candidatos.
 
@@ -111,7 +136,9 @@ ese resumen: cada par aparece una vez, aunque puede incumplir varios criterios.
 Un impedimento no demuestra que sean eventos distintos. Un
 `strict_match_unconfirmed` exige investigar una posible discrepancia del algoritmo.
 
-La revisión de esta iteración y sus límites están documentados en
-[docs/silver-review.md](../../docs/silver-review.md). Las coordenadas válidas por
-rango no acreditan por sí solas una ubicación correcta; los conflictos de país
-sin la evidencia específica de búsqueda solo por ciudad continúan pendientes.
+La revisión inicial de v3 está en
+[docs/silver-review.md](../../docs/silver-review.md). El contrato y cierre de v4,
+su relación con las recomendaciones de Databricks, consultas de ejemplo y
+límites están en [docs/silver-contract.md](../../docs/silver-contract.md).
+Las coordenadas válidas por rango no acreditan por sí solas una ubicación real.
+La cuarentena geográfica no resuelve el conflicto de país.

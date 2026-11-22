@@ -1,0 +1,40 @@
+name: Silver Quality Tests
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - '.github/workflows/test-silver.yml'
+      - 'scripts/**'
+      - 'config/**'
+      - 'tests/**'
+      - 'docs/**'
+      - 'README.md'
+      - 'data/silver/README.md'
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/test-silver.yml'
+      - 'scripts/**'
+      - 'config/**'
+      - 'tests/**'
+
+permissions:
+  contents: read
+
+concurrency:
+  group: silver-tests-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  unit-tests:
+    name: Test Silver contracts and preservation
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1, same pin as Bronze
+      - name: Run tests without external data or dependencies
+        run: |
+          python3 --version
+          python3 -m unittest discover -s tests -q
