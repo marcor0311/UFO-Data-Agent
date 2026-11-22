@@ -12,11 +12,16 @@ import sqlite3
 
 if __package__:
     from . import silver_analytics as analytics
+    from . import silver_evidence as source_evidence
 else:
     import silver_analytics as analytics
+    import silver_evidence as source_evidence
 
 
 RULES = {
+    "source_coordinates_recovered": ("info", "Coordenadas del catálogo original del mismo informe; enlace por ID único y fecha original."),
+    "source_proximity_recomputed": ("info", "Proximidad recalculada con coordenadas recuperadas y el catálogo nuclear conservado."),
+    "source_time_recovered": ("info", "Hora recuperada por ID único y fecha original idéntica; timestamp solo con día y hora exactos."),
     "geographic_dependency": ("warning", "Medida derivada de coordenadas no utilizables; conservar original y retirar del campo canónico."),
     "temporal_recovered": ("info", "Recuperar únicamente precisión explícita en date_event_raw; no imputar días."),
     "temporal_range": ("info", "Intervalo explícito conservado sin elegir una fecha representativa."),
@@ -255,7 +260,7 @@ def valid_json(value, expected, emotion=False):
         return False
 
 
-def clean_table(conn, table, policy, countries, source_names, coordinate_reviews=None):
+def clean_table(conn, table, policy, countries, source_names, coordinate_reviews=None, source_times=None, source_geography=None):
     names = table_columns(conn, table)
     original_names = list(names)
     key_names = [name for name, col in names.items() if col[5]]
@@ -289,6 +294,8 @@ def clean_table(conn, table, policy, countries, source_names, coordinate_reviews
     specs = numeric_specs(table, names)
     json_fields = {name: kind for name, kind in JSON_FIELDS.get(table, {}).items() if name in names}
     writable = [name for name in original_names if name in text_columns or name in specs or name in json_fields or name in ("date_event", "sighting_datetime", lat_name, lng_name, "craft_size_m")]
+    if table == 'sighting' and 'time_raw' in names and 'time_raw' not in writable:
+        writable.append('time_raw')
     if "country" in names and "country_status" in extra:
         writable += [name for name in ("country", "country_iso2") if name in names and name not in writable]
     geographic_dependencies = [name for name in ('distance_to_nearest_nuclear_site_km','nearest_nuclear_site_name') if table=='sighting' and name in names]
@@ -298,6 +305,7 @@ def clean_table(conn, table, policy, countries, source_names, coordinate_reviews
     cursor = conn.execute(f"SELECT * FROM {quote(table)} ORDER BY {quote(key_name)}")
     row_names = [col[0] for col in cursor.description]
     audit = Audit(conn)
+    facilities = source_evidence.nuclear_facilities(conn) if table=='sighting' and source_geography else []
     processed = changed_rows = 0
     while batch := cursor.fetchmany(2048):
         updates = []
@@ -346,6 +354,17 @@ def clean_table(conn, table, policy, countries, source_names, coordinate_reviews
                     conn.execute('INSERT INTO temporal_evidence VALUES (?,?,?,?,?,?,?)',
                         (key,original.get('date_event_raw'),evidence['kind'],evidence['candidate'],
                          evidence['year_min'],evidence['year_max'],int(applied)))
+                source_item = (source_times or {}).get(original.get('source_record_id')) if source_names.get(row.get('source_db_id')) == 'UFO-search' else None
+                source_overrides = source_evidence.time_overrides(original, temporal, source_item, parse_date, policy['reference_date'])
+                row.update(source_overrides)
+                if source_overrides:
+                    rules['time_raw'] = 'source_time_recovered'
+                    conn.execute('UPDATE source_time_evidence SET clock_applied=? WHERE sighting_id=?',
+                                 (int('sighting_datetime' in source_overrides),key))
+                    audit.issue(table,key,'time_raw','source_time_recovered',original.get('time_raw'),
+                                'Hora del registro original, enlazado por identificador y fecha sin cambios.', 'normalized')
+            else:
+                source_overrides = {}
             for name in ("date_event", "sighting_datetime"):
                 if name not in names:
                     continue
@@ -360,7 +379,11 @@ def clean_table(conn, table, policy, countries, source_names, coordinate_reviews
                     row.update(date_precision=precision, date_status=status, event_year=year)
                 else:
                     row.update(datetime_precision=precision, timezone_status=zone)
-                if temporal and (name in temporal[1] or temporal[0]['kind']=='qualified'):
+                if name in source_overrides:
+                    rules[name] = 'source_time_recovered'
+                    audit.issue(table,key,name,'source_time_recovered',original[name],
+                                'Día válido y hora exacta del mismo registro original; zona no inferida.', 'normalized')
+                elif temporal and (name in temporal[1] or temporal[0]['kind']=='qualified'):
                     rule = 'temporal_range' if status=='range' else 'temporal_conflict' if temporal[0]['kind'] in ('conflict','qualified') else 'temporal_recovered'
                     rules[name] = rule
                     audit.issue(table,key,name,rule,original[name],
@@ -373,7 +396,18 @@ def clean_table(conn, table, policy, countries, source_names, coordinate_reviews
                 elif not same(row[name], original[name]):
                     rules[name] = "date_format"
             if has_coords:
+                source_place = (source_geography or {}).get(original.get('source_record_id')) if table=='sighting' and source_names.get(row.get('source_db_id'))=='UFO-search' else None
+                geography_applied = source_place is not None and source_evidence.valid_source_coordinates(source_place)
+                source_nonterrestrial = source_place is not None and source_evidence.non_terrestrial(source_place)
+                if geography_applied:
+                    if source_place['date_event_raw'] != original.get('date_event_raw'):
+                        raise ValueError('La fecha difiere de la evidencia geográfica')
+                    row[lat_name],row[lng_name]=source_place['latitude'],source_place['longitude']
+                elif source_nonterrestrial:
+                    row[lat_name],row[lng_name]=None,None
                 row[lat_name], row[lng_name], status = coordinate_pair(row[lat_name], row[lng_name])
+                if source_nonterrestrial:
+                    status='not_applicable'
                 row["coordinate_status"] = status
                 if status in ("invalid", "partial"):
                     if names[lat_name][3] or names[lng_name][3]:
@@ -382,7 +416,14 @@ def clean_table(conn, table, policy, countries, source_names, coordinate_reviews
                     rules.update({lat_name: "coordinate_invalid", lng_name: "coordinate_invalid"})
                 else:
                     rules.update({lat_name: "numeric_cast", lng_name: "numeric_cast"})
-            if has_coords and row["coordinate_status"] == "valid" and key in (coordinate_reviews or {}):
+                if geography_applied or source_nonterrestrial:
+                    rules.update({lat_name:'source_coordinates_recovered',lng_name:'source_coordinates_recovered'})
+                    audit.issue(table,key,f'{lat_name},{lng_name}','source_coordinates_recovered',
+                                [original[lat_name],original[lng_name]],
+                                'Localización del catálogo original: '+('fuera de la superficie terrestre; mapa no aplicable.' if source_nonterrestrial else 'lugar catalogado; no acredita una posición exacta del testigo.'), 'normalized')
+            else:
+                geography_applied = False
+            if has_coords and not geography_applied and row["coordinate_status"] == "valid" and key in (coordinate_reviews or {}):
                 if names[lat_name][3] or names[lng_name][3]:
                     raise ValueError(f"Coordenadas obligatorias en conflicto: {table}.{key}")
                 row[lat_name], row[lng_name], row["coordinate_status"] = None, None, "review"
@@ -398,6 +439,14 @@ def clean_table(conn, table, policy, countries, source_names, coordinate_reviews
                         rules[name]='geographic_dependency'
                         audit.issue(table,key,name,'geographic_dependency',original[name],
                             'Medida de origen dependiente de un par de coordenadas no utilizable: '+row['coordinate_status'],'review')
+            if geography_applied and geographic_dependencies:
+                distance,site=source_evidence.nearest_facility(row[lat_name],row[lng_name],facilities)
+                for name,value in (('distance_to_nearest_nuclear_site_km',distance),('nearest_nuclear_site_name',site)):
+                    if name in geographic_dependencies:
+                        row[name]=value
+                        rules[name]='source_proximity_recomputed'
+                        audit.issue(table,key,name,'source_proximity_recomputed',original[name],
+                                    'Haversine, radio 6371 km, catálogo nuclear local y redondeo a 0,1 km.', 'normalized')
             if "country_status" in extra:
                 row["country"], row["country_iso2"], status = countries.resolve(row["country"], row.get("country_iso2"))
                 row["country_status"] = status
@@ -595,7 +644,7 @@ def validate_quality(conn, policy, countries):
         if "coordinate_status" in cols:
             lat, lng = ("lat", "lng") if table == "sighting" else ("latitude", "longitude")
             zero(f"quality_coords_{table}", f"SELECT COUNT(*) FROM {quote(table)} WHERE ({quote(lat)} IS NULL)!=({quote(lng)} IS NULL) OR {quote(lat)} NOT BETWEEN -90 AND 90 OR {quote(lng)} NOT BETWEEN -180 AND 180 OR (coordinate_status='valid')!=({quote(lat)} IS NOT NULL AND {quote(lng)} IS NOT NULL)")
-            zero(f"quality_coordinate_status_{table}", f"SELECT COUNT(*) FROM {quote(table)} WHERE coordinate_status IS NULL OR coordinate_status NOT IN ('valid','missing','invalid','partial','review')")
+            zero(f"quality_coordinate_status_{table}", f"SELECT COUNT(*) FROM {quote(table)} WHERE coordinate_status IS NULL OR coordinate_status NOT IN ('valid','missing','invalid','partial','review','not_applicable')")
         for column, spec in numeric_specs(table, cols).items():
             low, high, integer = spec
             predicate = f"typeof({quote(column)}) NOT IN ('integer','real') OR {quote(column)}<{low}"
@@ -658,7 +707,10 @@ def validate_quality(conn, policy, countries):
     if policy.get('analytical_contract'):
         checks.update(analytics.validate_analytics(conn,countries))
         checks.update(analytics.validate_temporal_evidence(conn,parse_date,policy))
+        checks.update(source_evidence.validate_geography(conn,policy,countries))
         expected=coordinate_conflicts(conn,countries,policy.get('coordinate_conflict_scope','city_only'),'bronze')
+        recovered={r[0] for r in conn.execute("SELECT sighting_id FROM source_geography_evidence WHERE coordinates_applied=1 OR coordinate_domain='non_terrestrial'")}
+        expected['sighting']={key:value for key,value in expected['sighting'].items() if key not in recovered}
         for table in ('location','sighting'):
             actual={row[0] for row in conn.execute(f"SELECT id FROM {quote(table)} WHERE coordinate_status='review'")}
             issues={row[0] for row in conn.execute("SELECT record_id FROM quality_issue WHERE table_name=? AND rule_id='coordinate_country_conflict'",(table,))}
@@ -704,12 +756,16 @@ def apply_quality(conn, policy, reference, lineage, layouts):
     if policy.get('analytical_contract'):
         analytics.create_evidence(conn)
         analytics.preserve_countries(conn, layouts, countries)
+    source_times, _ = source_evidence.policy_times(policy)
+    source_evidence.create_time_evidence(conn, source_times)
+    source_geography, _ = source_evidence.policy_geography(policy)
+    source_evidence.create_geography_evidence(conn, source_geography, countries)
     coordinate_reviews = coordinate_conflicts(conn, countries, policy.get("coordinate_conflict_scope","city_only"))
     with conn:
         for table in layouts:
             names = table_columns(conn, table)
             if table in policy["text_columns"] or table in JSON_FIELDS or "date_event" in names:
-                tables[table] = clean_table(conn, table, policy, countries, source_names, coordinate_reviews.get(table))
+                tables[table] = clean_table(conn, table, policy, countries, source_names, coordinate_reviews.get(table), source_times, source_geography)
         deduplication = group_duplicates(conn, policy["deduplication"])
         if policy.get('analytical_contract'):
             analytics.create_analytical_views(conn)

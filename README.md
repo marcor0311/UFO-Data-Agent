@@ -64,6 +64,19 @@ python3 scripts/review_silver.py
 Consulta la [revisión de Silver](docs/silver-review.md) para los hallazgos,
 correcciones y límites de interpretación de la política v3.
 
-El [contrato analítico de Silver v4](docs/silver-contract.md) define el grano,
+El [contrato analítico de Silver](docs/silver-contract.md) define el grano,
 las recuperaciones de precisión temporal, los intervalos, las vistas por informe,
 los valores rescatados y los controles de aceptación de la capa.
+
+La política actual es **v5**. Recupera campos factuales de las fuentes originales
+por ID y fecha idénticos, conserva su procedencia y recalcula las dependencias
+geográficas. Antes de consumir esta salida desde Gold:
+
+```bash
+python3 scripts/check_silver_ready.py
+```
+
+El comando termina con error si la salida no corresponde a Bronze, código,
+política y referencias actuales o incumple el contrato. Genera
+`data/silver/ufo.readiness.json` con cobertura, incidencias y reglas de consumo.
+Ver el [cierre de Silver para Gold](docs/silver-gold-readiness.md).
