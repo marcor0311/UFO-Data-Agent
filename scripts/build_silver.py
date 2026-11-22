@@ -100,7 +100,7 @@ def columns(conn: sqlite3.Connection, table: str, schema: str = "main") -> list:
 
 
 def lineage_for(source_hash: str, policy: dict) -> tuple[dict, dict]:
-    files = [Path(__file__), Path(__file__).with_name("silver_quality.py")]
+    files = [Path(__file__), Path(__file__).with_name("silver_quality.py"), Path(__file__).with_name("silver_analytics.py")]
     code_hashes = {path.name: digest(path) for path in files}
     ref_path = ROOT / policy["quality"]["country_reference"]
     reference = json.loads(ref_path.read_text(encoding="utf-8"))
@@ -238,6 +238,12 @@ def build(source: Path, target: Path, manifest: dict, policy: dict, replace: boo
                 print("Proyección verificada; aplicando reglas de calidad...", flush=True)
                 report["quality"], quality_checks = apply_quality(conn, policy["quality"], reference, lineage, layouts)
                 checks.update(quality_checks)
+                if policy['quality'].get('analytical_contract'):
+                    if __package__:
+                        from .silver_analytics import field_profile
+                    else:
+                        from silver_analytics import field_profile
+                    report['field_profile'] = field_profile(conn,layouts)
                 report["metrics_after_quality"] = {name: conn.execute(METRICS[name]).fetchone()[0] for name in manifest.get("expected_metrics", {})}
                 report["support_table_counts"] = {
                     row[0]: conn.execute(f"SELECT COUNT(*) FROM {quote(row[0])}").fetchone()[0]

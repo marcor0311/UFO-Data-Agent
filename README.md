@@ -63,3 +63,7 @@ python3 scripts/review_silver.py
 
 Consulta la [revisión de Silver](docs/silver-review.md) para los hallazgos,
 correcciones y límites de interpretación de la política v3.
+
+El [contrato analítico de Silver v4](docs/silver-contract.md) define el grano,
+las recuperaciones de precisión temporal, los intervalos, las vistas por informe,
+los valores rescatados y los controles de aceptación de la capa.

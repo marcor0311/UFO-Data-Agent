@@ -14,6 +14,24 @@ except ImportError:
 
 
 QUERIES = {
+    'temporal_recoveries': """SELECT d.name AS source,COUNT(*) AS evidence_reports,
+        SUM(b.date_event IS NULL AND s.date_event IS NOT NULL) AS recovered_points,
+        SUM(length(b.date_event)=4 AND length(s.date_event)=7) AS refined_year_to_month,
+        SUM(b.date_event IS NOT NULL AND s.date_event IS NOT NULL
+            AND length(s.date_event)<length(b.date_event)) AS removed_excess_precision,
+        SUM(e.interpretation IN ('range','decade')) AS intervals
+        FROM temporal_evidence e JOIN sighting s ON s.id=e.sighting_id
+        JOIN bronze.sighting b ON b.id=s.id JOIN source_database d ON d.id=s.source_db_id
+        GROUP BY d.name ORDER BY d.name""",
+    'temporal_evidence': """SELECT d.name AS source,e.interpretation,e.applied,
+        COUNT(*) AS reports FROM temporal_evidence e JOIN sighting s ON s.id=e.sighting_id
+        JOIN source_database d ON d.id=s.source_db_id
+        GROUP BY d.name,e.interpretation,e.applied ORDER BY reports DESC,source,e.interpretation,e.applied""",
+    'analytical_coverage': """SELECT source_name,COUNT(*) AS reports,
+        SUM(is_canonical) AS canonical_representatives,SUM(usable_for_map) AS map_reports,
+        SUM(usable_for_calendar) AS calendar_reports,SUM(usable_for_country) AS country_reports,
+        SUM(usable_for_nuclear_proximity) AS proximity_reports
+        FROM sighting_analytical GROUP BY source_name ORDER BY source_name""",
     'country_conflicts_by_geocoder': """SELECT b.geocode_src,COUNT(*) AS locations,
         SUM((SELECT COUNT(*) FROM sighting s WHERE s.location_id=b.id)) AS reports
         FROM bronze.location b JOIN location l ON l.id=b.id
@@ -22,13 +40,14 @@ QUERIES = {
         FROM quality_issue WHERE rule_id='country_unrecognized'
         GROUP BY table_name,raw_value ORDER BY records DESC,table_name,raw_value""",
     'date_causes': """SELECT d.name AS source,
-        CASE WHEN d.name='UFOCAT' AND b.date_event='19' THEN 'ufocat_short_19'
+        CASE WHEN e.interpretation='conflict' THEN 'representation_conflict'
+        WHEN d.name='UFOCAT' AND b.date_event='19' THEN 'ufocat_short_19'
         WHEN d.name='UFOCAT' AND b.date_event LIKE '0019-%' THEN 'ufocat_0019_sentinel'
         WHEN length(b.date_event) BETWEEN 1 AND 3 AND b.date_event NOT GLOB '*[^0-9]*'
           THEN 'short_year_ambiguous'
         ELSE 'calendar_or_format_or_future' END AS cause,
         COUNT(*) AS reports FROM sighting s JOIN bronze.sighting b ON b.id=s.id
-        JOIN source_database d ON d.id=s.source_db_id WHERE s.date_status IN ('invalid','review')
+        JOIN source_database d ON d.id=s.source_db_id LEFT JOIN temporal_evidence e ON e.sighting_id=s.id WHERE s.date_status IN ('invalid','review')
         GROUP BY d.name,cause ORDER BY reports DESC,source,cause""",
     'dates_by_evidence': """SELECT d.name AS source,q.rule_id,q.column_name,
         q.raw_value,b.date_event_raw,COUNT(*) AS reports,MIN(b.id) AS example_id
@@ -50,23 +69,27 @@ QUERIES = {
     'quarantined_reports_in_map': """SELECT COUNT(*) AS reports FROM quality_issue q
         JOIN sighting_for_map m ON m.id=CAST(q.record_id AS INTEGER)
         WHERE q.table_name='sighting' AND q.rule_id='coordinate_country_conflict'""",
+    'geographic_dependencies': """SELECT column_name,COUNT(*) AS records FROM quality_issue
+        WHERE rule_id='geographic_dependency' GROUP BY column_name ORDER BY column_name""",
     'coordinate_quarantine': """SELECT table_name,COUNT(*) AS records FROM quality_issue
         WHERE rule_id='coordinate_country_conflict' GROUP BY table_name ORDER BY table_name""",
 }
 
 
-def candidate_query(minimum=2, require_time=True):
+def candidate_query(minimum=2, require_time=True, check_certainty=False):
     descriptors = ['color','duration_seconds','num_witnesses','sound','direction','hynek','vallee','event_type','weather','terrain']
     def count(alias):
         return '+'.join(f'meaningful({alias}.{name})' for name in descriptors)
     differences = ' OR '.join(f'norm(a.{name}) IS NOT norm(b.{name})' for name in descriptors)
+    certainty = "WHEN a.date_certainty NOT IN ('source','coarsened') OR b.date_certainty NOT IN ('source','coarsened') THEN 'datetime_qualified'" if check_certainty else ''
     return f"""WITH classified AS (
         SELECT c.id,c.match_method,CASE
         WHEN a.id=b.id THEN 'same_record'
         WHEN r.decision='confirmed_exact' THEN 'confirmed_exact'
         WHEN a.sighting_datetime IS NULL OR b.sighting_datetime IS NULL
-          OR a.datetime_precision NOT IN ('minute','second','microsecond')
-          OR b.datetime_precision NOT IN ('minute','second','microsecond') THEN 'datetime_insufficient'
+          OR a.datetime_precision NOT IN ('minute','second','fractional_second')
+          OR b.datetime_precision NOT IN ('minute','second','fractional_second') THEN 'datetime_insufficient'
+        {certainty}
         WHEN a.sighting_datetime!=b.sighting_datetime THEN 'datetime_differs'
         WHEN a.coordinate_status!='valid' OR b.coordinate_status!='valid' THEN 'coordinates_unusable'
         WHEN a.lat!=b.lat OR a.lng!=b.lng THEN 'coordinates_differ'
@@ -91,7 +114,7 @@ def review(source, database, policy):
         raise ValueError('Silver no validada')
     queries = dict(QUERIES)
     dedup = policy['quality']['deduplication']
-    queries['candidate_first_blocker'] = candidate_query(dedup['minimum_additional_descriptors'],dedup.get('require_time_raw',True))
+    queries['candidate_first_blocker'] = candidate_query(dedup['minimum_additional_descriptors'],dedup.get('require_time_raw',True),bool(policy['quality'].get('analytical_contract')))
     with closing(sqlite3.connect(database.resolve().as_uri()+'?mode=ro',uri=True)) as conn:
         conn.execute('ATTACH DATABASE ? AS bronze',(source.resolve().as_uri()+'?mode=ro',))
         conn.execute('PRAGMA query_only=ON')

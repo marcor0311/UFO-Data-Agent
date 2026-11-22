@@ -74,6 +74,8 @@ class QualityTests(unittest.TestCase):
                     row.update(date_event=None,sighting_datetime=None,lat=None,lng=None)
                 elif key == 7:
                     row.update(date_event="0019-01-02T07:30",sighting_datetime="0019-01-02T07:30")
+                if key in (3,4,5):
+                    row.update(location_id=2,lat=42,lng=12)
                 rows.append(tuple(row[name] for name in fields))
             db.executemany("INSERT INTO sighting VALUES ("+",".join("?" for _ in fields)+")",rows)
             db.executemany("INSERT INTO duplicate_candidate VALUES (?,?,?,'pending')",[(1,3,4),(2,1,2),(3,1,1),(4,3,5)])
@@ -119,6 +121,7 @@ class QualityTests(unittest.TestCase):
             db.execute("ALTER TABLE location ADD COLUMN geocode_src TEXT")
             db.execute("UPDATE location SET geocode_src='geonames_city_only' WHERE id=1")
             # Rows 3 and 4 copy the conflicting location, row 5 has independent coordinates.
+            db.execute("UPDATE sighting SET location_id=1,lat=10,lng=-84 WHERE id IN (3,4)")
             db.execute("UPDATE sighting SET lat=11,lng=-85 WHERE id=5")
         self.manifest.update(size_bytes=self.source.stat().st_size,sha256=silver.digest(self.source))
         report = self.build()
@@ -138,6 +141,78 @@ class QualityTests(unittest.TestCase):
         for country,code in [('USSR','RU'),('Korea','KR'),('Kent',None),('OC',None),('AL','XK')]:
             self.assertEqual(countries.resolve(country,code)[2],'unrecognized')
         self.assertEqual(countries.resolve('Netherlands','US')[2],'conflict')
+
+    def test_temporal_recovery_downgrade_intervals_and_analytical_grain(self):
+        with closing(sqlite3.connect(self.source)) as db, db:
+            cases=[(None,None,'Summer 1952',2),
+                   ('1953-07-01','1953-07-01','Summer 1953',3),
+                   (None,None,'1995/1996',4),
+                   ('1990-01-01','1990-01-01',"1990's",5),
+                   (None,None,'10/11/1990',6)]
+            db.executemany('UPDATE sighting SET date_event=?,sighting_datetime=?,date_event_raw=? WHERE id=?',cases)
+            db.execute('UPDATE sighting SET location_id=NULL WHERE id=6')
+        self.manifest.update(size_bytes=self.source.stat().st_size,sha256=silver.digest(self.source))
+        report=self.build()
+        with closing(sqlite3.connect(self.target)) as db:
+            self.assertEqual(db.execute('SELECT date_event,date_precision,date_certainty FROM sighting WHERE id=2').fetchone(),('1952','year','coarsened'))
+            self.assertEqual(db.execute('SELECT date_event,sighting_datetime,date_precision FROM sighting WHERE id=3').fetchone(),('1953','1953','year'))
+            self.assertEqual(db.execute('SELECT date_event,event_year,date_status,date_certainty FROM sighting WHERE id=4').fetchone(),(None,None,'range','interval'))
+            self.assertEqual(db.execute('SELECT evidence_year_min,evidence_year_max FROM sighting_analytical WHERE id=5').fetchone(),(1990,1999))
+            self.assertEqual(db.execute('SELECT date_event,usable_for_calendar,usable_for_country FROM sighting_analytical WHERE id=6').fetchone(),(None,0,0))
+            self.assertEqual(db.execute('SELECT COUNT(*),COUNT(DISTINCT id) FROM sighting_analytical').fetchone(),(7,7))
+            self.assertEqual(db.execute("SELECT reported_value,coded_value,reported_iso2,coded_iso2 FROM country_evidence WHERE table_name='location' AND record_id='1'").fetchone(),('CA','US','CA','US'))
+            self.assertEqual(db.execute("SELECT json_extract(raw_value,'$') FROM silver_rescued_value WHERE table_name='location' AND record_id='1' AND column_name='country'").fetchone()[0],'CA')
+            self.assertEqual(db.execute('SELECT COUNT(*) FROM sighting_reports_for_time_analysis WHERE id IN (4,5,6)').fetchone()[0],0)
+        self.assertTrue(silver.verify(self.source,self.target,self.manifest,self.policy)['passed'])
+        self.assertEqual(report['field_profile']['sighting']['rows'],7)
+
+    def test_all_country_conflicts_quarantined_without_geocoder_tag(self):
+        self.build()
+        with closing(sqlite3.connect(self.target)) as db:
+            self.assertEqual(db.execute('SELECT latitude,longitude,coordinate_status FROM location WHERE id=1').fetchone(),(None,None,'review'))
+            self.assertEqual(db.execute('SELECT COUNT(*) FROM sighting_analytical WHERE id IN (3,4) AND usable_for_map=1').fetchone()[0],2)
+
+    def test_ledger_rejects_changed_primary_key_even_with_equal_counts(self):
+        self.build()
+        with closing(sqlite3.connect(self.target)) as db:
+            db.execute("ATTACH DATABASE ? AS bronze",(str(self.source),))
+            db.execute('UPDATE sighting SET id=30 WHERE id=3')
+            layouts={'sighting':[col for col in silver.columns(db,'sighting','bronze')]}
+            with self.assertRaisesRegex(ValueError,'Identificadores distintos'):
+                quality.verify_change_ledger(db,layouts)
+
+    def test_temporal_replay_detects_unexpected_evidence(self):
+        self.build()
+        with closing(sqlite3.connect(self.target)) as db:
+            db.execute('ATTACH DATABASE ? AS bronze',(str(self.source),))
+            db.execute("INSERT INTO temporal_evidence VALUES (3,'original date','unresolved',NULL,NULL,NULL,0)")
+            checks=quality.validate_quality(db,self.policy['quality'],quality.Countries(json.loads((silver.ROOT/'config/countries.json').read_text())))
+            self.assertFalse(checks['analytics_temporal_replay']['passed'])
+
+    def test_qualified_dates_do_not_confirm_duplicate_groups(self):
+        with closing(sqlite3.connect(self.source)) as db, db:
+            db.execute("UPDATE sighting SET date_event_raw='2020-01-01 (approximate)' WHERE id IN (3,4)")
+        self.manifest.update(size_bytes=self.source.stat().st_size,sha256=silver.digest(self.source))
+        self.build()
+        with closing(sqlite3.connect(self.target)) as db:
+            self.assertEqual(db.execute('SELECT COUNT(*) FROM duplicate_group').fetchone()[0],0)
+            self.assertEqual(db.execute('SELECT date_certainty,usable_for_calendar FROM sighting_analytical WHERE id=3').fetchone(),('qualified',0))
+            self.assertIsNotNone(db.execute('SELECT date_event FROM sighting WHERE id=3').fetchone()[0])
+
+    def test_geographic_dependencies_rescued_when_coordinates_unusable(self):
+        with closing(sqlite3.connect(self.source)) as db,db:
+            db.execute('ALTER TABLE sighting ADD COLUMN distance_to_nearest_nuclear_site_km REAL')
+            db.execute('ALTER TABLE sighting ADD COLUMN nearest_nuclear_site_name TEXT')
+            db.execute("UPDATE sighting SET distance_to_nearest_nuclear_site_km=20.5,nearest_nuclear_site_name='Source site'")
+            db.execute('UPDATE sighting SET location_id=1,lat=10,lng=-84 WHERE id=5')
+        self.manifest.update(size_bytes=self.source.stat().st_size,sha256=silver.digest(self.source))
+        self.build()
+        with closing(sqlite3.connect(self.target)) as db:
+            for key in (1,2,5,6):
+                self.assertEqual(db.execute('SELECT distance_to_nearest_nuclear_site_km,nearest_nuclear_site_name,usable_for_nuclear_proximity FROM sighting_analytical WHERE id=?',(key,)).fetchone(),(None,None,0))
+            self.assertEqual(db.execute('SELECT distance_to_nearest_nuclear_site_km,nearest_nuclear_site_name,usable_for_nuclear_proximity FROM sighting_analytical WHERE id=3').fetchone(),(20.5,'Source site',1))
+            self.assertEqual(db.execute("SELECT json_extract(raw_value,'$') FROM silver_rescued_value WHERE table_name='sighting' AND record_id='5' AND column_name='distance_to_nearest_nuclear_site_km'").fetchone()[0],20.5)
+        self.assertTrue(silver.verify(self.source,self.target,self.manifest,self.policy)['passed'])
 
     def test_deterministic_data_and_membership(self):
         self.build()

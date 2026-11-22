@@ -10,8 +10,17 @@ import math
 import re
 import sqlite3
 
+if __package__:
+    from . import silver_analytics as analytics
+else:
+    import silver_analytics as analytics
+
 
 RULES = {
+    "geographic_dependency": ("warning", "Medida derivada de coordenadas no utilizables; conservar original y retirar del campo canónico."),
+    "temporal_recovered": ("info", "Recuperar únicamente precisión explícita en date_event_raw; no imputar días."),
+    "temporal_range": ("info", "Intervalo explícito conservado sin elegir una fecha representativa."),
+    "temporal_conflict": ("warning", "Representaciones temporales contradictorias o calificadas; conservar evidencia."),
     "text_whitespace": ("info", "Recortar espacios exteriores; texto vacío pasa a NULL."),
     "missing_token": ("info", "Marcador de ausencia explícito de una columna pasa a NULL."),
     "date_missing": ("warning", "Fecha desconocida; no se imputa."),
@@ -19,7 +28,7 @@ RULES = {
     "date_suspect": ("warning", "Fecha centinela UFOCAT 0019 o posterior a la referencia; requiere revisión."),
     "date_format": ("info", "Normalizar formato sin inventar precisión ni zona horaria."),
     "coordinate_invalid": ("error", "Par de coordenadas incompleto, no numérico o fuera de rango."),
-    "coordinate_country_conflict": ("warning", "Geocodificación solo por ciudad contradice el país; coordenadas en revisión."),
+    "coordinate_country_conflict": ("warning", "Representaciones del país contradictorias; coordenadas en revisión."),
     "country_conflict": ("warning", "Las dos representaciones del país discrepan; país canónico desconocido."),
     "country_unrecognized": ("warning", "País ambiguo, histórico o fuera del catálogo; requiere revisión."),
     "country_normalized": ("info", "País normalizado mediante catálogo y alias explícitos."),
@@ -122,11 +131,17 @@ def parse_date(value, reference, suspect_century=False):
             temporal = date.fromisoformat(text)
             year, normalized, precision, zone = temporal.year, temporal.isoformat(), "day", "not_applicable"
         elif re.fullmatch(r"\d{4}-\d{2}-\d{2}[T ]\d{2}:\d{2}(?::\d{2}(?:\.\d{1,6})?)?(?:Z|[+-]\d{2}:\d{2})?", text):
+            offset = re.search(r'[+-](\d{2}):(\d{2})$',text)
+            if offset and (int(offset[1])>23 or int(offset[2])>59):
+                raise ValueError('invalid UTC offset')
             parsed = datetime.fromisoformat(text.replace("Z", "+00:00"))
             temporal, year = parsed.date(), parsed.year
             clock = re.split(r"Z|[+-]", text[11:])[0]
-            precision = "microsecond" if "." in clock else "second" if clock.count(":") == 2 else "minute"
-            normalized = parsed.isoformat(timespec={"microsecond": "microseconds", "second": "seconds", "minute": "minutes"}[precision])
+            precision = "fractional_second" if "." in clock else "second" if clock.count(":") == 2 else "minute"
+            normalized = parsed.isoformat(timespec={"fractional_second": "microseconds", "second": "seconds", "minute": "minutes"}[precision])
+            if precision=='fractional_second':
+                digits=len(clock.split('.')[1])
+                normalized=re.sub(r'\.(\d{6})',lambda m:'.'+m[1][:digits],normalized,count=1)
             zone = "offset_known" if parsed.utcoffset() is not None else "unspecified"
         else:
             raise ValueError("unsupported format")
@@ -250,6 +265,8 @@ def clean_table(conn, table, policy, countries, source_names, coordinate_reviews
     extra = {}
     if "date_event" in names:
         extra.update(date_precision="TEXT", date_status="TEXT", event_year="INTEGER")
+    if table == "sighting" and policy.get("analytical_contract"):
+        extra["date_certainty"] = "TEXT"
     if "sighting_datetime" in names:
         extra.update(datetime_precision="TEXT", timezone_status="TEXT")
     lat_name, lng_name = ("lat", "lng") if table == "sighting" else ("latitude", "longitude")
@@ -274,6 +291,8 @@ def clean_table(conn, table, policy, countries, source_names, coordinate_reviews
     writable = [name for name in original_names if name in text_columns or name in specs or name in json_fields or name in ("date_event", "sighting_datetime", lat_name, lng_name, "craft_size_m")]
     if "country" in names and "country_status" in extra:
         writable += [name for name in ("country", "country_iso2") if name in names and name not in writable]
+    geographic_dependencies = [name for name in ('distance_to_nearest_nuclear_site_km','nearest_nuclear_site_name') if table=='sighting' and name in names]
+    writable += [name for name in geographic_dependencies if name not in writable]
     writable += list(extra)
     sql_update = f"UPDATE {quote(table)} SET " + ",".join(f"{quote(name)}=?" for name in writable) + f" WHERE {quote(key_name)}=?"
     cursor = conn.execute(f"SELECT * FROM {quote(table)} ORDER BY {quote(key_name)}")
@@ -315,18 +334,40 @@ def clean_table(conn, table, policy, countries, source_names, coordinate_reviews
                     row[name] = None
                     rules[name] = "enum_invalid"
                     audit.issue(table, key, name, "enum_invalid", original[name], "Categoría desconocida; revisar fuente.", "nullified")
+            temporal = None
+            if table == 'sighting' and policy.get('analytical_contract'):
+                suspect = source_names.get(row.get('source_db_id')) == 'UFOCAT'
+                temporal = analytics.temporal_decision(original, parse_date, policy['reference_date'], suspect)
+                evidence, overrides, forced, certainty, relevant = temporal
+                row.update(overrides)
+                row['date_certainty'] = certainty
+                if relevant:
+                    applied = any(not same(original.get(name),value) for name,value in overrides.items())
+                    conn.execute('INSERT INTO temporal_evidence VALUES (?,?,?,?,?,?,?)',
+                        (key,original.get('date_event_raw'),evidence['kind'],evidence['candidate'],
+                         evidence['year_min'],evidence['year_max'],int(applied)))
             for name in ("date_event", "sighting_datetime"):
                 if name not in names:
                     continue
                 suspect = source_names.get(row.get("source_db_id")) == "UFOCAT"
                 normalized, precision, status, zone, year = parse_date(row[name], policy["reference_date"], suspect)
+                if temporal and temporal[2]:
+                    status = temporal[2]
+                    normalized, year, zone = None, None, 'not_applicable'
+                    precision = 'year_range' if status=='range' else 'unknown'
                 row[name] = normalized
                 if name == "date_event":
                     row.update(date_precision=precision, date_status=status, event_year=year)
                 else:
                     row.update(datetime_precision=precision, timezone_status=zone)
-                if status != "valid":
-                    rule = {"missing": "date_missing", "invalid": "date_invalid", "review": "date_suspect"}[status]
+                if temporal and (name in temporal[1] or temporal[0]['kind']=='qualified'):
+                    rule = 'temporal_range' if status=='range' else 'temporal_conflict' if temporal[0]['kind'] in ('conflict','qualified') else 'temporal_recovered'
+                    rules[name] = rule
+                    audit.issue(table,key,name,rule,original[name],
+                                encoded({'date_event_raw':original.get('date_event_raw'),'interpretation':temporal[0]}),
+                                'review' if rule=='temporal_conflict' else 'flagged')
+                elif status != "valid":
+                    rule = {"missing": "date_missing", "invalid": "date_invalid", "review": "date_suspect", "range":"temporal_range"}[status]
                     audit.issue(table, key, name, rule, original[name], "No se infiere ni corrige una fecha sin evidencia.", "flagged" if status == "missing" else "review")
                     rules[name] = rule
                 elif not same(row[name], original[name]):
@@ -350,6 +391,13 @@ def clean_table(conn, table, policy, countries, source_names, coordinate_reviews
                 audit.issue(table, key, f"{lat_name},{lng_name}", rule,
                             [original[lat_name], original[lng_name]],
                             coordinate_reviews[key], "review")
+            if geographic_dependencies and row['coordinate_status']!='valid':
+                for name in geographic_dependencies:
+                    if row[name] is not None:
+                        row[name]=None
+                        rules[name]='geographic_dependency'
+                        audit.issue(table,key,name,'geographic_dependency',original[name],
+                            'Medida de origen dependiente de un par de coordenadas no utilizable: '+row['coordinate_status'],'review')
             if "country_status" in extra:
                 row["country"], row["country_iso2"], status = countries.resolve(row["country"], row.get("country_iso2"))
                 row["country_status"] = status
@@ -419,6 +467,8 @@ def group_duplicates(conn, policy):
     existing = table_columns(conn, "sighting")
     descriptors = [name for name in descriptors if name in existing]
     requested = ["id", "sighting_datetime", "datetime_precision", "coordinate_status", "lat", "lng", "standardized_shape", "time_raw"] + descriptors
+    if "date_certainty" in existing:
+        requested.append("date_certainty")
     if set(requested) - existing.keys():
         raise ValueError("Faltan campos para la deduplicación conservadora")
     def meaningful(value):
@@ -431,7 +481,9 @@ def group_duplicates(conn, policy):
         keys = []
         for values in batch:
             row = dict(zip(requested, values))
-            if row["datetime_precision"] not in ("minute", "second", "microsecond") or not row["sighting_datetime"]:
+            if row["datetime_precision"] not in ("minute", "second", "fractional_second") or not row["sighting_datetime"]:
+                continue
+            if row.get("date_certainty","source") not in ("source","coarsened"):
                 continue
             if row["coordinate_status"] != "valid" or not meaningful(row["standardized_shape"]):
                 continue
@@ -510,6 +562,10 @@ def verify_change_ledger(conn, layouts):
         if len(keys) != 1:
             raise ValueError(f"Clave no soportada para reconciliar {table}")
         key = keys[0]
+        missing = conn.execute(f"SELECT 1 FROM bronze.{quote(table)} b LEFT JOIN main.{quote(table)} s ON s.{quote(key)}=b.{quote(key)} WHERE s.{quote(key)} IS NULL LIMIT 1").fetchone()
+        extra = conn.execute(f"SELECT 1 FROM main.{quote(table)} s LEFT JOIN bronze.{quote(table)} b ON b.{quote(key)}=s.{quote(key)} WHERE b.{quote(key)} IS NULL LIMIT 1").fetchone()
+        if missing or extra:
+            raise ValueError(f"Identificadores distintos de Bronze: {table}")
         compare = " AND ".join(f"(s.{quote(name)} IS b.{quote(name)} AND typeof(s.{quote(name)})=typeof(b.{quote(name)}))" for name in names)
         select = ",".join(f"{alias}.{quote(name)}" for alias in ("b", "s") for name in names)
         query = f"SELECT {select} FROM bronze.{quote(table)} b JOIN main.{quote(table)} s ON s.{quote(key)}=b.{quote(key)} WHERE NOT ({compare})"
@@ -566,7 +622,7 @@ def validate_quality(conn, policy, countries):
                 else:
                     invalid += value is not None or year is not None
             checks[f"quality_date_{table}"] = {"actual": invalid, "expected": 0, "passed": invalid == 0}
-            zero(f"quality_date_status_{table}", f"SELECT COUNT(*) FROM {quote(table)} WHERE date_status IS NULL OR date_status NOT IN ('valid','missing','invalid','review')")
+            zero(f"quality_date_status_{table}", f"SELECT COUNT(*) FROM {quote(table)} WHERE date_status IS NULL OR date_status NOT IN ('valid','missing','invalid','review','range')")
         if "sighting_datetime" in cols:
             invalid = 0
             for value, precision, zone in conn.execute(f"SELECT sighting_datetime,datetime_precision,timezone_status FROM {quote(table)}"):
@@ -592,54 +648,71 @@ def validate_quality(conn, policy, countries):
     zero("quality_event_membership", "SELECT COUNT(*) FROM sighting s LEFT JOIN event_membership m ON m.sighting_id=s.id WHERE m.sighting_id IS NULL")
     zero("quality_event_representatives", "SELECT COUNT(*) FROM event_membership m LEFT JOIN event_membership p ON p.sighting_id=m.canonical_event_id WHERE p.sighting_id IS NULL OR p.canonical_event_id!=p.sighting_id")
     zero("quality_group_sizes", "SELECT COUNT(*) FROM duplicate_group g WHERE g.member_count!=(SELECT COUNT(*) FROM event_membership m WHERE m.canonical_event_id=g.canonical_event_id)")
+    zero("quality_group_minimum_representative", "SELECT COUNT(*) FROM duplicate_group g WHERE g.canonical_event_id!=(SELECT MIN(m.sighting_id) FROM event_membership m WHERE m.canonical_event_id=g.canonical_event_id)")
     zero("quality_candidate_resolution", "SELECT COUNT(*) FROM duplicate_candidate c LEFT JOIN duplicate_resolution r ON r.candidate_id=c.id WHERE r.candidate_id IS NULL")
     zero("quality_confirmed_pairs", "SELECT COUNT(*) FROM duplicate_resolution r JOIN duplicate_candidate c ON c.id=r.candidate_id JOIN event_membership a ON a.sighting_id=c.sighting_id_a JOIN event_membership b ON b.sighting_id=c.sighting_id_b WHERE r.decision='confirmed_exact' AND (a.canonical_event_id!=b.canonical_event_id OR c.sighting_id_a=c.sighting_id_b)")
     integrity = [row[0] for row in conn.execute("PRAGMA main.integrity_check")]
     checks["quality_sqlite_integrity"] = {"result": integrity, "passed": integrity == ["ok"]}
     violations = sum(1 for _ in conn.execute("PRAGMA main.foreign_key_check"))
     checks["quality_foreign_keys"] = {"violations": violations, "passed": violations == 0}
+    if policy.get('analytical_contract'):
+        checks.update(analytics.validate_analytics(conn,countries))
+        checks.update(analytics.validate_temporal_evidence(conn,parse_date,policy))
+        expected=coordinate_conflicts(conn,countries,policy.get('coordinate_conflict_scope','city_only'),'bronze')
+        for table in ('location','sighting'):
+            actual={row[0] for row in conn.execute(f"SELECT id FROM {quote(table)} WHERE coordinate_status='review'")}
+            issues={row[0] for row in conn.execute("SELECT record_id FROM quality_issue WHERE table_name=? AND rule_id='coordinate_country_conflict'",(table,))}
+            passed=actual==set(expected[table]) and issues=={str(key) for key in expected[table]}
+            checks[f'quality_coordinate_quarantine_{table}']={'actual':len(actual),'expected':len(expected[table]),'passed':passed}
     return checks
 
 
-def coordinate_conflicts(conn, countries):
-    """Snapshot evidence before cleaning; quarantine only copied, conflicting geocodes.
-
-    A different report coordinate is not presumed to originate from its location.
-    No country is selected and no replacement coordinates are inferred.
-    """
+def coordinate_conflicts(conn, countries, scope="city_only", schema="main"):
+    """Snapshot complete conflicting pairs; never infer replacement coordinates."""
+    if scope not in ('city_only','all') or schema not in ('main','bronze'):
+        raise ValueError('Política de cuarentena geográfica no soportada')
     reviews = {"location": {}, "sighting": {}}
-    if "geocode_src" not in table_columns(conn, "location"):
+    columns={row[1] for row in conn.execute(f'PRAGMA {schema}.table_info(location)')}
+    if 'country_iso2' not in columns or ('geocode_src' not in columns and scope=='city_only'):
         return reviews
-    for key, country, code, lat, lng in conn.execute(
-            "SELECT id,country,country_iso2,latitude,longitude FROM location "
-            "WHERE geocode_src='geonames_city_only'"):
-        if countries.resolve(country, code)[2] != "conflict":
+    predicate = "1=1" if scope=='all' else "geocode_src='geonames_city_only'"
+    geocoder_column='geocode_src' if 'geocode_src' in columns else 'NULL'
+    for key, country, code, geocoder, lat, lng in conn.execute(
+            f"SELECT id,country,country_iso2,{geocoder_column},latitude,longitude FROM {schema}.location WHERE "+predicate):
+        if countries.resolve(country, code)[2] != "conflict" or coordinate_pair(lat,lng)[2]!='valid':
             continue
         reviews["location"][key] = encoded({"location_id": key, "country": country,
-            "country_iso2": code, "geocode_src": "geonames_city_only",
-            "reason": "Países contradictorios; búsqueda solo por ciudad no acredita ubicación."})
-    if "location_id" in table_columns(conn, "sighting"):
-        for key, location in conn.execute("""SELECT s.id,l.id FROM sighting s
-                JOIN location l ON l.id=s.location_id
-                WHERE l.geocode_src='geonames_city_only'
-                  AND s.lat=l.latitude AND s.lng=l.longitude"""):
+            "country_iso2": code, "geocode_src": geocoder,
+            "reason": "Países contradictorios; no se acredita ubicación ni se elige un país."})
+    report_columns={row[1] for row in conn.execute(f'PRAGMA {schema}.table_info(sighting)')}
+    if "location_id" in report_columns:
+        for key, location in conn.execute(f"""SELECT s.id,l.id FROM {schema}.sighting s
+                JOIN {schema}.location l ON l.id=s.location_id
+                WHERE s.lat=l.latitude AND s.lng=l.longitude"""):
             if location in reviews["location"]:
                 reviews["sighting"][key] = reviews["location"][location]
     return reviews
 
 
 def apply_quality(conn, policy, reference, lineage, layouts):
+    if policy.get('analytical_contract') not in (None,1):
+        raise ValueError('Versión de contrato analítico no soportada')
     countries = Countries(reference)
     create_audit(conn, lineage)
     source_names = dict(conn.execute("SELECT id,name FROM source_database"))
     tables = {}
-    coordinate_reviews = coordinate_conflicts(conn, countries)
+    if policy.get('analytical_contract'):
+        analytics.create_evidence(conn)
+        analytics.preserve_countries(conn, layouts, countries)
+    coordinate_reviews = coordinate_conflicts(conn, countries, policy.get("coordinate_conflict_scope","city_only"))
     with conn:
         for table in layouts:
             names = table_columns(conn, table)
             if table in policy["text_columns"] or table in JSON_FIELDS or "date_event" in names:
                 tables[table] = clean_table(conn, table, policy, countries, source_names, coordinate_reviews.get(table))
         deduplication = group_duplicates(conn, policy["deduplication"])
+        if policy.get('analytical_contract'):
+            analytics.create_analytical_views(conn)
     changed = verify_change_ledger(conn, layouts)
     checks = validate_quality(conn, policy, countries)
     checks["quality_change_ledger"] = {"verified_fields": changed, "passed": True}
