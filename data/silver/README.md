@@ -1,6 +1,6 @@
 # Silver
 
-La política v4 de `config/silver.json` se aplica a Bronze v17. Conserva las 10
+La política v5 de `config/silver.json` se aplica a Bronze v17. Conserva las 10
 tablas originales, todas sus filas y sus identificadores. Omite las 41 columnas
 vacías aprobadas y cuatro índices asociados. Añade columnas de calidad, tablas
 de trazabilidad y vistas de eventos canónicos. Bronze permanece intacta.
@@ -10,6 +10,7 @@ de trazabilidad y vistas de eventos canónicos. Bronze permanece intacta.
 ```bash
 python3 scripts/build_silver.py
 python3 scripts/build_silver.py --verify-only
+python3 scripts/check_silver_ready.py
 ```
 
 Si ya existe una Silver validada, reconstruir con:
@@ -46,6 +47,12 @@ También se puede construir otra copia con `--database RUTA`.
   excluidas de la vista de calendario y de confirmaciones automáticas.
   Las fracciones de segundo conservan sus dígitos y la precisión
   `fractional_second`; los offsets deben tener horas y minutos válidos.
+  La v5 interpreta los códigos de década UFOCAT (`196.`, `196E`, `196M`,
+  `196L`) como intervalos de diez años, según el manual oficial, solo para esa
+  fuente. Retira horas que el importador obtuvo de prefijos incompletos o
+  corruptos. Recupera `time_raw` desde UFO-search por ID único y fecha original
+  idéntica: crea timestamps únicamente con día válido, hora exacta y sin fechas
+  alternativas ni intervalos. Las horas aproximadas se conservan como texto.
 - **Coordenadas:** solo publicar pares completos dentro de los límites
   geográficos. Los pares inválidos o incompletos pasan a NULL; se conserva el
   registro y se añade `coordinate_status`. Coordenadas obligatorias inválidas
@@ -54,17 +61,32 @@ También se puede construir otra copia con `--database RUTA`.
   a los informes vinculados que copian exactamente ese par original; otros pares
   distintos se conservan. `coordinate_country_conflict` conserva el par original
   y la evidencia del conflicto. Se evalúa antes de agrupar duplicados.
+  Si el mismo informe aporta coordenadas independientes en el catálogo original,
+  se usan sus coordenadas en `sighting`, con trazabilidad por campo y
+  `coordinate_basis='original_catalog_place'`. No se copian a otros informes ni
+  se presentan como posición exacta del testigo. Los registros explícitamente
+  lunares, planetarios u orbitales tienen `coordinate_status='not_applicable'`;
+  no se sitúan en el mapa terrestre. Los valores fuera de rango del catálogo
+  siguen como evidencia, sin ajustarlos a los límites.
 - **Países:** normalizar nombres y códigos con el catálogo local versionado
   `config/countries.json`, derivado de [UN M49](https://unstats.un.org/unsd/methodology/m49/overview/).
   El código TW se documenta adicionalmente con el catálogo de UNCTAD. Si las
   representaciones discrepan o son históricas/ambiguas, el país canónico queda
   NULL y `country_status` señala revisión. No se adivina un país por una ciudad
   ni se convierte automáticamente un país histórico en su sucesor actual.
+  En `sighting_analytical`, un país inequívoco del catálogo original del informe
+  tiene precedencia sobre la ubicación compartida. `country_basis` indica esta
+  decisión. Las regiones que abarcan varios países permanecen sin país canónico;
+  la nacionalidad de una prueba nuclear no se usa como país de su ubicación.
 - **Dependencias geográficas:** la distancia y el sitio nuclear más cercano
   quedan NULL si su par de coordenadas no es utilizable. Los valores de origen
   se conservan con `geographic_dependency` y en `silver_rescued_value`.
   `usable_for_nuclear_proximity` identifica los informes que conservan ambos
   campos junto a coordenadas utilizables.
+  Cuando se recuperan coordenadas originales se recalculan distancia y sitio
+  más cercano con el catálogo `facility` conservado, las categorías nucleares
+  explícitas, Haversine, radio 6371 km y redondeo a 0,1 km. No se conserva la
+  distancia calculada desde el par anterior.
 - **Tipos y dominios:** validar números, booleanos, rangos, categorías y
   estructura JSON. Los valores no utilizables pasan a NULL y se registran.
   `craft_size_m` conserva las estimaciones como números acompañados de
@@ -96,6 +118,8 @@ También se puede construir otra copia con `--database RUTA`.
 | `sighting_reports_for_map` / `sighting_reports_for_time_analysis` | Vistas por informe; no eliminan duplicados al contar informes. |
 | `country_evidence` | Ambas representaciones originales del país y sus códigos reconocidos independientemente; no adjudica conflictos. |
 | `temporal_evidence` | Texto original, interpretación, precisión recuperada, intervalos y marca de aplicación. |
+| `source_time_evidence` | Hora del registro original, ID enlazado, fecha coincidente y marca de timestamp aplicado. |
+| `source_geography_evidence` | Coordenadas y país originales del informe, dominio terrestre o no terrestre y marca de aplicación. |
 | `silver_rescued_value` | Valores originales retirados de campos canónicos, en JSON y con su regla. |
 | `quality_quarantine` / `quality_summary` | Incidencias no utilizables o pendientes, y conteos por regla sin duplicar columnas del mismo registro. |
 
@@ -142,3 +166,6 @@ su relación con las recomendaciones de Databricks, consultas de ejemplo y
 límites están en [docs/silver-contract.md](../../docs/silver-contract.md).
 Las coordenadas válidas por rango no acreditan por sí solas una ubicación real.
 La cuarentena geográfica no resuelve el conflicto de país.
+
+La preparación actual para Gold, sus fuentes verificables y el comando de
+aceptación están en [docs/silver-gold-readiness.md](../../docs/silver-gold-readiness.md).

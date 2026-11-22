@@ -1,4 +1,10 @@
-# Contrato de Silver para analítica — política v4
+# Contrato de Silver para analítica — políticas v4 y v5
+
+La política vigente es **v5**. Sus recuperaciones de fuente, excepciones
+geográficas y aceptación para Gold se documentan en
+[Silver lista para Gold](silver-gold-readiness.md). Los resultados numéricos de
+v4 que aparecen al final son históricos; el informe generado de v5 identifica
+la salida actual mediante SHA-256.
 
 ## Criterio y alcance
 

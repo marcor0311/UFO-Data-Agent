@@ -5,12 +5,17 @@ from datetime import date
 import calendar
 import re
 
+if __package__:
+    from . import silver_evidence as source_evidence
+else:
+    import silver_evidence as source_evidence
+
 MONTHS = {name.casefold(): number for number in range(1,13)
           for name in (calendar.month_name[number],calendar.month_abbr[number])}
 MONTH = '|'.join(sorted(MONTHS,key=len,reverse=True))
 
 
-def interpret_raw_date(value):
+def interpret_raw_date(value, source=None):
     """Only anchored, unambiguous expressions. No two-digit years or fuzzy parser.
 
     A season or early/mid/late marker supplies a year/month, never a synthetic
@@ -21,6 +26,18 @@ def interpret_raw_date(value):
         return {'kind':'unresolved','candidate':None,'year_min':None,'year_max':None}
     text=' '.join(value.strip().split())
     result={'kind':'unresolved','candidate':None,'year_min':None,'year_max':None}
+    if source == 'UFOCAT':
+        # Codebook 2023, p.16: final YEAR character . / E / M / L is an
+        # uncertain year within the decade. Keep its full envelope, never
+        # turn 'late' into an invented 1968-1969 range.
+        match = re.fullmatch(r'(\d{3})[.EML]-(?:\d{2}|[EFMLSW])?-(?:\d{2}|[EML])?', text.replace(' ', ''))
+        if match and int(match[1]) > 0:
+            lower = int(match[1]) * 10
+            return {**result, 'kind':'decade', 'year_min':lower, 'year_max':lower+9}
+        match = re.fullmatch(r'([1-9]\d{3})-[EFMLSW]-(?:\d{2}|[EML])?', text.replace(' ', ''))
+        if match:
+            year = int(match[1])
+            return {**result, 'kind':'coarsened', 'candidate':match[1], 'year_min':year, 'year_max':year}
     match=re.fullmatch(r'(\d{4})\s*(?:-|–|/|to)\s*(\d{4})',text,re.I)
     if match:
         lower,upper=map(int,match.groups())
@@ -130,20 +147,33 @@ def create_analytical_views(conn):
         CREATE VIEW sighting_analytical AS
             SELECT s.*,d.name AS source_name,m.canonical_event_id,
                 (m.canonical_event_id=s.id) AS is_canonical,
-                l.country AS canonical_country,l.country_iso2 AS canonical_country_iso2,
-                COALESCE(l.country_status,'missing') AS country_status,
+                CASE WHEN g.coordinate_domain='non_terrestrial' THEN NULL
+                    WHEN g.country_reported!='' THEN g.country ELSE l.country END AS canonical_country,
+                CASE WHEN g.coordinate_domain='non_terrestrial' THEN NULL
+                    WHEN g.country_reported!='' THEN g.country_iso2 ELSE l.country_iso2 END AS canonical_country_iso2,
+                CASE WHEN g.coordinate_domain='non_terrestrial' THEN 'not_applicable'
+                    WHEN g.country_iso2 IS NOT NULL THEN 'valid'
+                    WHEN g.country_reported!='' THEN 'unrecognized'
+                    ELSE COALESCE(l.country_status,'missing') END AS country_status,
+                g.country_reported AS source_catalog_country,
+                CASE WHEN g.country_reported!='' THEN 'original_catalog' ELSE 'location' END AS country_basis,
+                CASE WHEN g.coordinate_domain='non_terrestrial' THEN 'non_terrestrial'
+                    WHEN g.coordinates_applied=1 THEN 'original_catalog_place' ELSE 'bronze' END AS coordinate_basis,
                 e.reported_value AS country_reported,e.coded_value AS country_coded,
                 e.reported_iso2,e.coded_iso2,
                 (s.coordinate_status='valid') AS usable_for_map,
                 {proximity} AS usable_for_nuclear_proximity,
                 (s.date_status='valid' AND s.date_certainty IN ('source','coarsened')) AS usable_for_calendar,
-                COALESCE((l.country_status='valid'),0) AS usable_for_country,
+                CASE WHEN g.coordinate_domain='non_terrestrial' THEN 0
+                    WHEN g.country_reported!='' THEN (g.country_iso2 IS NOT NULL)
+                    ELSE COALESCE((l.country_status='valid'),0) END AS usable_for_country,
                 t.year_min AS evidence_year_min,t.year_max AS evidence_year_max,
                 t.interpretation AS raw_date_interpretation
             FROM sighting s JOIN source_database d ON d.id=s.source_db_id
             JOIN event_membership m ON m.sighting_id=s.id
             LEFT JOIN location l ON l.id=s.location_id
             LEFT JOIN country_evidence e ON e.table_name='location' AND e.record_id=CAST(l.id AS TEXT)
+            LEFT JOIN source_geography_evidence g ON g.sighting_id=s.id
             LEFT JOIN temporal_evidence t ON t.sighting_id=s.id;
         CREATE VIEW sighting_reports_for_map AS
             SELECT * FROM sighting_analytical WHERE usable_for_map=1;
@@ -164,7 +194,7 @@ def create_analytical_views(conn):
 
 def temporal_decision(original, parser, reference, suspect=False):
     raw=original.get('date_event_raw')
-    evidence=interpret_raw_date(raw)
+    evidence=interpret_raw_date(raw, 'UFOCAT' if suspect else None)
     initial=parser(original.get('date_event'),reference,suspect)
     overrides={}
     forced=None
@@ -191,6 +221,21 @@ def temporal_decision(original, parser, reference, suspect=False):
                 certainty='coarsened' if kind=='coarsened' else 'source'
             elif kind=='coarsened':
                 certainty='coarsened'
+    # The original importer accepted numeric prefixes, including incomplete
+    # minutes or trailing corrupt characters, as precise times. The codebook
+    # requires all four HHMM digits for minute precision.
+    if suspect and not forced and original.get('time_raw') is not None:
+        raw_time = str(original['time_raw']).strip()
+        match = re.fullmatch(r'((?:[01]\d|2[0-3])):?([0-5]\d)', raw_time)
+        for name in ('date_event', 'sighting_datetime'):
+            value = overrides.get(name, original.get(name))
+            parsed = parser(value, reference, suspect)
+            if parsed[2]=='valid' and parsed[1] in ('minute','second','fractional_second'):
+                if not match or parsed[0][11:16] != ':'.join(match.groups()):
+                    overrides[name] = parsed[0][:10]
+                    certainty = 'qualified' if certainty=='qualified' else 'coarsened'
+                    if kind not in ('qualified','conflict'):
+                        evidence['kind']='coarsened'
     relevant=bool(overrides) or kind in ('qualified','range','decade') or initial[2]!='valid'
     return evidence,overrides,forced,certainty,relevant
 
@@ -271,11 +316,16 @@ def validate_temporal_evidence(conn, parser, policy):
     expected_keys=set()
     discrepancies=0
     sources=dict(conn.execute('SELECT id,name FROM source_database'))
+    source_times, _ = source_evidence.policy_times(policy)
+    actual_source = {row[0]:tuple(row[1:]) for row in conn.execute('SELECT * FROM source_time_evidence')}
+    expected_source = set()
+    source_discrepancies = 0
     query='''SELECT b.id,b.date_event,b.sighting_datetime,b.date_event_raw,b.source_db_id,
         s.date_event,s.sighting_datetime,s.date_certainty,s.date_status,s.date_precision,s.event_year,
-        s.datetime_precision,s.timezone_status FROM bronze.sighting b JOIN sighting s ON s.id=b.id'''
-    for key,old,old_dt,raw,source,new,new_dt,certainty,status,precision,year,dt_precision,zone in conn.execute(query):
-        original={'date_event':old,'sighting_datetime':old_dt,'date_event_raw':raw}
+        s.datetime_precision,s.timezone_status,b.source_record_id,b.time_raw,s.time_raw
+        FROM bronze.sighting b JOIN sighting s ON s.id=b.id'''
+    for key,old,old_dt,raw,source,new,new_dt,certainty,status,precision,year,dt_precision,zone,source_id,old_time,new_time in conn.execute(query):
+        original={'date_event':old,'sighting_datetime':old_dt,'date_event_raw':raw,'time_raw':old_time}
         suspect=sources.get(source)=='UFOCAT'
         detail,overrides,forced,expected_certainty,relevant=temporal_decision(original,parser,policy['reference_date'],suspect)
         if relevant:
@@ -284,6 +334,14 @@ def validate_temporal_evidence(conn, parser, policy):
             expected=(raw,detail['kind'],detail['candidate'],detail['year_min'],detail['year_max'],int(applied))
             discrepancies+=evidence.get(key)!=expected
         discrepancies+=certainty!=expected_certainty
+        item=source_times.get(source_id) if sources.get(source)=='UFO-search' else None
+        time_changes=source_evidence.time_overrides(original,(detail,overrides,forced,expected_certainty,relevant),item,parser,policy['reference_date'])
+        if item:
+            expected_source.add(key)
+            expected=(source_id,raw,item['time_raw'],int(item['single_date']),int('sighting_datetime' in time_changes))
+            source_discrepancies+=actual_source.get(key)!=expected
+        source_discrepancies+=new_time!=time_changes.get('time_raw',old_time)
+        overrides.update(time_changes)
         parsed=parser(overrides.get('date_event',old),policy['reference_date'],suspect)
         clock=parser(overrides.get('sighting_datetime',old_dt),policy['reference_date'],suspect)
         if forced:
@@ -295,5 +353,8 @@ def validate_temporal_evidence(conn, parser, policy):
         discrepancies+=(new,precision,status,year)!=point
         discrepancies+=(new_dt,dt_precision,zone)!=expected_clock
     discrepancies+=len(set(evidence)^expected_keys)
+    source_discrepancies+=len(set(actual_source)^expected_source)
     return {'analytics_temporal_replay':{'actual':discrepancies,'expected':0,'passed':discrepancies==0,
-        'evidence_records':len(expected_keys),'scope':'Every Bronze sighting: evidence coverage, raw values, point dates, precision, certainty and intervals.'}}
+        'evidence_records':len(expected_keys),'scope':'Every Bronze sighting: evidence coverage, raw values, point dates, precision, certainty and intervals.'},
+        'analytics_source_time_replay':{'actual':source_discrepancies,'expected':0,'passed':source_discrepancies==0,
+        'evidence_records':len(expected_source)}}

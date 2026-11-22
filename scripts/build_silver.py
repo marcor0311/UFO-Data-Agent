@@ -100,7 +100,7 @@ def columns(conn: sqlite3.Connection, table: str, schema: str = "main") -> list:
 
 
 def lineage_for(source_hash: str, policy: dict) -> tuple[dict, dict]:
-    files = [Path(__file__), Path(__file__).with_name("silver_quality.py"), Path(__file__).with_name("silver_analytics.py")]
+    files = [Path(__file__), Path(__file__).with_name("silver_quality.py"), Path(__file__).with_name("silver_analytics.py"), Path(__file__).with_name("silver_evidence.py")]
     code_hashes = {path.name: digest(path) for path in files}
     ref_path = ROOT / policy["quality"]["country_reference"]
     reference = json.loads(ref_path.read_text(encoding="utf-8"))
@@ -109,6 +109,16 @@ def lineage_for(source_hash: str, policy: dict) -> tuple[dict, dict]:
                "policy_sha256": policy_hash, "code_sha256": code_hashes,
                "country_reference_sha256": digest(ref_path), "country_reference_source": reference["source"],
                "reference_date": policy["quality"]["reference_date"]}
+    if policy['quality'].get('source_time_reference'):
+        source_path = ROOT / policy['quality']['source_time_reference']
+        source_data = json.loads(source_path.read_text(encoding='utf-8'))
+        lineage['source_time_reference_sha256'] = digest(source_path)
+        lineage['source_time_reference'] = source_data['source']
+    if policy['quality'].get('source_geography_reference'):
+        source_path = ROOT / policy['quality']['source_geography_reference']
+        source_data = json.loads(source_path.read_text(encoding='utf-8'))
+        lineage['source_geography_reference_sha256'] = digest(source_path)
+        lineage['source_geography_reference'] = source_data['source']
     lineage["run_id"] = hashlib.sha256(json.dumps(lineage, sort_keys=True).encode()).hexdigest()
     commit = subprocess.run(["git", "rev-parse", "HEAD"], cwd=ROOT, capture_output=True, text=True)
     lineage["git_base_commit"] = commit.stdout.strip() if commit.returncode == 0 else None
@@ -150,6 +160,10 @@ def build(source: Path, target: Path, manifest: dict, policy: dict, replace: boo
     with tempfile.TemporaryDirectory(prefix=".silver-", dir=target.parent) as work:
         output = Path(work) / "ufo.db"
         with closing(sqlite3.connect(output, uri=True)) as conn:
+            # Keep frequently updated audit/index pages in memory, especially
+            # when the workspace lives on an external drive. Durability stays
+            # at SQLite's default; this changes only the private build cache.
+            conn.execute('PRAGMA main.cache_size=-131072')
             conn.execute("ATTACH DATABASE ? AS bronze", (source.as_uri() + "?mode=ro&immutable=1",))
             tables = dict(conn.execute(
                 "SELECT name, sql FROM bronze.sqlite_master "
