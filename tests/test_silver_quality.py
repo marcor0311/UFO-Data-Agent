@@ -114,6 +114,31 @@ class QualityTests(unittest.TestCase):
         self.assertTrue(verification["passed"])
         self.assertEqual(verification["changed_fields_verified"],report["quality"]["changed_fields"])
 
+    def test_conflicting_city_geocode_is_quarantined_before_grouping(self):
+        with closing(sqlite3.connect(self.source)) as db, db:
+            db.execute("ALTER TABLE location ADD COLUMN geocode_src TEXT")
+            db.execute("UPDATE location SET geocode_src='geonames_city_only' WHERE id=1")
+            # Rows 3 and 4 copy the conflicting location, row 5 has independent coordinates.
+            db.execute("UPDATE sighting SET lat=11,lng=-85 WHERE id=5")
+        self.manifest.update(size_bytes=self.source.stat().st_size,sha256=silver.digest(self.source))
+        report = self.build()
+        self.assertTrue(report['passed'])
+        with closing(sqlite3.connect(self.target)) as db:
+            self.assertEqual(db.execute("SELECT latitude,longitude,coordinate_status FROM location WHERE id=1").fetchone(), (None,None,'review'))
+            self.assertEqual(db.execute("SELECT lat,lng,coordinate_status FROM sighting WHERE id=3").fetchone(), (None,None,'review'))
+            self.assertEqual(db.execute("SELECT lat,lng,coordinate_status FROM sighting WHERE id=5").fetchone(), (11,-85,'valid'))
+            self.assertEqual(db.execute("SELECT COUNT(*) FROM duplicate_group").fetchone()[0],0)
+            self.assertEqual(db.execute("SELECT COUNT(*) FROM sighting_for_map WHERE id IN (3,4)").fetchone()[0],0)
+            self.assertEqual(db.execute("SELECT rule_id FROM silver_change WHERE table_name='sighting' AND record_id='3' AND column_name='lat'").fetchone()[0],'coordinate_country_conflict')
+        self.assertTrue(silver.verify(self.source,self.target,self.manifest,self.policy)['passed'])
+
+    def test_netherlands_alias_and_uncertain_countries(self):
+        countries = quality.Countries(json.loads((silver.ROOT/'config/countries.json').read_text()))
+        self.assertEqual(countries.resolve('Netherlands','NL')[1:],('NL','valid'))
+        for country,code in [('USSR','RU'),('Korea','KR'),('Kent',None),('OC',None),('AL','XK')]:
+            self.assertEqual(countries.resolve(country,code)[2],'unrecognized')
+        self.assertEqual(countries.resolve('Netherlands','US')[2],'conflict')
+
     def test_deterministic_data_and_membership(self):
         self.build()
         other=self.root/'other.db'

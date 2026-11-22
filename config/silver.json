@@ -1,5 +1,5 @@
 {
-  "version": 2,
+  "version": 3,
   "scope": "Silver depurada con trazabilidad por campo, fechas y precisión, geografía, tipos, reglas de calidad y agrupación conservadora de duplicados.",
   "drop_columns": {
     "crash_retrieval": [

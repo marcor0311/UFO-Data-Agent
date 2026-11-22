@@ -1,0 +1,132 @@
+"""Read-only, reproducible triage of unresolved Silver evidence (no adjudication)."""
+from __future__ import annotations
+
+import argparse
+from contextlib import closing
+import json
+from pathlib import Path
+import sqlite3
+
+try:
+    from . import build_silver as silver
+except ImportError:
+    import build_silver as silver
+
+
+QUERIES = {
+    'country_conflicts_by_geocoder': """SELECT b.geocode_src,COUNT(*) AS locations,
+        SUM((SELECT COUNT(*) FROM sighting s WHERE s.location_id=b.id)) AS reports
+        FROM bronze.location b JOIN location l ON l.id=b.id
+        WHERE l.country_status='conflict' GROUP BY b.geocode_src ORDER BY locations DESC""",
+    'unrecognized_countries': """SELECT table_name,raw_value,COUNT(*) AS records
+        FROM quality_issue WHERE rule_id='country_unrecognized'
+        GROUP BY table_name,raw_value ORDER BY records DESC,table_name,raw_value""",
+    'date_causes': """SELECT d.name AS source,
+        CASE WHEN d.name='UFOCAT' AND b.date_event='19' THEN 'ufocat_short_19'
+        WHEN d.name='UFOCAT' AND b.date_event LIKE '0019-%' THEN 'ufocat_0019_sentinel'
+        WHEN length(b.date_event) BETWEEN 1 AND 3 AND b.date_event NOT GLOB '*[^0-9]*'
+          THEN 'short_year_ambiguous'
+        ELSE 'calendar_or_format_or_future' END AS cause,
+        COUNT(*) AS reports FROM sighting s JOIN bronze.sighting b ON b.id=s.id
+        JOIN source_database d ON d.id=s.source_db_id WHERE s.date_status IN ('invalid','review')
+        GROUP BY d.name,cause ORDER BY reports DESC,source,cause""",
+    'dates_by_evidence': """SELECT d.name AS source,q.rule_id,q.column_name,
+        q.raw_value,b.date_event_raw,COUNT(*) AS reports,MIN(b.id) AS example_id
+        FROM quality_issue q JOIN bronze.sighting b ON b.id=CAST(q.record_id AS INTEGER)
+        JOIN source_database d ON d.id=b.source_db_id
+        WHERE q.table_name='sighting' AND q.rule_id IN ('date_invalid','date_suspect')
+        GROUP BY d.name,q.rule_id,q.column_name,q.raw_value,b.date_event_raw
+        ORDER BY reports DESC,source,q.column_name,q.raw_value,b.date_event_raw""",
+    'source_datetime_precision': """SELECT d.name AS source,s.datetime_precision,
+        COUNT(*) AS reports FROM sighting s JOIN source_database d ON d.id=s.source_db_id
+        GROUP BY d.name,s.datetime_precision ORDER BY d.name,s.datetime_precision""",
+    'candidate_methods': """SELECT c.match_method,a.name AS source_a,b.name AS source_b,
+        r.decision,COUNT(*) AS pairs,MIN(c.similarity_score) AS min_score,
+        MAX(c.similarity_score) AS max_score FROM duplicate_candidate c
+        JOIN duplicate_resolution r ON r.candidate_id=c.id
+        JOIN sighting sa ON sa.id=c.sighting_id_a JOIN sighting sb ON sb.id=c.sighting_id_b
+        JOIN source_database a ON a.id=sa.source_db_id JOIN source_database b ON b.id=sb.source_db_id
+        GROUP BY c.match_method,a.name,b.name,r.decision ORDER BY pairs DESC""",
+    'quarantined_reports_in_map': """SELECT COUNT(*) AS reports FROM quality_issue q
+        JOIN sighting_for_map m ON m.id=CAST(q.record_id AS INTEGER)
+        WHERE q.table_name='sighting' AND q.rule_id='coordinate_country_conflict'""",
+    'coordinate_quarantine': """SELECT table_name,COUNT(*) AS records FROM quality_issue
+        WHERE rule_id='coordinate_country_conflict' GROUP BY table_name ORDER BY table_name""",
+}
+
+
+def candidate_query(minimum=2, require_time=True):
+    descriptors = ['color','duration_seconds','num_witnesses','sound','direction','hynek','vallee','event_type','weather','terrain']
+    def count(alias):
+        return '+'.join(f'meaningful({alias}.{name})' for name in descriptors)
+    differences = ' OR '.join(f'norm(a.{name}) IS NOT norm(b.{name})' for name in descriptors)
+    return f"""WITH classified AS (
+        SELECT c.id,c.match_method,CASE
+        WHEN a.id=b.id THEN 'same_record'
+        WHEN r.decision='confirmed_exact' THEN 'confirmed_exact'
+        WHEN a.sighting_datetime IS NULL OR b.sighting_datetime IS NULL
+          OR a.datetime_precision NOT IN ('minute','second','microsecond')
+          OR b.datetime_precision NOT IN ('minute','second','microsecond') THEN 'datetime_insufficient'
+        WHEN a.sighting_datetime!=b.sighting_datetime THEN 'datetime_differs'
+        WHEN a.coordinate_status!='valid' OR b.coordinate_status!='valid' THEN 'coordinates_unusable'
+        WHEN a.lat!=b.lat OR a.lng!=b.lng THEN 'coordinates_differ'
+        WHEN NOT meaningful(a.standardized_shape) OR NOT meaningful(b.standardized_shape) THEN 'shape_insufficient'
+        WHEN norm(a.standardized_shape)!=norm(b.standardized_shape) THEN 'shape_differs'
+        WHEN {int(require_time)} AND (NOT meaningful(a.time_raw) OR NOT meaningful(b.time_raw)) THEN 'time_raw_insufficient'
+        WHEN ({count('a')})<{int(minimum)} OR ({count('b')})<{int(minimum)} THEN 'descriptors_insufficient'
+        WHEN {differences} THEN 'descriptors_differ'
+        ELSE 'strict_match_unconfirmed' END AS first_blocker
+        FROM duplicate_candidate c JOIN sighting a ON a.id=c.sighting_id_a
+        JOIN sighting b ON b.id=c.sighting_id_b
+        JOIN duplicate_resolution r ON r.candidate_id=c.id)
+        SELECT first_blocker,match_method,COUNT(*) AS pairs,MIN(id) AS example_candidate_id
+        FROM classified GROUP BY first_blocker,match_method ORDER BY pairs DESC,first_blocker,match_method"""
+
+
+def review(source, database, policy):
+    # Verify the controlling artifacts before interpreting derived quality states.
+    manifest = json.loads(silver.MANIFEST.read_text())
+    verification = silver.verify(source, database, manifest, policy)
+    if not verification['passed']:
+        raise ValueError('Silver no validada')
+    queries = dict(QUERIES)
+    dedup = policy['quality']['deduplication']
+    queries['candidate_first_blocker'] = candidate_query(dedup['minimum_additional_descriptors'],dedup.get('require_time_raw',True))
+    with closing(sqlite3.connect(database.resolve().as_uri()+'?mode=ro',uri=True)) as conn:
+        conn.execute('ATTACH DATABASE ? AS bronze',(source.resolve().as_uri()+'?mode=ro',))
+        conn.execute('PRAGMA query_only=ON')
+        conn.create_function('norm',1,lambda v: v.strip().casefold() if isinstance(v,str) else v,deterministic=True)
+        conn.create_function('meaningful',1,lambda v: v is not None and str(v).strip().casefold() not in ('','unknown','other','n/a','?','unidentified'),deterministic=True)
+        findings = {}
+        for name,sql in queries.items():
+            cursor=conn.execute(sql)
+            columns=[col[0] for col in cursor.description]
+            findings[name]={'sql':sql,'rows':[dict(zip(columns,row)) for row in cursor]}
+        if findings['quarantined_reports_in_map']['rows'][0]['reports']:
+            raise ValueError('Un informe en cuarentena aparece en el mapa')
+        candidate_total=conn.execute('SELECT COUNT(*) FROM duplicate_candidate').fetchone()[0]
+        classified=sum(row['pairs'] for row in findings['candidate_first_blocker']['rows'])
+        if classified != candidate_total:
+            raise ValueError('Clasificación incompleta de candidatos')
+        return {'bronze_sha256':silver.digest(source),'silver_sha256':silver.digest(database),
+            'script_sha256':silver.digest(Path(__file__)), 'lineage':json.loads(conn.execute('SELECT metadata FROM silver_run').fetchone()[0]),
+            'candidate_pairs_classified':classified,
+            'interpretation':'Primer impedimento según orden explícito del CASE; categorías excluyentes, no prueba de eventos distintos. No adjudica ni modifica registros.',
+            'findings':findings}
+
+
+def main():
+    parser=argparse.ArgumentParser(description=__doc__)
+    parser.add_argument('--source',type=Path,default=silver.ROOT/'data/bronze/ufo.db')
+    parser.add_argument('--database',type=Path,default=silver.ROOT/'data/silver/ufo.db')
+    parser.add_argument('--output',type=Path,default=silver.ROOT/'data/silver/ufo.review.json')
+    args=parser.parse_args()
+    if args.output.resolve() in (args.source.resolve(),args.database.resolve()):
+        parser.error('El informe no puede sustituir una base de datos')
+    result=review(args.source,args.database,json.loads(silver.POLICY.read_text()))
+    args.output.write_text(json.dumps(result,ensure_ascii=False,indent=2)+'\n')
+    print(f"Revisión guardada: {args.output}; {result['candidate_pairs_classified']:,} pares clasificados.")
+
+
+if __name__=='__main__':
+    main()
