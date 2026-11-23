@@ -12,3 +12,16 @@
 __pycache__/
 *.pyc
 .DS_Store
+# Agent app: local credentials, environments and build output.
+.env
+.env.*
+!.env.example
+.venv/
+*.egg-info/
+node_modules/
+.next/
+.next-*/
+apps/web/test-results/
+apps/web/playwright-report/
+/apps/web/next-env.d.ts
+*.tsbuildinfo
