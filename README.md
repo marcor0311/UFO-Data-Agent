@@ -68,9 +68,11 @@ El [contrato analítico de Silver](docs/silver-contract.md) define el grano,
 las recuperaciones de precisión temporal, los intervalos, las vistas por informe,
 los valores rescatados y los controles de aceptación de la capa.
 
-La política actual es **v5**. Recupera campos factuales de las fuentes originales
-por ID y fecha idénticos, conserva su procedencia y recalcula las dependencias
-geográficas. Antes de consumir esta salida desde Gold:
+La política actual es **v6**. Exige que cada componente de una fecha aparezca
+en el texto original, marca los días marcadores por fuente, y solo usa la
+geografía del catálogo original de UFO-search para rellenar lo que falta en
+Bronze o corroborarlo; las contradicciones quedan en revisión. Antes de
+consumir esta salida desde Gold:
 
 ```bash
 python3 scripts/check_silver_ready.py

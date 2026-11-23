@@ -54,7 +54,7 @@ class QualityTests(unittest.TestCase):
             """)
             fields = [row[1] for row in db.execute("PRAGMA table_info(sighting)")]
             baseline = dict(id=1,source_db_id=1,source_record_id="reused",location_id=1,
-                            date_event="2020-01-01T21:00",date_event_raw="original date",time_raw="2100",
+                            date_event="2020-01-01T21:00",date_event_raw="2020-01-01",time_raw="2100",
                             sighting_datetime="2020-01-01T21:00",standardized_shape="Disc",color="Orange",
                             duration_seconds=30,num_witnesses=2,sound="none",direction="north",
                             quality_score=60,hoax_likelihood=0,lat=10,lng=-84,has_media=0,
@@ -64,16 +64,16 @@ class QualityTests(unittest.TestCase):
             for key in range(1,8):
                 row = {**baseline,"id":key}
                 if key == 1:
-                    row.update(date_event="1949-02-29",sighting_datetime="1949-02-29",lat=200,
+                    row.update(date_event="1949-02-29",sighting_datetime="1949-02-29",date_event_raw="original date",lat=200,
                                quality_score=101,movement_categories="not JSON",sound=" none ",emotion_7_dominant="invalid")
                 elif key == 2:
-                    row.update(date_event="2020-05",sighting_datetime="2020-05",lng=None)
+                    row.update(date_event="2020-05",sighting_datetime="2020-05",date_event_raw="2020-05",lng=None)
                 elif key == 5:
                     row["color"]="Blue"
                 elif key == 6:
-                    row.update(date_event=None,sighting_datetime=None,lat=None,lng=None)
+                    row.update(date_event=None,sighting_datetime=None,date_event_raw="original date",lat=None,lng=None)
                 elif key == 7:
-                    row.update(date_event="0019-01-02T07:30",sighting_datetime="0019-01-02T07:30")
+                    row.update(date_event="0019-01-02T07:30",sighting_datetime="0019-01-02T07:30",date_event_raw="19-01-02")
                 if key in (3,4,5):
                     row.update(location_id=2,lat=42,lng=12)
                 rows.append(tuple(row[name] for name in fields))
@@ -150,7 +150,7 @@ class QualityTests(unittest.TestCase):
                    ('1990-01-01','1990-01-01',"1990's",5),
                    (None,None,'10/11/1990',6)]
             db.executemany('UPDATE sighting SET date_event=?,sighting_datetime=?,date_event_raw=? WHERE id=?',cases)
-            db.execute('UPDATE sighting SET location_id=NULL WHERE id=6')
+            db.execute('UPDATE sighting SET location_id=NULL,time_raw=NULL WHERE id=6')
         self.manifest.update(size_bytes=self.source.stat().st_size,sha256=silver.digest(self.source))
         report=self.build()
         with closing(sqlite3.connect(self.target)) as db:
@@ -160,6 +160,7 @@ class QualityTests(unittest.TestCase):
             self.assertEqual(db.execute('SELECT evidence_year_min,evidence_year_max FROM sighting_analytical WHERE id=5').fetchone(),(1990,1999))
             self.assertEqual(db.execute('SELECT date_event,usable_for_calendar,usable_for_country FROM sighting_analytical WHERE id=6').fetchone(),(None,0,0))
             self.assertEqual(db.execute('SELECT COUNT(*),COUNT(DISTINCT id) FROM sighting_analytical').fetchone(),(7,7))
+            self.assertEqual(db.execute('SELECT time_basis,uses_external_evidence FROM sighting_analytical WHERE id=6').fetchone(),(None,0))
             self.assertEqual(db.execute("SELECT reported_value,coded_value,reported_iso2,coded_iso2 FROM country_evidence WHERE table_name='location' AND record_id='1'").fetchone(),('CA','US','CA','US'))
             self.assertEqual(db.execute("SELECT json_extract(raw_value,'$') FROM silver_rescued_value WHERE table_name='location' AND record_id='1' AND column_name='country'").fetchone()[0],'CA')
             self.assertEqual(db.execute('SELECT COUNT(*) FROM sighting_reports_for_time_analysis WHERE id IN (4,5,6)').fetchone()[0],0)
@@ -276,6 +277,40 @@ class QualityTests(unittest.TestCase):
         self.assertEqual(quality.parse_date('1949-02-29','2026-11-21')[2],'invalid')
         self.assertEqual(quality.parse_date('2027','2026-11-21')[2],'review')
         self.assertEqual(quality.parse_date('0019-01-02','2026-11-21',False)[2],'valid')
+
+    def test_catalogue_geography_is_compared_with_bronze_before_use(self):
+        with closing(sqlite3.connect(self.source)) as db, db:
+            db.execute("INSERT INTO source_database VALUES (2,'UFO-search')")
+            # Bronze geocoded "Palestine" in Texas; the catalogue places it in Jerusalem.
+            db.execute("""UPDATE sighting SET source_db_id=2,source_record_id='Hatch_UDB_5',date_event_raw='5/21/70',
+                date_event=NULL,sighting_datetime=NULL,time_raw=NULL,location_id=2,lat=31.76212,lng=-95.63079 WHERE id=5""")
+            # No Bronze pair: the same report's catalogue place may fill it.
+            db.execute("""UPDATE sighting SET source_db_id=2,source_record_id='Hatch_UDB_6',date_event_raw='1/840?',
+                time_raw=NULL,location_id=NULL WHERE id=6""")
+        self.manifest.update(size_bytes=self.source.stat().st_size,sha256=silver.digest(self.source),
+                             expected_sources={"UFOCAT":5,"UFO-search":2})
+        self.build()
+        with closing(sqlite3.connect(self.target)) as db:
+            self.assertEqual(db.execute('SELECT lat,lng,coordinate_status FROM sighting WHERE id=5').fetchone(),(None,None,'review'))
+            self.assertEqual(db.execute('SELECT country_status,country_basis,coordinate_basis,usable_for_map,usable_for_country FROM sighting_analytical WHERE id=5').fetchone(),
+                             ('conflict','source_conflict','source_conflict',0,0))
+            self.assertEqual(db.execute("SELECT COUNT(*) FROM quality_issue WHERE record_id='5' AND rule_id IN ('source_coordinate_conflict','source_country_conflict')").fetchone()[0],2)
+            self.assertEqual(db.execute('SELECT time_raw,time_basis,uses_external_evidence FROM sighting_analytical WHERE id=5').fetchone(),('~18:00','original_catalog',1))
+            self.assertEqual(db.execute('SELECT lat,lng,coordinate_status FROM sighting WHERE id=6').fetchone(),(45.750002,4.866667,'valid'))
+            self.assertEqual(db.execute('SELECT canonical_country_iso2,country_basis,coordinate_basis,uses_external_evidence FROM sighting_analytical WHERE id=6').fetchone(),
+                             ('FR','original_catalog','original_catalog_place',1))
+            self.assertEqual(db.execute('SELECT coordinate_check,country_check,coordinates_applied FROM source_geography_evidence ORDER BY sighting_id').fetchall(),
+                             [('conflict','conflict',0),('fill','fill',1)])
+            self.assertEqual(db.execute('SELECT COUNT(*) FROM sighting_analytical WHERE uses_external_evidence=1').fetchone()[0],2)
+        self.assertTrue(silver.verify(self.source,self.target,self.manifest,self.policy)['passed'])
+
+    def test_rescued_values_keep_size_annotations_but_not_blank_text(self):
+        self.build()
+        with closing(sqlite3.connect(self.target)) as db:
+            rescued=dict(((row[0],row[1]),json.loads(row[2])) for row in db.execute(
+                "SELECT record_id,column_name,raw_value FROM silver_rescued_value WHERE table_name='crash_retrieval'"))
+            self.assertEqual(rescued,{('estimate','craft_size_m'):'~30 (99 ft, per source)',
+                                      ('component','craft_size_m'):'component-only (no intact craft)'})
 
 
 if __name__=='__main__':

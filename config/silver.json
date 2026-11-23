@@ -1,6 +1,6 @@
 {
-  "version": 5,
-  "scope": "Silver depurada con trazabilidad por campo, fechas y precisión, geografía, tipos, reglas de calidad y agrupación conservadora de duplicados.",
+  "version": 6,
+  "scope": "Silver depurada con trazabilidad por campo, fechas sustentadas por el texto original, marcadores de día por fuente, geografía externa contrastada con Bronze, tipos, reglas de calidad y agrupación conservadora de duplicados.",
   "drop_columns": {
     "crash_retrieval": [
       "evidence_quality",
@@ -59,7 +59,108 @@
   "quality": {
     "source_time_reference": "config/silver-source-times.json",
     "source_geography_reference": "config/silver-source-geography.json",
+    "source_geography_policy": {
+      "corroboration_km": 50,
+      "region_members": {
+        "Great Britain and Ireland": [
+          "GB",
+          "IE",
+          "IM",
+          "JE",
+          "GG"
+        ],
+        "Scandanavian and Finland": [
+          "NO",
+          "SE",
+          "DK",
+          "FI",
+          "IS",
+          "FO",
+          "AX",
+          "SJ"
+        ],
+        "Belgium, Netherlandsand Luxembourg": [
+          "BE",
+          "NL",
+          "LU"
+        ],
+        "Republic of South Africa": [
+          "ZA"
+        ],
+        "Zimbabwe & Zambia": [
+          "ZW",
+          "ZM"
+        ],
+        "Korea(both sides)": [
+          "KR",
+          "KP"
+        ],
+        "Former Yugoslavia": [
+          "SI",
+          "HR",
+          "BA",
+          "RS",
+          "ME",
+          "MK"
+        ],
+        "Estonia, Latvia& Lithuania": [
+          "EE",
+          "LV",
+          "LT"
+        ],
+        "Kazakh Republic": [
+          "KZ"
+        ],
+        "Taiwan China": [
+          "TW"
+        ],
+        "Ivory Coast, Ghana, Togo, Benin, Liberia": [
+          "CI",
+          "GH",
+          "TG",
+          "BJ",
+          "LR"
+        ],
+        "Czech and Slovak Republics": [
+          "CZ",
+          "SK"
+        ],
+        "Guyanas (all 3 of them)": [
+          "GY",
+          "SR",
+          "GF"
+        ],
+        "Congo states": [
+          "CG",
+          "CD"
+        ],
+        "Belorus": [
+          "BY"
+        ],
+        "Uzbek Republic": [
+          "UZ"
+        ],
+        "Turkmen Republic": [
+          "TM"
+        ],
+        "Tadzhik Republic": [
+          "TJ"
+        ]
+      }
+    },
     "analytical_contract": 1,
+    "temporal_placeholders": {
+      "candidates": {
+        "day": [
+          "01",
+          "15"
+        ],
+        "month_day": [
+          "01-01"
+        ]
+      },
+      "ratio_threshold": 1.25
+    },
     "coordinate_conflict_scope": "all",
     "reference_date": "2026-11-21",
     "country_reference": "config/countries.json",

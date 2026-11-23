@@ -1,6 +1,6 @@
 # Silver
 
-La política v5 de `config/silver.json` se aplica a Bronze v17. Conserva las 10
+La política v6 de `config/silver.json` se aplica a Bronze v17. Conserva las 10
 tablas originales, todas sus filas y sus identificadores. Omite las 41 columnas
 vacías aprobadas y cuatro índices asociados. Añade columnas de calidad, tablas
 de trazabilidad y vistas de eventos canónicos. Bronze permanece intacta.
@@ -53,6 +53,28 @@ También se puede construir otra copia con `--database RUTA`.
   corruptos. Recupera `time_raw` desde UFO-search por ID único y fecha original
   idéntica: crea timestamps únicamente con día válido, hora exacta y sin fechas
   alternativas ni intervalos. Las horas aproximadas se conservan como texto.
+  La v6 exige que **cada componente de la fecha canónica aparezca en
+  `date_event_raw`** cuando el texto no pertenece a la gramática declarada.
+  El día o mes que el origen sintetizó se retira (`07/52 → 1952-07`,
+  `Sometime in 1952 → 1952`, certeza `coarsened`); si ni siquiera el año
+  aparece en el texto (`20 Feb`), la fecha queda `qualified` con evidencia
+  `unsupported` y regla `temporal_unsupported`. Lenguaje aproximado,
+  alternativo, relativo o de publicación (`about`, `~`, `or`, `?`, `reported`,
+  `listed on website`…) deja la fecha `qualified`, fuera del calendario. Se
+  reconoce el formato italiano de Capella (`LUN. 06 DICEMBRE 1937 17.35 …`):
+  la fecha inicial es explícita y los calificadores posteriores afectan a la
+  hora; `o 1980`, `?` o `/` inmediatamente después la califican. `1938
+  (September)` conserva el mes. Las fechas en revisión no conservan etiqueta
+  de precisión. Los años de dos cifras solo corroboran el siglo del origen;
+  Silver no lo crea.
+- **Marcadores de día por fuente:** `temporal_placeholder_profile` mide, por
+  fuente, la frecuencia de los días `01` y `15` frente a la mediana de los
+  días 02–28, y de `01-01` frente al día 1 de los otros meses. Un exceso de
+  1,25× o más marca el patrón: los informes afectados tienen
+  `day_placeholder_risk=1` (y `month_placeholder_risk=1` para `01-01`).
+  No se puede saber qué informe usó el marcador, así que la fecha se conserva,
+  pero `calendar_precision` baja a mes (o a año), y
+  `usable_for_day_analysis` / `usable_for_month_analysis` los excluyen.
 - **Coordenadas:** solo publicar pares completos dentro de los límites
   geográficos. Los pares inválidos o incompletos pasan a NULL; se conserva el
   registro y se añade `coordinate_status`. Coordenadas obligatorias inválidas
@@ -61,10 +83,16 @@ También se puede construir otra copia con `--database RUTA`.
   a los informes vinculados que copian exactamente ese par original; otros pares
   distintos se conservan. `coordinate_country_conflict` conserva el par original
   y la evidencia del conflicto. Se evalúa antes de agrupar duplicados.
-  Si el mismo informe aporta coordenadas independientes en el catálogo original,
-  se usan sus coordenadas en `sighting`, con trazabilidad por campo y
-  `coordinate_basis='original_catalog_place'`. No se copian a otros informes ni
-  se presentan como posición exacta del testigo. Los registros explícitamente
+  Las coordenadas del catálogo original del mismo informe se **contrastan con
+  Bronze antes de usarse** (`source_geography_evidence.coordinate_check`):
+  rellenan solo un par ausente o inválido (`fill`,
+  `coordinate_basis='original_catalog_place'`); si coinciden a 50 km o menos
+  con el par de Bronze, se conserva el de Bronze (`bronze_corroborated`); si
+  discrepan, o si rellenarían un informe cuyo país contradice al de Bronze,
+  ningún par se publica (`coordinate_status='review'`, regla
+  `source_coordinate_conflict`, `coordinate_basis='source_conflict'`). La
+  evidencia externa nunca levanta una cuarentena de Bronze (`quarantined`).
+  No se copian a otros informes ni se presentan como posición exacta del testigo. Los registros explícitamente
   lunares, planetarios u orbitales tienen `coordinate_status='not_applicable'`;
   no se sitúan en el mapa terrestre. Los valores fuera de rango del catálogo
   siguen como evidencia, sin ajustarlos a los límites.
@@ -74,10 +102,16 @@ También se puede construir otra copia con `--database RUTA`.
   representaciones discrepan o son históricas/ambiguas, el país canónico queda
   NULL y `country_status` señala revisión. No se adivina un país por una ciudad
   ni se convierte automáticamente un país histórico en su sucesor actual.
-  En `sighting_analytical`, un país inequívoco del catálogo original del informe
-  tiene precedencia sobre la ubicación compartida. `country_basis` indica esta
-  decisión. Las regiones que abarcan varios países permanecen sin país canónico;
-  la nacionalidad de una prueba nuclear no se usa como país de su ubicación.
+  En `sighting_analytical`, el país del catálogo original del informe solo
+  rellena una ubicación sin país válido (`country_basis='original_catalog'`).
+  Si coincide con Bronze, se publica el de Bronze (`location_corroborated`); si
+  lo contradice, el país queda desconocido (`country_status='conflict'`,
+  `country_basis='source_conflict'`, regla `source_country_conflict`). Un
+  conflicto interno de Bronze no se resuelve con evidencia externa. Las
+  regiones que abarcan varios países (`Great Britain and Ireland`, …) nunca
+  asignan país: `quality.source_geography_policy.region_members` solo permite
+  detectar contradicciones. La nacionalidad de una prueba nuclear no se usa
+  como país de su ubicación.
 - **Dependencias geográficas:** la distancia y el sitio nuclear más cercano
   quedan NULL si su par de coordenadas no es utilizable. Los valores de origen
   se conservan con `geographic_dependency` y en `silver_rescued_value`.
@@ -114,13 +148,14 @@ También se puede construir otra copia con `--database RUTA`.
 | `quality_rule` / `quality_issue` | Contrato, gravedad, valor original y tratamiento de cada incidencia. |
 | `silver_change` | Valores anterior y nuevo y regla de cada campo original modificado. |
 | `silver_run` | Versión, hashes de código, política y catálogo, referencia temporal y procedencia. |
-| `sighting_analytical` | Una fila por informe, fuente, vínculo canónico y elegibilidad independiente para mapa, calendario y país. |
+| `sighting_analytical` | Una fila por informe, fuente, vínculo canónico y elegibilidad independiente para mapa, calendario, mes, día y país; procedencia por dimensión (`coordinate_basis`, `country_basis`, `time_basis`, `clock_basis`) y `uses_external_evidence`. |
+| `temporal_placeholder_profile` | Frecuencias observadas, línea base, razón y marca de los días marcadores por fuente. |
 | `sighting_reports_for_map` / `sighting_reports_for_time_analysis` | Vistas por informe; no eliminan duplicados al contar informes. |
 | `country_evidence` | Ambas representaciones originales del país y sus códigos reconocidos independientemente; no adjudica conflictos. |
 | `temporal_evidence` | Texto original, interpretación, precisión recuperada, intervalos y marca de aplicación. |
 | `source_time_evidence` | Hora del registro original, ID enlazado, fecha coincidente y marca de timestamp aplicado. |
-| `source_geography_evidence` | Coordenadas y país originales del informe, dominio terrestre o no terrestre y marca de aplicación. |
-| `silver_rescued_value` | Valores originales retirados de campos canónicos, en JSON y con su regla. |
+| `source_geography_evidence` | Coordenadas y país originales del informe, dominio terrestre o no terrestre, distancia al par de Bronze y decisión por país y coordenadas. |
+| `silver_rescued_value` | Valores originales con información retirados de campos canónicos (sin cadenas vacías) y anotaciones de medidas aproximadas, en JSON y con su regla. |
 | `quality_quarantine` / `quality_summary` | Incidencias no utilizables o pendientes, y conteos por regla sin duplicar columnas del mismo registro. |
 
 La vista canónica facilita contar representantes según una regla explícita.
