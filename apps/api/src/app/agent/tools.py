@@ -45,6 +45,131 @@ def query_schema(analytics: Analytics) -> dict:
     }
 
 
+def needs_schema(analytics: Analytics) -> dict:
+    """What the question asks for, declared by the model so coverage is decided in code."""
+    query = query_schema(analytics)["properties"]
+    return {"type": ["object", "null"], "additionalProperties": False,
+            "description": "Lo que pide la pregunta, con IDs reales de find_entities: filtros (país, año, fuente…), "
+                           "agrupación y métricas. El código compara cada candidata con esto.",
+            "properties": {"filters": query["filters"], "group_by": query["group_by"], "metrics": query["metrics"]}}
+
+
+def _same(a, b) -> bool:
+    norm = lambda v: sorted(map(_same_key, v)) if isinstance(v, list) else _same_key(v)
+    return norm(a) == norm(b)
+
+
+def _same_key(value) -> str:
+    return str(int(value) if isinstance(value, bool) else value).strip().casefold()
+
+
+def _plan_or_none(analytics: Analytics, raw: dict):
+    try:
+        q = Query.parse(raw, analytics.limits)
+        return q, analytics._plan(q)
+    except QueryError:
+        return None, None
+
+
+def _readable(analytics: Analytics, raw: dict) -> str | None:
+    q, plan = _plan_or_none(analytics, raw)
+    return analytics._readable(q, plan, plan["metrics"])["texto"] if plan else None
+
+
+def _needs(raw) -> dict:
+    if raw is None:
+        return {}
+    if not isinstance(raw, dict) or set(raw) - {"filters", "group_by", "metrics"}:
+        raise QueryError("contract", "needs admite solo filters, group_by y metrics")
+    filters = raw.get("filters") or []
+    if not isinstance(filters, list) or not all(isinstance(f, dict) and isinstance(f.get("column"), str) for f in filters):
+        raise QueryError("contract", "needs.filters debe ser una lista de filtros con column")
+    for key in ("group_by", "metrics"):
+        if raw.get(key) is not None and not (isinstance(raw[key], list) and all(isinstance(v, str) for v in raw[key])):
+            raise QueryError("contract", f"needs.{key} debe ser una lista de textos")
+    return {"filters": [{"column": f["column"], "op": f.get("op", "eq"), "value": f.get("value")} for f in filters],
+            "group_by": raw.get("group_by"), "metrics": raw.get("metrics") or []}
+
+
+def coverage(analytics: Analytics, item: dict, needs: dict) -> dict:
+    """Compare a certified query with what the question needs; list every gap."""
+    query = item["query"]
+    missing = []
+    for need in needs.get("filters", []):
+        if not any(f["column"] == need["column"] and f.get("op", "eq") == need["op"] and _same(f.get("value"), need["value"])
+                   for f in query.get("filters", [])):
+            missing.append({"aspect": "filter", **need})
+    if needs.get("group_by") is not None and sorted(needs["group_by"]) != sorted(query.get("group_by", [])):
+        missing.append({"aspect": "group_by", "asked": needs["group_by"], "certified": query.get("group_by", [])})
+    for metric in needs.get("metrics", []):
+        if metric not in query.get("metrics", []):
+            missing.append({"aspect": "metric", "metric": metric})
+    columns = analytics.datasets[query["dataset"]]["columns"]
+    unsupported = sorted({m.get("column") for m in missing if m["aspect"] == "filter" and m["column"] not in columns}
+                         | {c for m in missing if m["aspect"] == "group_by" for c in m["asked"] if c not in columns})
+    return {"coverage": "total" if not missing else "parcial", "missing": missing,
+            "dataset_lacks_columns": unsupported}
+
+
+def compose_from(analytics: Analytics, item: dict, needs: dict) -> dict | None:
+    """A valid query equivalent to the certified one plus what the question adds.
+
+    Keeps the certified dataset when it has every needed column; otherwise moves to
+    the first dataset that does, declaring the eligibility its columns require.
+    """
+    base = item["query"]
+    asked = {(f["column"], f["op"]) for f in needs.get("filters", [])}
+    filters = [f for f in base.get("filters", []) if (f["column"], f.get("op", "eq")) not in asked] + needs.get("filters", [])
+    group_by = needs["group_by"] if needs.get("group_by") is not None else list(base.get("group_by", []))
+    metrics = list(dict.fromkeys([*base.get("metrics", []), *needs.get("metrics", [])]))
+    used = {*group_by, *(f["column"] for f in filters)}
+    candidates = [base["dataset"]] + sorted(d for d in analytics.datasets if d != base["dataset"])
+    for dataset in candidates:
+        spec = analytics.datasets[dataset]
+        if not used <= set(spec["columns"]) or not all(dataset in analytics.metrics.get(m, {}).get("datasets", []) for m in metrics):
+            continue
+        eligibility = [] if spec["eligibility"] else sorted(
+            analytics._requirements(dataset, used) | {r for m in metrics for r in analytics.metrics[m]["requires"]})
+        for view in dict.fromkeys([base.get("view", "table"), "table"]):
+            raw = {**{k: v for k, v in base.items() if k != "title"}, "dataset": dataset, "filters": filters,
+                   "group_by": group_by, "metrics": metrics, "eligibility": eligibility, "view": view}
+            if dataset != base["dataset"] and not spec.get("row_listing"):
+                raw["columns"] = []
+            if _plan_or_none(analytics, raw)[1]:
+                return raw
+    return None
+
+
+def search(analytics: Analytics, question: str, needs: dict) -> dict:
+    found = analytics.search_certified(question)
+    items = {i["id"]: i for i in analytics.certified()["queries"]}
+    candidates, decision = [], None
+    for f in found:
+        item = items[f["id"]]
+        entry = {"id": f["id"], "title": f["title"], "score": f["score"], "valid": f["status"]["valid"],
+                 "invalid_reasons": f["status"]["reasons"], "description": item["description"],
+                 "examples": item["examples"], "limitation": item["limitation"],
+                 "certified_query": {k: item["query"].get(k) for k in ("dataset", "filters", "group_by", "metrics", "view")},
+                 "readable_query": _readable(analytics, item["query"])}
+        if needs:
+            entry.update(coverage(analytics, item, needs))
+            if entry["coverage"] == "total" and entry["valid"]:
+                decision = decision or {"tool": "run_certified", "id": f["id"]}
+            elif entry["coverage"] == "parcial" or not entry["valid"]:
+                composed = compose_from(analytics, item, needs)
+                entry["composed_query"] = composed
+                entry["composed_readable_query"] = _readable(analytics, composed) if composed else None
+        candidates.append(entry)
+    if needs and decision is None:
+        composed = next((c["composed_query"] for c in candidates if c.get("composed_query")), None)
+        decision = {"tool": "query_gold", "query": composed} if composed else {"tool": "query_gold", "query": None}
+    return {"candidates": candidates, "decision": decision,
+            "rule": ("Ejecuta run_certified solo si la candidata es válida y su coverage es total. "
+                     "Con coverage parcial o certificación inválida, usa query_gold con composed_query "
+                     "(añade title) o compón otra que cubra todos los filtros, la agrupación y las métricas pedidas. "
+                     "Si no declaraste needs, compara tú certified_query con la pregunta antes de decidir.")}
+
+
 def schemas(analytics: Analytics) -> list[dict]:
     certified = [q["id"] for q in analytics.certified()["queries"]]
 
@@ -52,9 +177,12 @@ def schemas(analytics: Analytics) -> list[dict]:
         return {"type": "function", "strict": False, "name": name, "description": description,
                 "parameters": {"type": "object", "properties": properties, "required": required, "additionalProperties": False}}
     return [
-        fn("search_certified", "Busca consultas certificadas para la pregunta. Úsala SIEMPRE antes de componer una consulta.",
-           {"question": {"type": "string", "maxLength": 500}}, ["question"]),
-        fn("run_certified", "Ejecuta una consulta certificada válida por su ID y devuelve su visualización.",
+        fn("search_certified", "Busca consultas certificadas para la pregunta. Úsala SIEMPRE antes de componer una consulta. "
+                               "Declara en needs los filtros, la agrupación y las métricas que pide la pregunta: el código "
+                               "devuelve la cobertura de cada candidata y, si es parcial, una consulta compuesta equivalente.",
+           {"question": {"type": "string", "maxLength": 500}, "needs": needs_schema(analytics)}, ["question", "needs"]),
+        fn("run_certified", "Ejecuta una consulta certificada válida por su ID y devuelve su visualización. "
+                            "Solo cuando search_certified indicó coverage total: no admite filtros adicionales.",
            {"id": {"type": "string", "enum": certified}}, ["id"]),
         {"type": "function", "strict": False, "name": "query_gold",
          "description": "Ejecuta una consulta validada sobre Gold y devuelve una visualización lista. Sin SQL. "
@@ -114,12 +242,7 @@ def execute(analytics: Analytics, name: str, arguments: dict, visuals: list) -> 
         question = arguments.get("question")
         if not isinstance(question, str) or not question.strip():
             raise QueryError("contract", "search_certified requiere question")
-        found = analytics.search_certified(question)
-        items = {i["id"]: i for i in analytics.certified()["queries"]}
-        return {"candidates": [{"id": f["id"], "title": f["title"], "score": f["score"], "valid": f["status"]["valid"],
-                                "description": items[f["id"]]["description"], "examples": items[f["id"]]["examples"],
-                                "limitation": items[f["id"]]["limitation"]} for f in found],
-                "rule": "Si un candidato válido responde la pregunta, ejecútalo con run_certified; si no, compón con query_gold."}
+        return search(analytics, question, _needs(arguments.get("needs")))
     if name == "find_entities":
         text, kind = arguments.get("text"), arguments.get("kind")
         if not isinstance(text, str) or (kind is not None and kind not in KINDS):
