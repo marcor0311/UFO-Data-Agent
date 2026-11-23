@@ -1,0 +1,231 @@
+.demo {
+  --selection: #efc480;
+  display: grid;
+  grid-template-columns: minmax(0, 0.86fr) minmax(0, 1.14fr);
+  gap: 1.15rem clamp(1.25rem, 2.7vw, 2.9rem);
+  margin: 0;
+  padding: clamp(1rem, 2vw, 2rem);
+  border: 1px solid var(--rule);
+  background: var(--backdrop);
+}
+
+.demo h3 {
+  margin: 0;
+  font-size: clamp(1.15rem, 1.6vw, 1.42rem);
+  line-height: 1.25;
+  letter-spacing: -0.025em;
+}
+
+.chart, .mapPane {
+  min-width: 0;
+}
+
+.chartTitle, .mapTitle, .mapFooter {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+}
+
+.chartTitle, .mapTitle {
+  min-height: 2.4rem;
+}
+
+.demo button {
+  color: var(--ink);
+  background: transparent;
+  border: 1px solid var(--rule);
+  border-radius: 2px;
+  font-size: 0.875rem;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.demo button:hover {
+  border-color: var(--muted);
+}
+
+.chartTitle button {
+  padding: 0.35rem 0.55rem;
+  white-space: nowrap;
+}
+
+.chartTitle button[aria-pressed="true"] {
+  border-color: #677e92;
+  color: var(--signal);
+}
+
+.chartInstruction, .chartNote, .demo figcaption, .mapFooter, .selection {
+  color: var(--muted);
+  font-size: 0.875rem;
+}
+
+.chartInstruction {
+  margin: 0.45rem 0 0;
+}
+
+.chartNote {
+  margin: 0.85rem 0 0;
+}
+
+.plot {
+  --plot-height: clamp(10.5rem, 18vw, 16rem);
+  position: relative;
+  margin-top: 1.8rem;
+  padding-inline-start: 1.75rem;
+}
+
+.grid {
+  position: absolute;
+  inset: 0 0 auto;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  height: var(--plot-height);
+  pointer-events: none;
+}
+
+.grid span {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  height: 0;
+  color: var(--muted);
+  font-size: 0.75rem;
+  font-variant-numeric: tabular-nums;
+}
+
+.grid span::after {
+  position: absolute;
+  right: 0;
+  left: 1.6rem;
+  border-top: 1px solid var(--rule);
+  content: "";
+}
+
+.bars {
+  position: relative;
+  display: grid;
+  grid-template-columns: repeat(12, minmax(0, 1fr));
+  gap: clamp(0.125rem, 0.35vw, 0.35rem);
+}
+
+.bars button {
+  display: grid;
+  grid-template-rows: var(--plot-height) auto;
+  justify-items: center;
+  min-width: 0;
+  padding: 0;
+  border: 0;
+}
+
+.barSpace {
+  display: flex;
+  align-items: end;
+  width: 100%;
+  padding: 0 9%;
+}
+
+.bar {
+  position: relative;
+  display: block;
+  width: 100%;
+  height: var(--bar-height);
+  background: #91aabd;
+}
+
+.bar span {
+  position: absolute;
+  bottom: calc(100% + 0.15rem);
+  left: 50%;
+  transform: translateX(-50%);
+  color: var(--ink);
+  font-size: 0.78rem;
+  font-variant-numeric: tabular-nums;
+}
+
+.bars button:hover .bar, .bars button[aria-pressed="true"] .bar {
+  background: var(--selection);
+}
+
+.bars button[aria-pressed="true"] .bar span, .bars button[aria-pressed="true"] .month {
+  color: var(--selection);
+}
+
+.month {
+  padding-top: 0.5rem;
+  font-size: clamp(0.62rem, 0.9vw, 0.82rem);
+}
+
+.selection {
+  margin: 0;
+  color: var(--selection);
+  text-align: end;
+}
+
+.map {
+  margin-top: 0.45rem;
+  border: 1px solid var(--rule);
+  background: radial-gradient(ellipse at 50% 45%, #1c3043, #101823 75%);
+}
+
+.map canvas {
+  display: block;
+  width: 100%;
+  height: clamp(17rem, 29vw, 26rem);
+  cursor: grab;
+  user-select: none;
+}
+
+.map canvas:active {
+  cursor: grabbing;
+}
+
+.map canvas:focus-visible {
+  outline-offset: -3px;
+}
+
+.mapFooter {
+  flex-wrap: wrap;
+  padding: 0.5rem 0.65rem;
+  border-top: 1px solid var(--rule);
+  background: var(--backdrop);
+}
+
+.mapControls, .zoomControls {
+  display: flex;
+  gap: 0.35rem;
+}
+
+.mapControls {
+  margin-inline-start: auto;
+}
+
+.mapControls button {
+  min-width: 2.5rem;
+  min-height: 2.5rem;
+  padding: 0.25rem 0.65rem;
+  white-space: nowrap;
+}
+
+.mapControls button[aria-pressed="true"] {
+  border-color: var(--selection);
+  color: var(--selection);
+}
+
+.mapControls button:disabled {
+  opacity: 0.45;
+  border-color: var(--rule);
+  cursor: default;
+}
+
+.zoomControls button {
+  font-size: 1.15rem;
+}
+
+.demo figcaption {
+  grid-column: 1 / -1;
+  padding-top: 0.85rem;
+  border-top: 1px solid var(--rule);
+}
