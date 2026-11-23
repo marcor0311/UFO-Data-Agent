@@ -1,0 +1,192 @@
+{
+  "description": "Métricas de Gold. Las expresiones son tipos cerrados que el motor convierte en SQL con identificadores validados: count, sum, count_distinct, avg, min, max. Ningún catálogo contiene SQL libre.",
+  "types": {
+    "additive": "Se puede sumar entre grupos y reagregar desde agregados.",
+    "ratio": "Se recalcula como suma del numerador / suma del denominador en cada grupo; nunca se suman ni promedian porcentajes.",
+    "non_additive": "No se puede sumar entre grupos; se calcula sobre las filas de origen de cada grupo."
+  },
+  "metrics": {
+    "report_count": {
+      "label": "Informes (cota superior)",
+      "definition": "Número de informes que cumplen filtros y elegibilidad, incluidos los que tienen pares candidatos pendientes de deduplicación.",
+      "unit": "informes", "type": "additive", "grain": "informe",
+      "duplicate_bound": {"role": "upper", "pair": "report_count_excl_candidates"},
+      "requires": [],
+      "datasets": {
+        "fact_report": {"op": "count"}, "report_model_output": {"op": "count"},
+        "agg_year": {"op": "sum", "column": "report_count"}, "agg_month": {"op": "sum", "column": "report_count"},
+        "agg_weekday_hour": {"op": "sum", "column": "report_count"}, "agg_country": {"op": "sum", "column": "report_count"},
+        "agg_shape": {"op": "sum", "column": "report_count"}, "agg_source": {"op": "sum", "column": "report_count"},
+        "agg_spatial_cell": {"op": "sum", "column": "report_count"}, "agg_nuclear_band": {"op": "sum", "column": "report_count"},
+        "agg_coverage": {"op": "sum", "column": "report_count"}
+      },
+      "warnings": ["Cuenta informes, no avistamientos ni eventos.", "Incluye informes que podrían ser duplicados pendientes: es una cota superior."]
+    },
+    "report_count_excl_candidates": {
+      "label": "Informes sin candidatos pendientes (cota inferior)",
+      "definition": "Informes que cumplen filtros y elegibilidad y no participan en ningún par candidato pendiente (has_pending_candidate=0). La diferencia con report_count es exactamente pending_candidate_reports.",
+      "unit": "informes", "type": "additive", "grain": "informe",
+      "duplicate_bound": {"role": "lower", "pair": "report_count"},
+      "requires": [],
+      "datasets": {
+        "fact_report": {"op": "sum", "column": "has_pending_candidate", "negate_flag": true},
+        "agg_year": {"op": "sum", "column": "report_count_excl_candidates"}, "agg_month": {"op": "sum", "column": "report_count_excl_candidates"},
+        "agg_weekday_hour": {"op": "sum", "column": "report_count_excl_candidates"}, "agg_country": {"op": "sum", "column": "report_count_excl_candidates"},
+        "agg_shape": {"op": "sum", "column": "report_count_excl_candidates"}, "agg_source": {"op": "sum", "column": "report_count_excl_candidates"},
+        "agg_spatial_cell": {"op": "sum", "column": "report_count_excl_candidates"}, "agg_nuclear_band": {"op": "sum", "column": "report_count_excl_candidates"},
+        "agg_coverage": {"op": "sum", "column": "report_count_excl_candidates"}
+      },
+      "warnings": ["Retira todos los informes con un par pendiente, aunque al menos uno de cada par sea un informe distinto; no es un conteo de eventos."]
+    },
+    "pending_candidate_reports": {
+      "label": "Informes con par candidato pendiente",
+      "definition": "Informes que participan en al menos un par de duplicate_candidate con decisión needs_review.",
+      "unit": "informes", "type": "additive", "grain": "informe", "requires": [],
+      "datasets": {
+        "fact_report": {"op": "sum", "column": "has_pending_candidate"},
+        "agg_year": {"op": "sum", "column": "pending_candidate_reports"}, "agg_month": {"op": "sum", "column": "pending_candidate_reports"},
+        "agg_weekday_hour": {"op": "sum", "column": "pending_candidate_reports"}, "agg_country": {"op": "sum", "column": "pending_candidate_reports"},
+        "agg_shape": {"op": "sum", "column": "pending_candidate_reports"}, "agg_source": {"op": "sum", "column": "pending_candidate_reports"},
+        "agg_spatial_cell": {"op": "sum", "column": "pending_candidate_reports"}, "agg_nuclear_band": {"op": "sum", "column": "pending_candidate_reports"},
+        "agg_coverage": {"op": "sum", "column": "pending_candidate_reports"}
+      },
+      "warnings": ["Un par pendiente no prueba que los informes sean duplicados ni que sean distintos."]
+    },
+    "external_evidence_reports": {
+      "label": "Informes con evidencia externa",
+      "definition": "Informes cuya coordenada, país u hora procede del catálogo fijado de UFO-search y no de Bronze (uses_external_evidence=1).",
+      "unit": "informes", "type": "additive", "grain": "informe", "requires": [],
+      "datasets": {
+        "fact_report": {"op": "sum", "column": "uses_external_evidence"},
+        "agg_year": {"op": "sum", "column": "external_evidence_reports"}, "agg_month": {"op": "sum", "column": "external_evidence_reports"},
+        "agg_weekday_hour": {"op": "sum", "column": "external_evidence_reports"}, "agg_country": {"op": "sum", "column": "external_evidence_reports"},
+        "agg_shape": {"op": "sum", "column": "external_evidence_reports"}, "agg_source": {"op": "sum", "column": "external_evidence_reports"},
+        "agg_spatial_cell": {"op": "sum", "column": "external_evidence_reports"}, "agg_nuclear_band": {"op": "sum", "column": "external_evidence_reports"},
+        "agg_coverage": {"op": "sum", "column": "external_evidence_reports"}
+      },
+      "warnings": ["Bronze no puede confirmar los valores externos."]
+    },
+    "confirmed_group_reports": {
+      "label": "Informes en grupos confirmados",
+      "definition": "Informes que pertenecen a un grupo de duplicados confirmado por coincidencia exacta (representantes y miembros).",
+      "unit": "informes", "type": "additive", "grain": "informe", "requires": [],
+      "datasets": {"fact_report": {"op": "sum", "column": "in_confirmed_group"}},
+      "warnings": []
+    },
+    "canonical_representative_reports": {
+      "label": "Representantes canónicos",
+      "definition": "Informes con is_canonical=1: un representante por grupo confirmado más cada informe sin grupo. Aplica la política de representantes de Silver.",
+      "unit": "informes", "type": "additive", "grain": "informe", "requires": [],
+      "datasets": {"fact_report": {"op": "sum", "column": "is_canonical"}},
+      "warnings": ["No es el número de eventos reales: los candidatos pendientes pueden ser el mismo evento."]
+    },
+    "media_reports": {
+      "label": "Informes que mencionan medios",
+      "definition": "Informes con has_media=1 (foto o video mencionados o adjuntos en el origen). No prueba que el medio exista ni que sea auténtico.",
+      "unit": "informes", "type": "additive", "grain": "informe", "requires": [],
+      "datasets": {"fact_report": {"op": "sum", "column": "has_media"}},
+      "warnings": ["Mencionar un medio no lo autentica."]
+    },
+    "event_count": {
+      "label": "Eventos confirmados",
+      "definition": "Grupos de duplicados confirmados por coincidencia exacta de fecha, hora, coordenadas, forma y descriptores.",
+      "unit": "eventos", "type": "additive", "grain": "evento confirmado", "requires": [],
+      "datasets": {"fact_event": {"op": "count"}},
+      "warnings": ["Solo existen eventos para grupos confirmados; los informes únicos y los candidatos pendientes no son eventos."]
+    },
+    "event_member_reports": {
+      "label": "Informes miembros de eventos confirmados",
+      "definition": "Suma de member_count de los grupos confirmados.",
+      "unit": "informes", "type": "additive", "grain": "evento confirmado", "requires": [],
+      "datasets": {"fact_event": {"op": "sum", "column": "member_count"}, "event_report": {"op": "count"}},
+      "warnings": []
+    },
+    "external_evidence_pct": {
+      "label": "% de informes con evidencia externa",
+      "definition": "100 × external_evidence_reports / report_count, recalculado en cada grupo.",
+      "unit": "%", "type": "ratio", "numerator": "external_evidence_reports", "denominator": "report_count", "factor": 100,
+      "requires": [],
+      "datasets": {"fact_report": {}, "agg_year": {}, "agg_month": {}, "agg_weekday_hour": {}, "agg_country": {}, "agg_shape": {}, "agg_source": {}, "agg_spatial_cell": {}, "agg_nuclear_band": {}},
+      "warnings": ["No se suman porcentajes entre grupos."]
+    },
+    "pending_candidate_pct": {
+      "label": "% de informes con candidato pendiente",
+      "definition": "100 × pending_candidate_reports / report_count, recalculado en cada grupo.",
+      "unit": "%", "type": "ratio", "numerator": "pending_candidate_reports", "denominator": "report_count", "factor": 100,
+      "requires": [],
+      "datasets": {"fact_report": {}, "agg_year": {}, "agg_month": {}, "agg_weekday_hour": {}, "agg_country": {}, "agg_shape": {}, "agg_source": {}, "agg_spatial_cell": {}, "agg_nuclear_band": {}},
+      "warnings": ["No se suman porcentajes entre grupos."]
+    },
+    "media_pct": {
+      "label": "% de informes que mencionan medios",
+      "definition": "100 × media_reports / report_count, recalculado en cada grupo.",
+      "unit": "%", "type": "ratio", "numerator": "media_reports", "denominator": "report_count", "factor": 100,
+      "requires": [],
+      "datasets": {"fact_report": {}},
+      "warnings": ["No se suman porcentajes entre grupos."]
+    },
+    "distinct_country_count": {
+      "label": "Países distintos",
+      "definition": "Número de códigos ISO2 distintos entre los informes aptos para país del grupo.",
+      "unit": "países", "type": "non_additive", "requires": ["country"],
+      "datasets": {"fact_report": {"op": "count_distinct", "column": "country_iso2"}, "agg_country": {"op": "count_distinct", "column": "country_iso2"}},
+      "warnings": ["No se suma entre grupos: un país puede aparecer en varios."]
+    },
+    "first_year": {
+      "label": "Primer año con informes",
+      "definition": "Año mínimo entre los informes aptos para calendario del grupo.",
+      "unit": "año", "type": "non_additive", "requires": ["calendar"],
+      "datasets": {"fact_report": {"op": "min", "column": "event_year"}, "agg_year": {"op": "min", "column": "event_year"}, "agg_month": {"op": "min", "column": "event_year"}},
+      "warnings": ["Los años muy antiguos proceden de compilaciones históricas; no prueban un fenómeno."]
+    },
+    "last_year": {
+      "label": "Último año con informes",
+      "definition": "Año máximo entre los informes aptos para calendario del grupo.",
+      "unit": "año", "type": "non_additive", "requires": ["calendar"],
+      "datasets": {"fact_report": {"op": "max", "column": "event_year"}, "agg_year": {"op": "max", "column": "event_year"}, "agg_month": {"op": "max", "column": "event_year"}},
+      "warnings": []
+    },
+    "avg_nuclear_distance_km": {
+      "label": "Distancia media a la instalación del catálogo más cercana",
+      "definition": "Media de nuclear_distance_km (Haversine, radio 6371 km, catálogo local de instalaciones) entre los informes aptos para proximidad.",
+      "unit": "km", "type": "non_additive", "requires": ["nuclear_proximity"],
+      "datasets": {"fact_report": {"op": "avg", "column": "nuclear_distance_km"}},
+      "warnings": ["La distancia es relativa al catálogo local de instalaciones de Silver (dim_nuclear_facility), no a todas las del mundo.", "Proximidad no implica relación causal."]
+    },
+    "scored_reports": {
+      "label": "Informes con puntuación de riesgo de engaño",
+      "definition": "Informes con hoax_likelihood no nulo.",
+      "unit": "informes", "type": "additive", "requires": [], "model_output": true,
+      "datasets": {"report_model_output": {"op": "count", "column": "hoax_likelihood"}},
+      "warnings": ["Salida de un modelo heredado del origen, no un hecho."]
+    },
+    "avg_hoax_likelihood": {
+      "label": "Probabilidad media de engaño (modelo)",
+      "definition": "Media de hoax_likelihood heredado del origen (0–1).",
+      "unit": "probabilidad del modelo", "type": "non_additive", "requires": [], "model_output": true,
+      "datasets": {"report_model_output": {"op": "avg", "column": "hoax_likelihood"}},
+      "warnings": ["Salida de un modelo heredado del origen sin calibración documentada; no prueba engaño ni veracidad."]
+    },
+    "avg_quality_score": {
+      "label": "Puntuación media de riqueza del origen",
+      "definition": "Media de quality_score heredado (0–100, heurística de riqueza de campos del origen). No es el cumplimiento del contrato Silver.",
+      "unit": "puntos del origen", "type": "non_additive", "requires": [], "model_output": true,
+      "datasets": {"report_model_output": {"op": "avg", "column": "quality_score"}},
+      "warnings": ["Heurística del origen; no mide veracidad."]
+    },
+    "avg_vader_compound": {
+      "label": "Sentimiento medio VADER (modelo)",
+      "definition": "Media de vader_compound (−1 a 1) sobre el texto del origen.",
+      "unit": "puntuación del modelo", "type": "non_additive", "requires": [], "model_output": true,
+      "datasets": {"report_model_output": {"op": "avg", "column": "vader_compound"}},
+      "warnings": ["Salida de modelo; mide el tono del texto, no lo ocurrido."]
+    },
+    "avg_roberta_sentiment": {
+      "label": "Sentimiento medio RoBERTa (modelo)",
+      "definition": "Media de roberta_sentiment (−1 a 1) sobre el texto del origen.",
+      "unit": "puntuación del modelo", "type": "non_additive", "requires": [], "model_output": true,
+      "datasets": {"report_model_output": {"op": "avg", "column": "roberta_sentiment"}},
+      "warnings": ["Salida de modelo; mide el tono del texto, no lo ocurrido."]
+    }
+  }
+}

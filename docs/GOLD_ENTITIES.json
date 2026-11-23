@@ -1,0 +1,4750 @@
+{
+ "load_id": "cb34d85bf862a18b55466abb2b22fc6b96a9219a3d018a6e7ab372063e665cb4",
+ "description": "Entidades resolubles por el agente: ID real (código usado en filtros), nombre canónico, alias y nombre de visualización en español.",
+ "regions_note": "Silver no publica regiones por informe; las etiquetas multinacionales del catálogo original solo detectan contradicciones. No hay entidades de región.",
+ "sources": [
+  {
+   "id": "Capella",
+   "canonical_name": "Capella",
+   "display_name": "Capella (corpus PhenomAInon)",
+   "aliases": [
+    "Capella",
+    "capella",
+    "corpus capella",
+    "phenomainon"
+   ],
+   "report_count": 30453,
+   "collection_code": "PUBLIUS",
+   "calendar_year_min": 1783,
+   "calendar_year_max": 2023
+  },
+  {
+   "id": "UFO-search",
+   "canonical_name": "UFO-search",
+   "display_name": "UFO-search (Majestic Timeline)",
+   "aliases": [
+    "UFO-search",
+    "geldreich",
+    "majestic timeline",
+    "ufo search",
+    "ufo-search",
+    "ufosearch"
+   ],
+   "report_count": 54751,
+   "collection_code": "GELDREICH",
+   "calendar_year_min": 1001,
+   "calendar_year_max": 2023
+  },
+  {
+   "id": "UFOCAT",
+   "canonical_name": "UFOCAT",
+   "display_name": "UFOCAT (CUFOS)",
+   "aliases": [
+    "UFOCAT",
+    "center for ufo studies",
+    "cufos",
+    "ufocat"
+   ],
+   "report_count": 320412,
+   "collection_code": "UFOCAT",
+   "calendar_year_min": 34,
+   "calendar_year_max": 2023
+  },
+  {
+   "id": "UPDB",
+   "canonical_name": "UPDB",
+   "display_name": "UPDB (Unified Phenomena Database)",
+   "aliases": [
+    "UPDB",
+    "publius",
+    "unified phenomena database",
+    "updb"
+   ],
+   "report_count": 296956,
+   "collection_code": "PUBLIUS",
+   "calendar_year_min": 100,
+   "calendar_year_max": 2022
+  }
+ ],
+ "origins": [
+  {
+   "id": "BAASS",
+   "canonical_name": "BAASS",
+   "display_name": "BAASS",
+   "aliases": [
+    "BAASS"
+   ],
+   "report_count": 1700
+  },
+  {
+   "id": "BLUEBOOK",
+   "canonical_name": "BLUEBOOK",
+   "display_name": "Proyecto Blue Book",
+   "aliases": [
+    "BLUEBOOK",
+    "Proyecto Blue Book"
+   ],
+   "report_count": 15544
+  },
+  {
+   "id": "BRAZILGOV",
+   "canonical_name": "BRAZILGOV",
+   "display_name": "Archivos del Gobierno de Brasil",
+   "aliases": [
+    "Archivos del Gobierno de Brasil",
+    "BRAZILGOV"
+   ],
+   "report_count": 1040
+  },
+  {
+   "id": "CANADAGOV",
+   "canonical_name": "CANADAGOV",
+   "display_name": "Archivos del Gobierno de Canadá",
+   "aliases": [
+    "Archivos del Gobierno de Canadá",
+    "CANADAGOV"
+   ],
+   "report_count": 1696
+  },
+  {
+   "id": "ITALY",
+   "canonical_name": "ITALY",
+   "display_name": "Archivos de Italia",
+   "aliases": [
+    "Archivos de Italia",
+    "ITALY"
+   ],
+   "report_count": 12202
+  },
+  {
+   "id": "MUFON",
+   "canonical_name": "MUFON",
+   "display_name": "MUFON",
+   "aliases": [
+    "MUFON"
+   ],
+   "report_count": 95683
+  },
+  {
+   "id": "NICAP",
+   "canonical_name": "NICAP",
+   "display_name": "NICAP",
+   "aliases": [
+    "NICAP"
+   ],
+   "report_count": 5841
+  },
+  {
+   "id": "NIDS",
+   "canonical_name": "NIDS",
+   "display_name": "NIDS",
+   "aliases": [
+    "NIDS"
+   ],
+   "report_count": 7038
+  },
+  {
+   "id": "NUFORC",
+   "canonical_name": "NUFORC",
+   "display_name": "NUFORC",
+   "aliases": [
+    "NUFORC"
+   ],
+   "report_count": 260482
+  },
+  {
+   "id": "PILOTS",
+   "canonical_name": "PILOTS",
+   "display_name": "Informes de pilotos",
+   "aliases": [
+    "Informes de pilotos",
+    "PILOTS"
+   ],
+   "report_count": 954
+  },
+  {
+   "id": "SKINWALKER",
+   "canonical_name": "SKINWALKER",
+   "display_name": "Skinwalker Ranch",
+   "aliases": [
+    "SKINWALKER",
+    "Skinwalker Ranch"
+   ],
+   "report_count": 4474
+  },
+  {
+   "id": "UFODNA",
+   "canonical_name": "UFODNA",
+   "display_name": "UFODNA",
+   "aliases": [
+    "UFODNA"
+   ],
+   "report_count": 38269
+  },
+  {
+   "id": "UKTNA",
+   "canonical_name": "UKTNA",
+   "display_name": "Archivos Nacionales del Reino Unido",
+   "aliases": [
+    "Archivos Nacionales del Reino Unido",
+    "UKTNA"
+   ],
+   "report_count": 5615
+  }
+ ],
+ "collections": [
+  {
+   "id": "GELDREICH",
+   "canonical_name": "GELDREICH",
+   "display_name": "Majestic Timeline de Rich Geldreich",
+   "aliases": [
+    "GELDREICH",
+    "Majestic Timeline de Rich Geldreich"
+   ]
+  },
+  {
+   "id": "PUBLIUS",
+   "canonical_name": "PUBLIUS",
+   "display_name": "Recopilación de Publius",
+   "aliases": [
+    "PUBLIUS",
+    "Recopilación de Publius"
+   ]
+  },
+  {
+   "id": "UFOCAT",
+   "canonical_name": "UFOCAT",
+   "display_name": "Catálogo UFOCAT de CUFOS",
+   "aliases": [
+    "Catálogo UFOCAT de CUFOS",
+    "UFOCAT"
+   ]
+  }
+ ],
+ "countries": [
+  {
+   "id": "AD",
+   "canonical_name": "Andorra",
+   "display_name": "Andorra",
+   "aliases": [
+    "AD",
+    "AND",
+    "Andorra"
+   ],
+   "alpha3": "AND",
+   "report_count": 8
+  },
+  {
+   "id": "AE",
+   "canonical_name": "United Arab Emirates",
+   "display_name": "Emiratos Árabes Unidos",
+   "aliases": [
+    "AE",
+    "ARE",
+    "Emiratos Árabes Unidos",
+    "United Arab Emirates"
+   ],
+   "alpha3": "ARE",
+   "report_count": 110
+  },
+  {
+   "id": "AF",
+   "canonical_name": "Afghanistan",
+   "display_name": "Afganistán",
+   "aliases": [
+    "AF",
+    "AFG",
+    "Afganistán",
+    "Afghanistan"
+   ],
+   "alpha3": "AFG",
+   "report_count": 102
+  },
+  {
+   "id": "AG",
+   "canonical_name": "Antigua and Barbuda",
+   "display_name": "Antigua y Barbuda",
+   "aliases": [
+    "AG",
+    "ATG",
+    "Antigua and Barbuda",
+    "Antigua y Barbuda"
+   ],
+   "alpha3": "ATG",
+   "report_count": 4
+  },
+  {
+   "id": "AI",
+   "canonical_name": "Anguilla",
+   "display_name": "Anguila",
+   "aliases": [
+    "AI",
+    "AIA",
+    "Anguila",
+    "Anguilla"
+   ],
+   "alpha3": "AIA",
+   "report_count": 0
+  },
+  {
+   "id": "AL",
+   "canonical_name": "Albania",
+   "display_name": "Albania",
+   "aliases": [
+    "AL",
+    "ALB",
+    "Albania"
+   ],
+   "alpha3": "ALB",
+   "report_count": 30
+  },
+  {
+   "id": "AM",
+   "canonical_name": "Armenia",
+   "display_name": "Armenia",
+   "aliases": [
+    "AM",
+    "ARM",
+    "Armenia"
+   ],
+   "alpha3": "ARM",
+   "report_count": 23
+  },
+  {
+   "id": "AO",
+   "canonical_name": "Angola",
+   "display_name": "Angola",
+   "aliases": [
+    "AGO",
+    "AO",
+    "Angola"
+   ],
+   "alpha3": "AGO",
+   "report_count": 47
+  },
+  {
+   "id": "AQ",
+   "canonical_name": "Antarctica",
+   "display_name": "Antártida",
+   "aliases": [
+    "AQ",
+    "ATA",
+    "Antarctica",
+    "Antártida"
+   ],
+   "alpha3": "ATA",
+   "report_count": 71
+  },
+  {
+   "id": "AR",
+   "canonical_name": "Argentina",
+   "display_name": "Argentina",
+   "aliases": [
+    "AR",
+    "ARG",
+    "Argentina"
+   ],
+   "alpha3": "ARG",
+   "report_count": 5291
+  },
+  {
+   "id": "AS",
+   "canonical_name": "American Samoa",
+   "display_name": "Samoa Americana",
+   "aliases": [
+    "AS",
+    "ASM",
+    "American Samoa",
+    "Samoa Americana"
+   ],
+   "alpha3": "ASM",
+   "report_count": 134
+  },
+  {
+   "id": "AT",
+   "canonical_name": "Austria",
+   "display_name": "Austria",
+   "aliases": [
+    "AT",
+    "AUT",
+    "Austria"
+   ],
+   "alpha3": "AUT",
+   "report_count": 589
+  },
+  {
+   "id": "AU",
+   "canonical_name": "Australia",
+   "display_name": "Australia",
+   "aliases": [
+    "AU",
+    "AUS",
+    "Australia"
+   ],
+   "alpha3": "AUS",
+   "report_count": 13519
+  },
+  {
+   "id": "AW",
+   "canonical_name": "Aruba",
+   "display_name": "Aruba",
+   "aliases": [
+    "ABW",
+    "AW",
+    "Aruba"
+   ],
+   "alpha3": "ABW",
+   "report_count": 13
+  },
+  {
+   "id": "AX",
+   "canonical_name": "Åland Islands",
+   "display_name": "Islas Åland",
+   "aliases": [
+    "ALA",
+    "AX",
+    "Islas Åland",
+    "Åland Islands"
+   ],
+   "alpha3": "ALA",
+   "report_count": 11
+  },
+  {
+   "id": "AZ",
+   "canonical_name": "Azerbaijan",
+   "display_name": "Azerbaiyán",
+   "aliases": [
+    "AZ",
+    "AZE",
+    "Azerbaijan",
+    "Azerbaiyán"
+   ],
+   "alpha3": "AZE",
+   "report_count": 34
+  },
+  {
+   "id": "BA",
+   "canonical_name": "Bosnia and Herzegovina",
+   "display_name": "Bosnia y Herzegovina",
+   "aliases": [
+    "BA",
+    "BIH",
+    "Bosnia and Herzegovina",
+    "Bosnia y Herzegovina"
+   ],
+   "alpha3": "BIH",
+   "report_count": 100
+  },
+  {
+   "id": "BB",
+   "canonical_name": "Barbados",
+   "display_name": "Barbados",
+   "aliases": [
+    "BB",
+    "BRB",
+    "Barbados"
+   ],
+   "alpha3": "BRB",
+   "report_count": 23
+  },
+  {
+   "id": "BD",
+   "canonical_name": "Bangladesh",
+   "display_name": "Bangladés",
+   "aliases": [
+    "BD",
+    "BGD",
+    "Bangladesh",
+    "Bangladés"
+   ],
+   "alpha3": "BGD",
+   "report_count": 39
+  },
+  {
+   "id": "BE",
+   "canonical_name": "Belgium",
+   "display_name": "Bélgica",
+   "aliases": [
+    "BE",
+    "BEL",
+    "Belgium",
+    "Bélgica"
+   ],
+   "alpha3": "BEL",
+   "report_count": 1369
+  },
+  {
+   "id": "BF",
+   "canonical_name": "Burkina Faso",
+   "display_name": "Burkina Faso",
+   "aliases": [
+    "BF",
+    "BFA",
+    "Burkina Faso"
+   ],
+   "alpha3": "BFA",
+   "report_count": 4
+  },
+  {
+   "id": "BG",
+   "canonical_name": "Bulgaria",
+   "display_name": "Bulgaria",
+   "aliases": [
+    "BG",
+    "BGR",
+    "Bulgaria"
+   ],
+   "alpha3": "BGR",
+   "report_count": 210
+  },
+  {
+   "id": "BH",
+   "canonical_name": "Bahrain",
+   "display_name": "Baréin",
+   "aliases": [
+    "BH",
+    "BHR",
+    "Bahrain",
+    "Baréin"
+   ],
+   "alpha3": "BHR",
+   "report_count": 12
+  },
+  {
+   "id": "BI",
+   "canonical_name": "Burundi",
+   "display_name": "Burundi",
+   "aliases": [
+    "BDI",
+    "BI",
+    "Burundi"
+   ],
+   "alpha3": "BDI",
+   "report_count": 5
+  },
+  {
+   "id": "BJ",
+   "canonical_name": "Benin",
+   "display_name": "Benín",
+   "aliases": [
+    "BEN",
+    "BJ",
+    "Benin",
+    "Benín"
+   ],
+   "alpha3": "BEN",
+   "report_count": 3
+  },
+  {
+   "id": "BL",
+   "canonical_name": "Saint Barthélemy",
+   "display_name": "San Bartolomé",
+   "aliases": [
+    "BL",
+    "BLM",
+    "Saint Barthélemy",
+    "San Bartolomé"
+   ],
+   "alpha3": "BLM",
+   "report_count": 0
+  },
+  {
+   "id": "BM",
+   "canonical_name": "Bermuda",
+   "display_name": "Bermudas",
+   "aliases": [
+    "BM",
+    "BMU",
+    "Bermuda",
+    "Bermudas"
+   ],
+   "alpha3": "BMU",
+   "report_count": 80
+  },
+  {
+   "id": "BN",
+   "canonical_name": "Brunei Darussalam",
+   "display_name": "Brunéi",
+   "aliases": [
+    "BN",
+    "BRN",
+    "Brunei",
+    "Brunei Darussalam",
+    "Brunéi"
+   ],
+   "alpha3": "BRN",
+   "report_count": 16
+  },
+  {
+   "id": "BO",
+   "canonical_name": "Bolivia (Plurinational State of)",
+   "display_name": "Bolivia",
+   "aliases": [
+    "BO",
+    "BOL",
+    "Bolivia",
+    "Bolivia (Plurinational State of)"
+   ],
+   "alpha3": "BOL",
+   "report_count": 145
+  },
+  {
+   "id": "BQ",
+   "canonical_name": "Bonaire, Sint Eustatius and Saba",
+   "display_name": "Bonaire, San Eustaquio y Saba",
+   "aliases": [
+    "BES",
+    "BQ",
+    "Bonaire, San Eustaquio y Saba",
+    "Bonaire, Sint Eustatius and Saba"
+   ],
+   "alpha3": "BES",
+   "report_count": 2
+  },
+  {
+   "id": "BR",
+   "canonical_name": "Brazil",
+   "display_name": "Brasil",
+   "aliases": [
+    "BR",
+    "BRA",
+    "Brasil",
+    "Brazil"
+   ],
+   "alpha3": "BRA",
+   "report_count": 7375
+  },
+  {
+   "id": "BS",
+   "canonical_name": "Bahamas",
+   "display_name": "Bahamas",
+   "aliases": [
+    "BHS",
+    "BS",
+    "Bahamas"
+   ],
+   "alpha3": "BHS",
+   "report_count": 127
+  },
+  {
+   "id": "BT",
+   "canonical_name": "Bhutan",
+   "display_name": "Bután",
+   "aliases": [
+    "BT",
+    "BTN",
+    "Bhutan",
+    "Bután"
+   ],
+   "alpha3": "BTN",
+   "report_count": 1
+  },
+  {
+   "id": "BV",
+   "canonical_name": "Bouvet Island",
+   "display_name": "Isla Bouvet",
+   "aliases": [
+    "BV",
+    "BVT",
+    "Bouvet Island",
+    "Isla Bouvet"
+   ],
+   "alpha3": "BVT",
+   "report_count": 0
+  },
+  {
+   "id": "BW",
+   "canonical_name": "Botswana",
+   "display_name": "Botsuana",
+   "aliases": [
+    "BW",
+    "BWA",
+    "Botsuana",
+    "Botswana"
+   ],
+   "alpha3": "BWA",
+   "report_count": 11
+  },
+  {
+   "id": "BY",
+   "canonical_name": "Belarus",
+   "display_name": "Bielorrusia",
+   "aliases": [
+    "BLR",
+    "BY",
+    "Belarus",
+    "Bielorrusia"
+   ],
+   "alpha3": "BLR",
+   "report_count": 52
+  },
+  {
+   "id": "BZ",
+   "canonical_name": "Belize",
+   "display_name": "Belice",
+   "aliases": [
+    "BLZ",
+    "BZ",
+    "Belice",
+    "Belize"
+   ],
+   "alpha3": "BLZ",
+   "report_count": 24
+  },
+  {
+   "id": "CA",
+   "canonical_name": "Canada",
+   "display_name": "Canadá",
+   "aliases": [
+    "CA",
+    "CAN",
+    "Canada",
+    "Canadá"
+   ],
+   "alpha3": "CAN",
+   "report_count": 34156
+  },
+  {
+   "id": "CC",
+   "canonical_name": "Cocos (Keeling) Islands",
+   "display_name": "Islas Cocos",
+   "aliases": [
+    "CC",
+    "CCK",
+    "Cocos (Keeling) Islands",
+    "Islas Cocos"
+   ],
+   "alpha3": "CCK",
+   "report_count": 0
+  },
+  {
+   "id": "CD",
+   "canonical_name": "Democratic Republic of the Congo",
+   "display_name": "República Democrática del Congo",
+   "aliases": [
+    "CD",
+    "COD",
+    "Congo",
+    "Congo-Kinsasa",
+    "Democratic Republic of the Congo",
+    "RDC",
+    "República Democrática del Congo"
+   ],
+   "alpha3": "COD",
+   "report_count": 15
+  },
+  {
+   "id": "CF",
+   "canonical_name": "Central African Republic",
+   "display_name": "República Centroafricana",
+   "aliases": [
+    "CAF",
+    "CF",
+    "Central African Republic",
+    "República Centroafricana"
+   ],
+   "alpha3": "CAF",
+   "report_count": 10
+  },
+  {
+   "id": "CG",
+   "canonical_name": "Congo",
+   "display_name": "República del Congo",
+   "aliases": [
+    "CG",
+    "COG",
+    "Congo",
+    "Congo-Brazzaville",
+    "República del Congo"
+   ],
+   "alpha3": "COG",
+   "report_count": 8
+  },
+  {
+   "id": "CH",
+   "canonical_name": "Switzerland",
+   "display_name": "Suiza",
+   "aliases": [
+    "CH",
+    "CHE",
+    "Suiza",
+    "Switzerland"
+   ],
+   "alpha3": "CHE",
+   "report_count": 767
+  },
+  {
+   "id": "CI",
+   "canonical_name": "Côte d’Ivoire",
+   "display_name": "Côte d’Ivoire",
+   "aliases": [
+    "CI",
+    "CIV",
+    "Côte d’Ivoire"
+   ],
+   "alpha3": "CIV",
+   "report_count": 24
+  },
+  {
+   "id": "CK",
+   "canonical_name": "Cook Islands",
+   "display_name": "Islas Cook",
+   "aliases": [
+    "CK",
+    "COK",
+    "Cook Islands",
+    "Islas Cook"
+   ],
+   "alpha3": "COK",
+   "report_count": 1
+  },
+  {
+   "id": "CL",
+   "canonical_name": "Chile",
+   "display_name": "Chile",
+   "aliases": [
+    "CHL",
+    "CL",
+    "Chile"
+   ],
+   "alpha3": "CHL",
+   "report_count": 1476
+  },
+  {
+   "id": "CM",
+   "canonical_name": "Cameroon",
+   "display_name": "Camerún",
+   "aliases": [
+    "CM",
+    "CMR",
+    "Cameroon",
+    "Camerún"
+   ],
+   "alpha3": "CMR",
+   "report_count": 19
+  },
+  {
+   "id": "CN",
+   "canonical_name": "China",
+   "display_name": "China",
+   "aliases": [
+    "CHN",
+    "CN",
+    "China"
+   ],
+   "alpha3": "CHN",
+   "report_count": 1370
+  },
+  {
+   "id": "CO",
+   "canonical_name": "Colombia",
+   "display_name": "Colombia",
+   "aliases": [
+    "CO",
+    "COL",
+    "Colombia"
+   ],
+   "alpha3": "COL",
+   "report_count": 621
+  },
+  {
+   "id": "CR",
+   "canonical_name": "Costa Rica",
+   "display_name": "Costa Rica",
+   "aliases": [
+    "CR",
+    "CRI",
+    "Costa Rica"
+   ],
+   "alpha3": "CRI",
+   "report_count": 172
+  },
+  {
+   "id": "CU",
+   "canonical_name": "Cuba",
+   "display_name": "Cuba",
+   "aliases": [
+    "CU",
+    "CUB",
+    "Cuba"
+   ],
+   "alpha3": "CUB",
+   "report_count": 238
+  },
+  {
+   "id": "CV",
+   "canonical_name": "Cabo Verde",
+   "display_name": "Cabo Verde",
+   "aliases": [
+    "CPV",
+    "CV",
+    "Cabo Verde"
+   ],
+   "alpha3": "CPV",
+   "report_count": 2
+  },
+  {
+   "id": "CW",
+   "canonical_name": "Curaçao",
+   "display_name": "Curazao",
+   "aliases": [
+    "CUW",
+    "CW",
+    "Curazao",
+    "Curaçao"
+   ],
+   "alpha3": "CUW",
+   "report_count": 9
+  },
+  {
+   "id": "CX",
+   "canonical_name": "Christmas Island",
+   "display_name": "Isla de Navidad",
+   "aliases": [
+    "CX",
+    "CXR",
+    "Christmas Island",
+    "Isla de Navidad"
+   ],
+   "alpha3": "CXR",
+   "report_count": 1
+  },
+  {
+   "id": "CY",
+   "canonical_name": "Cyprus",
+   "display_name": "Chipre",
+   "aliases": [
+    "CY",
+    "CYP",
+    "Chipre",
+    "Cyprus"
+   ],
+   "alpha3": "CYP",
+   "report_count": 115
+  },
+  {
+   "id": "CZ",
+   "canonical_name": "Czechia",
+   "display_name": "Chequia",
+   "aliases": [
+    "CZ",
+    "CZE",
+    "Chequia",
+    "Czech Republic",
+    "Czechia",
+    "República Checa"
+   ],
+   "alpha3": "CZE",
+   "report_count": 174
+  },
+  {
+   "id": "DE",
+   "canonical_name": "Germany",
+   "display_name": "Alemania",
+   "aliases": [
+    "Alemania",
+    "DE",
+    "DEU",
+    "Germany"
+   ],
+   "alpha3": "DEU",
+   "report_count": 3410
+  },
+  {
+   "id": "DJ",
+   "canonical_name": "Djibouti",
+   "display_name": "Yibuti",
+   "aliases": [
+    "DJ",
+    "DJI",
+    "Djibouti",
+    "Yibuti"
+   ],
+   "alpha3": "DJI",
+   "report_count": 2
+  },
+  {
+   "id": "DK",
+   "canonical_name": "Denmark",
+   "display_name": "Dinamarca",
+   "aliases": [
+    "DK",
+    "DNK",
+    "Denmark",
+    "Dinamarca"
+   ],
+   "alpha3": "DNK",
+   "report_count": 1555
+  },
+  {
+   "id": "DM",
+   "canonical_name": "Dominica",
+   "display_name": "Dominica",
+   "aliases": [
+    "DM",
+    "DMA",
+    "Dominica"
+   ],
+   "alpha3": "DMA",
+   "report_count": 2
+  },
+  {
+   "id": "DO",
+   "canonical_name": "Dominican Republic",
+   "display_name": "República Dominicana",
+   "aliases": [
+    "DO",
+    "DOM",
+    "Dominican Republic",
+    "República Dominicana"
+   ],
+   "alpha3": "DOM",
+   "report_count": 232
+  },
+  {
+   "id": "DZ",
+   "canonical_name": "Algeria",
+   "display_name": "Argelia",
+   "aliases": [
+    "Algeria",
+    "Argelia",
+    "DZ",
+    "DZA"
+   ],
+   "alpha3": "DZA",
+   "report_count": 416
+  },
+  {
+   "id": "EC",
+   "canonical_name": "Ecuador",
+   "display_name": "Ecuador",
+   "aliases": [
+    "EC",
+    "ECU",
+    "Ecuador"
+   ],
+   "alpha3": "ECU",
+   "report_count": 120
+  },
+  {
+   "id": "EE",
+   "canonical_name": "Estonia",
+   "display_name": "Estonia",
+   "aliases": [
+    "EE",
+    "EST",
+    "Estonia"
+   ],
+   "alpha3": "EST",
+   "report_count": 97
+  },
+  {
+   "id": "EG",
+   "canonical_name": "Egypt",
+   "display_name": "Egipto",
+   "aliases": [
+    "EG",
+    "EGY",
+    "Egipto",
+    "Egypt"
+   ],
+   "alpha3": "EGY",
+   "report_count": 134
+  },
+  {
+   "id": "EH",
+   "canonical_name": "Western Sahara",
+   "display_name": "Sáhara Occidental",
+   "aliases": [
+    "EH",
+    "ESH",
+    "Sáhara Occidental",
+    "Western Sahara"
+   ],
+   "alpha3": "ESH",
+   "report_count": 5
+  },
+  {
+   "id": "ER",
+   "canonical_name": "Eritrea",
+   "display_name": "Eritrea",
+   "aliases": [
+    "ER",
+    "ERI",
+    "Eritrea"
+   ],
+   "alpha3": "ERI",
+   "report_count": 9
+  },
+  {
+   "id": "ES",
+   "canonical_name": "Spain",
+   "display_name": "España",
+   "aliases": [
+    "ES",
+    "ESP",
+    "España",
+    "Spain"
+   ],
+   "alpha3": "ESP",
+   "report_count": 4430
+  },
+  {
+   "id": "ET",
+   "canonical_name": "Ethiopia",
+   "display_name": "Etiopía",
+   "aliases": [
+    "ET",
+    "ETH",
+    "Ethiopia",
+    "Etiopía"
+   ],
+   "alpha3": "ETH",
+   "report_count": 44
+  },
+  {
+   "id": "FI",
+   "canonical_name": "Finland",
+   "display_name": "Finlandia",
+   "aliases": [
+    "FI",
+    "FIN",
+    "Finland",
+    "Finlandia"
+   ],
+   "alpha3": "FIN",
+   "report_count": 741
+  },
+  {
+   "id": "FJ",
+   "canonical_name": "Fiji",
+   "display_name": "Fiyi",
+   "aliases": [
+    "FJ",
+    "FJI",
+    "Fiji",
+    "Fiyi"
+   ],
+   "alpha3": "FJI",
+   "report_count": 66
+  },
+  {
+   "id": "FK",
+   "canonical_name": "Falkland Islands (Malvinas)",
+   "display_name": "Islas Malvinas",
+   "aliases": [
+    "FK",
+    "FLK",
+    "Falkland Islands (Malvinas)",
+    "Islas Malvinas"
+   ],
+   "alpha3": "FLK",
+   "report_count": 1
+  },
+  {
+   "id": "FM",
+   "canonical_name": "Micronesia (Federated States of)",
+   "display_name": "Micronesia",
+   "aliases": [
+    "FM",
+    "FSM",
+    "Micronesia",
+    "Micronesia (Federated States of)"
+   ],
+   "alpha3": "FSM",
+   "report_count": 23
+  },
+  {
+   "id": "FO",
+   "canonical_name": "Faroe Islands",
+   "display_name": "Islas Feroe",
+   "aliases": [
+    "FO",
+    "FRO",
+    "Faroe Islands",
+    "Islas Feroe"
+   ],
+   "alpha3": "FRO",
+   "report_count": 8
+  },
+  {
+   "id": "FR",
+   "canonical_name": "France",
+   "display_name": "Francia",
+   "aliases": [
+    "FR",
+    "FRA",
+    "France",
+    "Francia"
+   ],
+   "alpha3": "FRA",
+   "report_count": 14025
+  },
+  {
+   "id": "GA",
+   "canonical_name": "Gabon",
+   "display_name": "Gabón",
+   "aliases": [
+    "GA",
+    "GAB",
+    "Gabon",
+    "Gabón"
+   ],
+   "alpha3": "GAB",
+   "report_count": 17
+  },
+  {
+   "id": "GB",
+   "canonical_name": "United Kingdom of Great Britain and Northern Ireland",
+   "display_name": "Reino Unido",
+   "aliases": [
+    "England",
+    "England, Uk",
+    "Escocia",
+    "GB",
+    "GBR",
+    "Gales",
+    "Gran Bretaña",
+    "Inglaterra",
+    "Irlanda del Norte",
+    "Northern Ireland",
+    "Reino Unido",
+    "Scotland",
+    "Scotland, Uk",
+    "U.K.",
+    "UK",
+    "Uk",
+    "United Kingdom",
+    "United Kingdom of Great Britain and Northern Ireland",
+    "Wales"
+   ],
+   "alpha3": "GBR",
+   "report_count": 31164
+  },
+  {
+   "id": "GD",
+   "canonical_name": "Grenada",
+   "display_name": "Granada",
+   "aliases": [
+    "GD",
+    "GRD",
+    "Granada",
+    "Grenada"
+   ],
+   "alpha3": "GRD",
+   "report_count": 7
+  },
+  {
+   "id": "GE",
+   "canonical_name": "Georgia",
+   "display_name": "Georgia",
+   "aliases": [
+    "GE",
+    "GEO",
+    "Georgia"
+   ],
+   "alpha3": "GEO",
+   "report_count": 86
+  },
+  {
+   "id": "GF",
+   "canonical_name": "French Guiana",
+   "display_name": "Guayana Francesa",
+   "aliases": [
+    "French Guiana",
+    "GF",
+    "GUF",
+    "Guayana Francesa"
+   ],
+   "alpha3": "GUF",
+   "report_count": 13
+  },
+  {
+   "id": "GG",
+   "canonical_name": "Guernsey",
+   "display_name": "Guernsey",
+   "aliases": [
+    "GG",
+    "GGY",
+    "Guernsey"
+   ],
+   "alpha3": "GGY",
+   "report_count": 30
+  },
+  {
+   "id": "GH",
+   "canonical_name": "Ghana",
+   "display_name": "Ghana",
+   "aliases": [
+    "GH",
+    "GHA",
+    "Ghana"
+   ],
+   "alpha3": "GHA",
+   "report_count": 13
+  },
+  {
+   "id": "GI",
+   "canonical_name": "Gibraltar",
+   "display_name": "Gibraltar",
+   "aliases": [
+    "GI",
+    "GIB",
+    "Gibraltar"
+   ],
+   "alpha3": "GIB",
+   "report_count": 2
+  },
+  {
+   "id": "GL",
+   "canonical_name": "Greenland",
+   "display_name": "Groenlandia",
+   "aliases": [
+    "GL",
+    "GRL",
+    "Greenland",
+    "Groenlandia"
+   ],
+   "alpha3": "GRL",
+   "report_count": 90
+  },
+  {
+   "id": "GM",
+   "canonical_name": "Gambia",
+   "display_name": "Gambia",
+   "aliases": [
+    "GM",
+    "GMB",
+    "Gambia"
+   ],
+   "alpha3": "GMB",
+   "report_count": 4
+  },
+  {
+   "id": "GN",
+   "canonical_name": "Guinea",
+   "display_name": "Guinea",
+   "aliases": [
+    "GIN",
+    "GN",
+    "Guinea"
+   ],
+   "alpha3": "GIN",
+   "report_count": 1
+  },
+  {
+   "id": "GP",
+   "canonical_name": "Guadeloupe",
+   "display_name": "Guadalupe",
+   "aliases": [
+    "GLP",
+    "GP",
+    "Guadalupe",
+    "Guadeloupe"
+   ],
+   "alpha3": "GLP",
+   "report_count": 11
+  },
+  {
+   "id": "GQ",
+   "canonical_name": "Equatorial Guinea",
+   "display_name": "Guinea Ecuatorial",
+   "aliases": [
+    "Equatorial Guinea",
+    "GNQ",
+    "GQ",
+    "Guinea Ecuatorial"
+   ],
+   "alpha3": "GNQ",
+   "report_count": 2
+  },
+  {
+   "id": "GR",
+   "canonical_name": "Greece",
+   "display_name": "Grecia",
+   "aliases": [
+    "GR",
+    "GRC",
+    "Grecia",
+    "Greece"
+   ],
+   "alpha3": "GRC",
+   "report_count": 355
+  },
+  {
+   "id": "GS",
+   "canonical_name": "South Georgia and the South Sandwich Islands",
+   "display_name": "Islas Georgias del Sur y Sandwich del Sur",
+   "aliases": [
+    "GS",
+    "Islas Georgias del Sur y Sandwich del Sur",
+    "SGS",
+    "South Georgia and the South Sandwich Islands"
+   ],
+   "alpha3": "SGS",
+   "report_count": 0
+  },
+  {
+   "id": "GT",
+   "canonical_name": "Guatemala",
+   "display_name": "Guatemala",
+   "aliases": [
+    "GT",
+    "GTM",
+    "Guatemala"
+   ],
+   "alpha3": "GTM",
+   "report_count": 129
+  },
+  {
+   "id": "GU",
+   "canonical_name": "Guam",
+   "display_name": "Guam",
+   "aliases": [
+    "GU",
+    "GUM",
+    "Guam"
+   ],
+   "alpha3": "GUM",
+   "report_count": 82
+  },
+  {
+   "id": "GW",
+   "canonical_name": "Guinea-Bissau",
+   "display_name": "Guinea-Bisáu",
+   "aliases": [
+    "GNB",
+    "GW",
+    "Guinea-Bissau",
+    "Guinea-Bisáu"
+   ],
+   "alpha3": "GNB",
+   "report_count": 0
+  },
+  {
+   "id": "GY",
+   "canonical_name": "Guyana",
+   "display_name": "Guyana",
+   "aliases": [
+    "GUY",
+    "GY",
+    "Guyana"
+   ],
+   "alpha3": "GUY",
+   "report_count": 15
+  },
+  {
+   "id": "HK",
+   "canonical_name": "China, Hong Kong Special Administrative Region",
+   "display_name": "Hong Kong (RAE de China)",
+   "aliases": [
+    "China, Hong Kong Special Administrative Region",
+    "HK",
+    "HKG",
+    "Hong Kong (RAE de China)"
+   ],
+   "alpha3": "HKG",
+   "report_count": 86
+  },
+  {
+   "id": "HM",
+   "canonical_name": "Heard Island and McDonald Islands",
+   "display_name": "Islas Heard y McDonald",
+   "aliases": [
+    "HM",
+    "HMD",
+    "Heard Island and McDonald Islands",
+    "Islas Heard y McDonald"
+   ],
+   "alpha3": "HMD",
+   "report_count": 0
+  },
+  {
+   "id": "HN",
+   "canonical_name": "Honduras",
+   "display_name": "Honduras",
+   "aliases": [
+    "HN",
+    "HND",
+    "Honduras"
+   ],
+   "alpha3": "HND",
+   "report_count": 61
+  },
+  {
+   "id": "HR",
+   "canonical_name": "Croatia",
+   "display_name": "Croacia",
+   "aliases": [
+    "Croacia",
+    "Croatia",
+    "HR",
+    "HRV"
+   ],
+   "alpha3": "HRV",
+   "report_count": 238
+  },
+  {
+   "id": "HT",
+   "canonical_name": "Haiti",
+   "display_name": "Haití",
+   "aliases": [
+    "HT",
+    "HTI",
+    "Haiti",
+    "Haití"
+   ],
+   "alpha3": "HTI",
+   "report_count": 22
+  },
+  {
+   "id": "HU",
+   "canonical_name": "Hungary",
+   "display_name": "Hungría",
+   "aliases": [
+    "HU",
+    "HUN",
+    "Hungary",
+    "Hungría"
+   ],
+   "alpha3": "HUN",
+   "report_count": 219
+  },
+  {
+   "id": "ID",
+   "canonical_name": "Indonesia",
+   "display_name": "Indonesia",
+   "aliases": [
+    "ID",
+    "IDN",
+    "Indonesia"
+   ],
+   "alpha3": "IDN",
+   "report_count": 214
+  },
+  {
+   "id": "IE",
+   "canonical_name": "Ireland",
+   "display_name": "Irlanda",
+   "aliases": [
+    "IE",
+    "IRL",
+    "Ireland",
+    "Irlanda"
+   ],
+   "alpha3": "IRL",
+   "report_count": 985
+  },
+  {
+   "id": "IL",
+   "canonical_name": "Israel",
+   "display_name": "Israel",
+   "aliases": [
+    "IL",
+    "ISR",
+    "Israel"
+   ],
+   "alpha3": "ISR",
+   "report_count": 243
+  },
+  {
+   "id": "IM",
+   "canonical_name": "Isle of Man",
+   "display_name": "Isla de Man",
+   "aliases": [
+    "IM",
+    "IMN",
+    "Isla de Man",
+    "Isle of Man"
+   ],
+   "alpha3": "IMN",
+   "report_count": 30
+  },
+  {
+   "id": "IN",
+   "canonical_name": "India",
+   "display_name": "India",
+   "aliases": [
+    "IN",
+    "IND",
+    "India"
+   ],
+   "alpha3": "IND",
+   "report_count": 1686
+  },
+  {
+   "id": "IO",
+   "canonical_name": "British Indian Ocean Territory",
+   "display_name": "Territorio Británico del Océano Índico",
+   "aliases": [
+    "British Indian Ocean Territory",
+    "IO",
+    "IOT",
+    "Territorio Británico del Océano Índico"
+   ],
+   "alpha3": "IOT",
+   "report_count": 0
+  },
+  {
+   "id": "IQ",
+   "canonical_name": "Iraq",
+   "display_name": "Irak",
+   "aliases": [
+    "IQ",
+    "IRQ",
+    "Irak",
+    "Iraq"
+   ],
+   "alpha3": "IRQ",
+   "report_count": 101
+  },
+  {
+   "id": "IR",
+   "canonical_name": "Iran (Islamic Republic of)",
+   "display_name": "Irán",
+   "aliases": [
+    "IR",
+    "IRN",
+    "Iran",
+    "Iran (Islamic Republic of)",
+    "Irán",
+    "Persia"
+   ],
+   "alpha3": "IRN",
+   "report_count": 474
+  },
+  {
+   "id": "IS",
+   "canonical_name": "Iceland",
+   "display_name": "Islandia",
+   "aliases": [
+    "IS",
+    "ISL",
+    "Iceland",
+    "Islandia"
+   ],
+   "alpha3": "ISL",
+   "report_count": 137
+  },
+  {
+   "id": "IT",
+   "canonical_name": "Italy",
+   "display_name": "Italia",
+   "aliases": [
+    "IT",
+    "ITA",
+    "Italia",
+    "Italy"
+   ],
+   "alpha3": "ITA",
+   "report_count": 16243
+  },
+  {
+   "id": "JE",
+   "canonical_name": "Jersey",
+   "display_name": "Jersey",
+   "aliases": [
+    "JE",
+    "JEY",
+    "Jersey"
+   ],
+   "alpha3": "JEY",
+   "report_count": 13
+  },
+  {
+   "id": "JM",
+   "canonical_name": "Jamaica",
+   "display_name": "Jamaica",
+   "aliases": [
+    "JAM",
+    "JM",
+    "Jamaica"
+   ],
+   "alpha3": "JAM",
+   "report_count": 67
+  },
+  {
+   "id": "JO",
+   "canonical_name": "Jordan",
+   "display_name": "Jordania",
+   "aliases": [
+    "JO",
+    "JOR",
+    "Jordan",
+    "Jordania"
+   ],
+   "alpha3": "JOR",
+   "report_count": 42
+  },
+  {
+   "id": "JP",
+   "canonical_name": "Japan",
+   "display_name": "Japón",
+   "aliases": [
+    "JP",
+    "JPN",
+    "Japan",
+    "Japón"
+   ],
+   "alpha3": "JPN",
+   "report_count": 1713
+  },
+  {
+   "id": "KE",
+   "canonical_name": "Kenya",
+   "display_name": "Kenia",
+   "aliases": [
+    "KE",
+    "KEN",
+    "Kenia",
+    "Kenya"
+   ],
+   "alpha3": "KEN",
+   "report_count": 95
+  },
+  {
+   "id": "KG",
+   "canonical_name": "Kyrgyzstan",
+   "display_name": "Kirguistán",
+   "aliases": [
+    "KG",
+    "KGZ",
+    "Kirguistán",
+    "Kyrgyzstan"
+   ],
+   "alpha3": "KGZ",
+   "report_count": 10
+  },
+  {
+   "id": "KH",
+   "canonical_name": "Cambodia",
+   "display_name": "Camboya",
+   "aliases": [
+    "Cambodia",
+    "Camboya",
+    "KH",
+    "KHM"
+   ],
+   "alpha3": "KHM",
+   "report_count": 34
+  },
+  {
+   "id": "KI",
+   "canonical_name": "Kiribati",
+   "display_name": "Kiribati",
+   "aliases": [
+    "KI",
+    "KIR",
+    "Kiribati"
+   ],
+   "alpha3": "KIR",
+   "report_count": 7
+  },
+  {
+   "id": "KM",
+   "canonical_name": "Comoros",
+   "display_name": "Comoras",
+   "aliases": [
+    "COM",
+    "Comoras",
+    "Comoros",
+    "KM"
+   ],
+   "alpha3": "COM",
+   "report_count": 1
+  },
+  {
+   "id": "KN",
+   "canonical_name": "Saint Kitts and Nevis",
+   "display_name": "San Cristóbal y Nieves",
+   "aliases": [
+    "KN",
+    "KNA",
+    "Saint Kitts and Nevis",
+    "San Cristóbal y Nieves"
+   ],
+   "alpha3": "KNA",
+   "report_count": 4
+  },
+  {
+   "id": "KP",
+   "canonical_name": "Democratic People's Republic of Korea",
+   "display_name": "Corea del Norte",
+   "aliases": [
+    "Corea",
+    "Corea del Norte",
+    "Democratic People's Republic of Korea",
+    "KP",
+    "North Korea",
+    "PRK"
+   ],
+   "alpha3": "PRK",
+   "report_count": 127
+  },
+  {
+   "id": "KR",
+   "canonical_name": "Republic of Korea",
+   "display_name": "Corea del Sur",
+   "aliases": [
+    "Corea",
+    "Corea del Sur",
+    "KOR",
+    "KR",
+    "Republic of Korea",
+    "South Korea"
+   ],
+   "alpha3": "KOR",
+   "report_count": 430
+  },
+  {
+   "id": "KW",
+   "canonical_name": "Kuwait",
+   "display_name": "Kuwait",
+   "aliases": [
+    "KW",
+    "KWT",
+    "Kuwait"
+   ],
+   "alpha3": "KWT",
+   "report_count": 75
+  },
+  {
+   "id": "KY",
+   "canonical_name": "Cayman Islands",
+   "display_name": "Islas Caimán",
+   "aliases": [
+    "CYM",
+    "Cayman Islands",
+    "Islas Caimán",
+    "KY"
+   ],
+   "alpha3": "CYM",
+   "report_count": 17
+  },
+  {
+   "id": "KZ",
+   "canonical_name": "Kazakhstan",
+   "display_name": "Kazajistán",
+   "aliases": [
+    "KAZ",
+    "KZ",
+    "Kazajistán",
+    "Kazakhstan"
+   ],
+   "alpha3": "KAZ",
+   "report_count": 289
+  },
+  {
+   "id": "LA",
+   "canonical_name": "Lao People's Democratic Republic",
+   "display_name": "Laos",
+   "aliases": [
+    "LA",
+    "LAO",
+    "Lao People's Democratic Republic",
+    "Laos"
+   ],
+   "alpha3": "LAO",
+   "report_count": 6
+  },
+  {
+   "id": "LB",
+   "canonical_name": "Lebanon",
+   "display_name": "Líbano",
+   "aliases": [
+    "LB",
+    "LBN",
+    "Lebanon",
+    "Líbano"
+   ],
+   "alpha3": "LBN",
+   "report_count": 87
+  },
+  {
+   "id": "LC",
+   "canonical_name": "Saint Lucia",
+   "display_name": "Santa Lucía",
+   "aliases": [
+    "LC",
+    "LCA",
+    "Saint Lucia",
+    "Santa Lucía"
+   ],
+   "alpha3": "LCA",
+   "report_count": 5
+  },
+  {
+   "id": "LI",
+   "canonical_name": "Liechtenstein",
+   "display_name": "Liechtenstein",
+   "aliases": [
+    "LI",
+    "LIE",
+    "Liechtenstein"
+   ],
+   "alpha3": "LIE",
+   "report_count": 1
+  },
+  {
+   "id": "LK",
+   "canonical_name": "Sri Lanka",
+   "display_name": "Sri Lanka",
+   "aliases": [
+    "LK",
+    "LKA",
+    "Sri Lanka"
+   ],
+   "alpha3": "LKA",
+   "report_count": 92
+  },
+  {
+   "id": "LR",
+   "canonical_name": "Liberia",
+   "display_name": "Liberia",
+   "aliases": [
+    "LBR",
+    "LR",
+    "Liberia"
+   ],
+   "alpha3": "LBR",
+   "report_count": 6
+  },
+  {
+   "id": "LS",
+   "canonical_name": "Lesotho",
+   "display_name": "Lesoto",
+   "aliases": [
+    "LS",
+    "LSO",
+    "Lesotho",
+    "Lesoto"
+   ],
+   "alpha3": "LSO",
+   "report_count": 2
+  },
+  {
+   "id": "LT",
+   "canonical_name": "Lithuania",
+   "display_name": "Lituania",
+   "aliases": [
+    "LT",
+    "LTU",
+    "Lithuania",
+    "Lituania"
+   ],
+   "alpha3": "LTU",
+   "report_count": 78
+  },
+  {
+   "id": "LU",
+   "canonical_name": "Luxembourg",
+   "display_name": "Luxemburgo",
+   "aliases": [
+    "LU",
+    "LUX",
+    "Luxembourg",
+    "Luxemburgo"
+   ],
+   "alpha3": "LUX",
+   "report_count": 10
+  },
+  {
+   "id": "LV",
+   "canonical_name": "Latvia",
+   "display_name": "Letonia",
+   "aliases": [
+    "LV",
+    "LVA",
+    "Latvia",
+    "Letonia"
+   ],
+   "alpha3": "LVA",
+   "report_count": 90
+  },
+  {
+   "id": "LY",
+   "canonical_name": "Libya",
+   "display_name": "Libia",
+   "aliases": [
+    "LBY",
+    "LY",
+    "Libia",
+    "Libya"
+   ],
+   "alpha3": "LBY",
+   "report_count": 81
+  },
+  {
+   "id": "MA",
+   "canonical_name": "Morocco",
+   "display_name": "Marruecos",
+   "aliases": [
+    "MA",
+    "MAR",
+    "Marruecos",
+    "Morocco"
+   ],
+   "alpha3": "MAR",
+   "report_count": 360
+  },
+  {
+   "id": "MC",
+   "canonical_name": "Monaco",
+   "display_name": "Mónaco",
+   "aliases": [
+    "MC",
+    "MCO",
+    "Monaco",
+    "Mónaco"
+   ],
+   "alpha3": "MCO",
+   "report_count": 3
+  },
+  {
+   "id": "MD",
+   "canonical_name": "Republic of Moldova",
+   "display_name": "Moldavia",
+   "aliases": [
+    "MD",
+    "MDA",
+    "Moldavia",
+    "Moldova",
+    "Republic of Moldova"
+   ],
+   "alpha3": "MDA",
+   "report_count": 9
+  },
+  {
+   "id": "ME",
+   "canonical_name": "Montenegro",
+   "display_name": "Montenegro",
+   "aliases": [
+    "ME",
+    "MNE",
+    "Montenegro"
+   ],
+   "alpha3": "MNE",
+   "report_count": 33
+  },
+  {
+   "id": "MF",
+   "canonical_name": "Saint Martin (French Part)",
+   "display_name": "San Martín (parte francesa)",
+   "aliases": [
+    "MAF",
+    "MF",
+    "Saint Martin (French Part)",
+    "San Martín (parte francesa)"
+   ],
+   "alpha3": "MAF",
+   "report_count": 0
+  },
+  {
+   "id": "MG",
+   "canonical_name": "Madagascar",
+   "display_name": "Madagascar",
+   "aliases": [
+    "MDG",
+    "MG",
+    "Madagascar"
+   ],
+   "alpha3": "MDG",
+   "report_count": 44
+  },
+  {
+   "id": "MH",
+   "canonical_name": "Marshall Islands",
+   "display_name": "Islas Marshall",
+   "aliases": [
+    "Islas Marshall",
+    "MH",
+    "MHL",
+    "Marshall Islands"
+   ],
+   "alpha3": "MHL",
+   "report_count": 50
+  },
+  {
+   "id": "MK",
+   "canonical_name": "North Macedonia",
+   "display_name": "Macedonia del Norte",
+   "aliases": [
+    "MK",
+    "MKD",
+    "Macedonia del Norte",
+    "North Macedonia"
+   ],
+   "alpha3": "MKD",
+   "report_count": 24
+  },
+  {
+   "id": "ML",
+   "canonical_name": "Mali",
+   "display_name": "Malí",
+   "aliases": [
+    "ML",
+    "MLI",
+    "Mali",
+    "Malí"
+   ],
+   "alpha3": "MLI",
+   "report_count": 9
+  },
+  {
+   "id": "MM",
+   "canonical_name": "Myanmar",
+   "display_name": "Myanmar (Birmania)",
+   "aliases": [
+    "MM",
+    "MMR",
+    "Myanmar",
+    "Myanmar (Birmania)"
+   ],
+   "alpha3": "MMR",
+   "report_count": 12
+  },
+  {
+   "id": "MN",
+   "canonical_name": "Mongolia",
+   "display_name": "Mongolia",
+   "aliases": [
+    "MN",
+    "MNG",
+    "Mongolia"
+   ],
+   "alpha3": "MNG",
+   "report_count": 24
+  },
+  {
+   "id": "MO",
+   "canonical_name": "China, Macao Special Administrative Region",
+   "display_name": "Macao (RAE de China)",
+   "aliases": [
+    "China, Macao Special Administrative Region",
+    "MAC",
+    "MO",
+    "Macao (RAE de China)"
+   ],
+   "alpha3": "MAC",
+   "report_count": 7
+  },
+  {
+   "id": "MP",
+   "canonical_name": "Northern Mariana Islands",
+   "display_name": "Islas Marianas del Norte",
+   "aliases": [
+    "Islas Marianas del Norte",
+    "MNP",
+    "MP",
+    "Northern Mariana Islands"
+   ],
+   "alpha3": "MNP",
+   "report_count": 11
+  },
+  {
+   "id": "MQ",
+   "canonical_name": "Martinique",
+   "display_name": "Martinica",
+   "aliases": [
+    "MQ",
+    "MTQ",
+    "Martinica",
+    "Martinique"
+   ],
+   "alpha3": "MTQ",
+   "report_count": 8
+  },
+  {
+   "id": "MR",
+   "canonical_name": "Mauritania",
+   "display_name": "Mauritania",
+   "aliases": [
+    "MR",
+    "MRT",
+    "Mauritania"
+   ],
+   "alpha3": "MRT",
+   "report_count": 1
+  },
+  {
+   "id": "MS",
+   "canonical_name": "Montserrat",
+   "display_name": "Montserrat",
+   "aliases": [
+    "MS",
+    "MSR",
+    "Montserrat"
+   ],
+   "alpha3": "MSR",
+   "report_count": 1
+  },
+  {
+   "id": "MT",
+   "canonical_name": "Malta",
+   "display_name": "Malta",
+   "aliases": [
+    "MLT",
+    "MT",
+    "Malta"
+   ],
+   "alpha3": "MLT",
+   "report_count": 103
+  },
+  {
+   "id": "MU",
+   "canonical_name": "Mauritius",
+   "display_name": "Mauricio",
+   "aliases": [
+    "MU",
+    "MUS",
+    "Mauricio",
+    "Mauritius"
+   ],
+   "alpha3": "MUS",
+   "report_count": 21
+  },
+  {
+   "id": "MV",
+   "canonical_name": "Maldives",
+   "display_name": "Maldivas",
+   "aliases": [
+    "MDV",
+    "MV",
+    "Maldivas",
+    "Maldives"
+   ],
+   "alpha3": "MDV",
+   "report_count": 15
+  },
+  {
+   "id": "MW",
+   "canonical_name": "Malawi",
+   "display_name": "Malaui",
+   "aliases": [
+    "MW",
+    "MWI",
+    "Malaui",
+    "Malawi"
+   ],
+   "alpha3": "MWI",
+   "report_count": 5
+  },
+  {
+   "id": "MX",
+   "canonical_name": "Mexico",
+   "display_name": "México",
+   "aliases": [
+    "MEX",
+    "MX",
+    "Mexico",
+    "México"
+   ],
+   "alpha3": "MEX",
+   "report_count": 2615
+  },
+  {
+   "id": "MY",
+   "canonical_name": "Malaysia",
+   "display_name": "Malasia",
+   "aliases": [
+    "MY",
+    "MYS",
+    "Malasia",
+    "Malaysia"
+   ],
+   "alpha3": "MYS",
+   "report_count": 679
+  },
+  {
+   "id": "MZ",
+   "canonical_name": "Mozambique",
+   "display_name": "Mozambique",
+   "aliases": [
+    "MOZ",
+    "MZ",
+    "Mozambique"
+   ],
+   "alpha3": "MOZ",
+   "report_count": 61
+  },
+  {
+   "id": "NA",
+   "canonical_name": "Namibia",
+   "display_name": "Namibia",
+   "aliases": [
+    "NA",
+    "NAM",
+    "Namibia"
+   ],
+   "alpha3": "NAM",
+   "report_count": 30
+  },
+  {
+   "id": "NC",
+   "canonical_name": "New Caledonia",
+   "display_name": "Nueva Caledonia",
+   "aliases": [
+    "NC",
+    "NCL",
+    "New Caledonia",
+    "Nueva Caledonia"
+   ],
+   "alpha3": "NCL",
+   "report_count": 15
+  },
+  {
+   "id": "NE",
+   "canonical_name": "Niger",
+   "display_name": "Níger",
+   "aliases": [
+    "NE",
+    "NER",
+    "Niger",
+    "Níger"
+   ],
+   "alpha3": "NER",
+   "report_count": 6
+  },
+  {
+   "id": "NF",
+   "canonical_name": "Norfolk Island",
+   "display_name": "Isla Norfolk",
+   "aliases": [
+    "Isla Norfolk",
+    "NF",
+    "NFK",
+    "Norfolk Island"
+   ],
+   "alpha3": "NFK",
+   "report_count": 1
+  },
+  {
+   "id": "NG",
+   "canonical_name": "Nigeria",
+   "display_name": "Nigeria",
+   "aliases": [
+    "NG",
+    "NGA",
+    "Nigeria"
+   ],
+   "alpha3": "NGA",
+   "report_count": 23
+  },
+  {
+   "id": "NI",
+   "canonical_name": "Nicaragua",
+   "display_name": "Nicaragua",
+   "aliases": [
+    "NI",
+    "NIC",
+    "Nicaragua"
+   ],
+   "alpha3": "NIC",
+   "report_count": 55
+  },
+  {
+   "id": "NL",
+   "canonical_name": "Netherlands (Kingdom of the)",
+   "display_name": "Países Bajos",
+   "aliases": [
+    "Holanda",
+    "NL",
+    "NLD",
+    "Netherlands",
+    "Netherlands (Kingdom of the)",
+    "Países Bajos"
+   ],
+   "alpha3": "NLD",
+   "report_count": 621
+  },
+  {
+   "id": "NO",
+   "canonical_name": "Norway",
+   "display_name": "Noruega",
+   "aliases": [
+    "NO",
+    "NOR",
+    "Noruega",
+    "Norway"
+   ],
+   "alpha3": "NOR",
+   "report_count": 1158
+  },
+  {
+   "id": "NP",
+   "canonical_name": "Nepal",
+   "display_name": "Nepal",
+   "aliases": [
+    "NP",
+    "NPL",
+    "Nepal"
+   ],
+   "alpha3": "NPL",
+   "report_count": 43
+  },
+  {
+   "id": "NR",
+   "canonical_name": "Naoero",
+   "display_name": "Nauru",
+   "aliases": [
+    "NR",
+    "NRU",
+    "Naoero",
+    "Nauru"
+   ],
+   "alpha3": "NRU",
+   "report_count": 2
+  },
+  {
+   "id": "NU",
+   "canonical_name": "Niue",
+   "display_name": "Niue",
+   "aliases": [
+    "NIU",
+    "NU",
+    "Niue"
+   ],
+   "alpha3": "NIU",
+   "report_count": 0
+  },
+  {
+   "id": "NZ",
+   "canonical_name": "New Zealand",
+   "display_name": "Nueva Zelanda",
+   "aliases": [
+    "NZ",
+    "NZL",
+    "New Zealand",
+    "Nueva Zelanda"
+   ],
+   "alpha3": "NZL",
+   "report_count": 2619
+  },
+  {
+   "id": "OM",
+   "canonical_name": "Oman",
+   "display_name": "Omán",
+   "aliases": [
+    "OM",
+    "OMN",
+    "Oman",
+    "Omán"
+   ],
+   "alpha3": "OMN",
+   "report_count": 23
+  },
+  {
+   "id": "PA",
+   "canonical_name": "Panama",
+   "display_name": "Panamá",
+   "aliases": [
+    "PA",
+    "PAN",
+    "Panama",
+    "Panamá"
+   ],
+   "alpha3": "PAN",
+   "report_count": 145
+  },
+  {
+   "id": "PE",
+   "canonical_name": "Peru",
+   "display_name": "Perú",
+   "aliases": [
+    "PE",
+    "PER",
+    "Peru",
+    "Perú"
+   ],
+   "alpha3": "PER",
+   "report_count": 824
+  },
+  {
+   "id": "PF",
+   "canonical_name": "French Polynesia",
+   "display_name": "Polinesia Francesa",
+   "aliases": [
+    "French Polynesia",
+    "PF",
+    "PYF",
+    "Polinesia Francesa"
+   ],
+   "alpha3": "PYF",
+   "report_count": 14
+  },
+  {
+   "id": "PG",
+   "canonical_name": "Papua New Guinea",
+   "display_name": "Papúa Nueva Guinea",
+   "aliases": [
+    "PG",
+    "PNG",
+    "Papua New Guinea",
+    "Papúa Nueva Guinea"
+   ],
+   "alpha3": "PNG",
+   "report_count": 272
+  },
+  {
+   "id": "PH",
+   "canonical_name": "Philippines",
+   "display_name": "Filipinas",
+   "aliases": [
+    "Filipinas",
+    "PH",
+    "PHL",
+    "Philippines"
+   ],
+   "alpha3": "PHL",
+   "report_count": 559
+  },
+  {
+   "id": "PK",
+   "canonical_name": "Pakistan",
+   "display_name": "Pakistán",
+   "aliases": [
+    "PAK",
+    "PK",
+    "Pakistan",
+    "Pakistán"
+   ],
+   "alpha3": "PAK",
+   "report_count": 152
+  },
+  {
+   "id": "PL",
+   "canonical_name": "Poland",
+   "display_name": "Polonia",
+   "aliases": [
+    "PL",
+    "POL",
+    "Poland",
+    "Polonia"
+   ],
+   "alpha3": "POL",
+   "report_count": 559
+  },
+  {
+   "id": "PM",
+   "canonical_name": "Saint Pierre and Miquelon",
+   "display_name": "San Pedro y Miquelón",
+   "aliases": [
+    "PM",
+    "SPM",
+    "Saint Pierre and Miquelon",
+    "San Pedro y Miquelón"
+   ],
+   "alpha3": "SPM",
+   "report_count": 0
+  },
+  {
+   "id": "PN",
+   "canonical_name": "Pitcairn",
+   "display_name": "Islas Pitcairn",
+   "aliases": [
+    "Islas Pitcairn",
+    "PCN",
+    "PN",
+    "Pitcairn"
+   ],
+   "alpha3": "PCN",
+   "report_count": 2
+  },
+  {
+   "id": "PR",
+   "canonical_name": "Puerto Rico",
+   "display_name": "Puerto Rico",
+   "aliases": [
+    "PR",
+    "PRI",
+    "Puerto Rico"
+   ],
+   "alpha3": "PRI",
+   "report_count": 1156
+  },
+  {
+   "id": "PS",
+   "canonical_name": "State of Palestine",
+   "display_name": "Territorios Palestinos",
+   "aliases": [
+    "PS",
+    "PSE",
+    "Palestine",
+    "State of Palestine",
+    "Territorios Palestinos"
+   ],
+   "alpha3": "PSE",
+   "report_count": 6
+  },
+  {
+   "id": "PT",
+   "canonical_name": "Portugal",
+   "display_name": "Portugal",
+   "aliases": [
+    "PRT",
+    "PT",
+    "Portugal"
+   ],
+   "alpha3": "PRT",
+   "report_count": 1345
+  },
+  {
+   "id": "PW",
+   "canonical_name": "Palau",
+   "display_name": "Palaos",
+   "aliases": [
+    "PLW",
+    "PW",
+    "Palaos",
+    "Palau"
+   ],
+   "alpha3": "PLW",
+   "report_count": 2
+  },
+  {
+   "id": "PY",
+   "canonical_name": "Paraguay",
+   "display_name": "Paraguay",
+   "aliases": [
+    "PRY",
+    "PY",
+    "Paraguay"
+   ],
+   "alpha3": "PRY",
+   "report_count": 41
+  },
+  {
+   "id": "QA",
+   "canonical_name": "Qatar",
+   "display_name": "Catar",
+   "aliases": [
+    "Catar",
+    "QA",
+    "QAT",
+    "Qatar"
+   ],
+   "alpha3": "QAT",
+   "report_count": 13
+  },
+  {
+   "id": "RE",
+   "canonical_name": "Réunion",
+   "display_name": "Reunión",
+   "aliases": [
+    "RE",
+    "REU",
+    "Reunión",
+    "Réunion"
+   ],
+   "alpha3": "REU",
+   "report_count": 57
+  },
+  {
+   "id": "RO",
+   "canonical_name": "Romania",
+   "display_name": "Rumania",
+   "aliases": [
+    "RO",
+    "ROU",
+    "Romania",
+    "Rumania"
+   ],
+   "alpha3": "ROU",
+   "report_count": 917
+  },
+  {
+   "id": "RS",
+   "canonical_name": "Serbia",
+   "display_name": "Serbia",
+   "aliases": [
+    "RS",
+    "SRB",
+    "Serbia"
+   ],
+   "alpha3": "SRB",
+   "report_count": 208
+  },
+  {
+   "id": "RU",
+   "canonical_name": "Russian Federation",
+   "display_name": "Rusia",
+   "aliases": [
+    "Federación Rusa",
+    "RU",
+    "RUS",
+    "Rusia",
+    "Russia",
+    "Russian Federation"
+   ],
+   "alpha3": "RUS",
+   "report_count": 1998
+  },
+  {
+   "id": "RW",
+   "canonical_name": "Rwanda",
+   "display_name": "Ruanda",
+   "aliases": [
+    "RW",
+    "RWA",
+    "Ruanda",
+    "Rwanda"
+   ],
+   "alpha3": "RWA",
+   "report_count": 1
+  },
+  {
+   "id": "SA",
+   "canonical_name": "Saudi Arabia",
+   "display_name": "Arabia Saudí",
+   "aliases": [
+    "Arabia Saudí",
+    "SA",
+    "SAU",
+    "Saudi Arabia"
+   ],
+   "alpha3": "SAU",
+   "report_count": 75
+  },
+  {
+   "id": "SB",
+   "canonical_name": "Solomon Islands",
+   "display_name": "Islas Salomón",
+   "aliases": [
+    "Islas Salomón",
+    "SB",
+    "SLB",
+    "Solomon Islands"
+   ],
+   "alpha3": "SLB",
+   "report_count": 21
+  },
+  {
+   "id": "SC",
+   "canonical_name": "Seychelles",
+   "display_name": "Seychelles",
+   "aliases": [
+    "SC",
+    "SYC",
+    "Seychelles"
+   ],
+   "alpha3": "SYC",
+   "report_count": 6
+  },
+  {
+   "id": "SD",
+   "canonical_name": "Sudan",
+   "display_name": "Sudán",
+   "aliases": [
+    "SD",
+    "SDN",
+    "Sudan",
+    "Sudán"
+   ],
+   "alpha3": "SDN",
+   "report_count": 8
+  },
+  {
+   "id": "SE",
+   "canonical_name": "Sweden",
+   "display_name": "Suecia",
+   "aliases": [
+    "SE",
+    "SWE",
+    "Suecia",
+    "Sweden"
+   ],
+   "alpha3": "SWE",
+   "report_count": 2518
+  },
+  {
+   "id": "SG",
+   "canonical_name": "Singapore",
+   "display_name": "Singapur",
+   "aliases": [
+    "SG",
+    "SGP",
+    "Singapore",
+    "Singapur"
+   ],
+   "alpha3": "SGP",
+   "report_count": 106
+  },
+  {
+   "id": "SH",
+   "canonical_name": "Saint Helena",
+   "display_name": "Santa Elena",
+   "aliases": [
+    "SH",
+    "SHN",
+    "Saint Helena",
+    "Santa Elena"
+   ],
+   "alpha3": "SHN",
+   "report_count": 9
+  },
+  {
+   "id": "SI",
+   "canonical_name": "Slovenia",
+   "display_name": "Eslovenia",
+   "aliases": [
+    "Eslovenia",
+    "SI",
+    "SVN",
+    "Slovenia"
+   ],
+   "alpha3": "SVN",
+   "report_count": 150
+  },
+  {
+   "id": "SJ",
+   "canonical_name": "Svalbard and Jan Mayen Islands",
+   "display_name": "Svalbard y Jan Mayen",
+   "aliases": [
+    "SJ",
+    "SJM",
+    "Svalbard and Jan Mayen Islands",
+    "Svalbard y Jan Mayen"
+   ],
+   "alpha3": "SJM",
+   "report_count": 26
+  },
+  {
+   "id": "SK",
+   "canonical_name": "Slovakia",
+   "display_name": "Eslovaquia",
+   "aliases": [
+    "Eslovaquia",
+    "SK",
+    "SVK",
+    "Slovakia"
+   ],
+   "alpha3": "SVK",
+   "report_count": 35
+  },
+  {
+   "id": "SL",
+   "canonical_name": "Sierra Leone",
+   "display_name": "Sierra Leona",
+   "aliases": [
+    "SL",
+    "SLE",
+    "Sierra Leona",
+    "Sierra Leone"
+   ],
+   "alpha3": "SLE",
+   "report_count": 3
+  },
+  {
+   "id": "SM",
+   "canonical_name": "San Marino",
+   "display_name": "San Marino",
+   "aliases": [
+    "SM",
+    "SMR",
+    "San Marino"
+   ],
+   "alpha3": "SMR",
+   "report_count": 2
+  },
+  {
+   "id": "SN",
+   "canonical_name": "Senegal",
+   "display_name": "Senegal",
+   "aliases": [
+    "SEN",
+    "SN",
+    "Senegal"
+   ],
+   "alpha3": "SEN",
+   "report_count": 32
+  },
+  {
+   "id": "SO",
+   "canonical_name": "Somalia",
+   "display_name": "Somalia",
+   "aliases": [
+    "SO",
+    "SOM",
+    "Somalia"
+   ],
+   "alpha3": "SOM",
+   "report_count": 4
+  },
+  {
+   "id": "SR",
+   "canonical_name": "Suriname",
+   "display_name": "Surinam",
+   "aliases": [
+    "SR",
+    "SUR",
+    "Surinam",
+    "Suriname"
+   ],
+   "alpha3": "SUR",
+   "report_count": 15
+  },
+  {
+   "id": "SS",
+   "canonical_name": "South Sudan",
+   "display_name": "Sudán del Sur",
+   "aliases": [
+    "SS",
+    "SSD",
+    "South Sudan",
+    "Sudán del Sur"
+   ],
+   "alpha3": "SSD",
+   "report_count": 0
+  },
+  {
+   "id": "ST",
+   "canonical_name": "Sao Tome and Principe",
+   "display_name": "Santo Tomé y Príncipe",
+   "aliases": [
+    "ST",
+    "STP",
+    "Santo Tomé y Príncipe",
+    "Sao Tome and Principe"
+   ],
+   "alpha3": "STP",
+   "report_count": 0
+  },
+  {
+   "id": "SV",
+   "canonical_name": "El Salvador",
+   "display_name": "El Salvador",
+   "aliases": [
+    "El Salvador",
+    "SLV",
+    "SV"
+   ],
+   "alpha3": "SLV",
+   "report_count": 46
+  },
+  {
+   "id": "SX",
+   "canonical_name": "Sint Maarten (Dutch part)",
+   "display_name": "Sint Maarten",
+   "aliases": [
+    "SX",
+    "SXM",
+    "Sint Maarten",
+    "Sint Maarten (Dutch part)"
+   ],
+   "alpha3": "SXM",
+   "report_count": 0
+  },
+  {
+   "id": "SY",
+   "canonical_name": "Syrian Arab Republic",
+   "display_name": "Siria",
+   "aliases": [
+    "SY",
+    "SYR",
+    "Siria",
+    "Syria",
+    "Syrian Arab Republic"
+   ],
+   "alpha3": "SYR",
+   "report_count": 21
+  },
+  {
+   "id": "SZ",
+   "canonical_name": "Eswatini",
+   "display_name": "Esuatini",
+   "aliases": [
+    "Esuatini",
+    "Eswatini",
+    "SWZ",
+    "SZ"
+   ],
+   "alpha3": "SWZ",
+   "report_count": 2
+  },
+  {
+   "id": "TC",
+   "canonical_name": "Turks and Caicos Islands",
+   "display_name": "Islas Turcas y Caicos",
+   "aliases": [
+    "Islas Turcas y Caicos",
+    "TC",
+    "TCA",
+    "Turks and Caicos Islands"
+   ],
+   "alpha3": "TCA",
+   "report_count": 10
+  },
+  {
+   "id": "TD",
+   "canonical_name": "Chad",
+   "display_name": "Chad",
+   "aliases": [
+    "Chad",
+    "TCD",
+    "TD"
+   ],
+   "alpha3": "TCD",
+   "report_count": 7
+  },
+  {
+   "id": "TF",
+   "canonical_name": "French Southern Territories",
+   "display_name": "Territorios Australes Franceses",
+   "aliases": [
+    "ATF",
+    "French Southern Territories",
+    "TF",
+    "Territorios Australes Franceses"
+   ],
+   "alpha3": "ATF",
+   "report_count": 1
+  },
+  {
+   "id": "TG",
+   "canonical_name": "Togo",
+   "display_name": "Togo",
+   "aliases": [
+    "TG",
+    "TGO",
+    "Togo"
+   ],
+   "alpha3": "TGO",
+   "report_count": 3
+  },
+  {
+   "id": "TH",
+   "canonical_name": "Thailand",
+   "display_name": "Tailandia",
+   "aliases": [
+    "TH",
+    "THA",
+    "Tailandia",
+    "Thailand"
+   ],
+   "alpha3": "THA",
+   "report_count": 172
+  },
+  {
+   "id": "TJ",
+   "canonical_name": "Tajikistan",
+   "display_name": "Tayikistán",
+   "aliases": [
+    "TJ",
+    "TJK",
+    "Tajikistan",
+    "Tayikistán"
+   ],
+   "alpha3": "TJK",
+   "report_count": 11
+  },
+  {
+   "id": "TK",
+   "canonical_name": "Tokelau",
+   "display_name": "Tokelau",
+   "aliases": [
+    "TK",
+    "TKL",
+    "Tokelau"
+   ],
+   "alpha3": "TKL",
+   "report_count": 0
+  },
+  {
+   "id": "TL",
+   "canonical_name": "Timor-Leste",
+   "display_name": "Timor-Leste",
+   "aliases": [
+    "TL",
+    "TLS",
+    "Timor-Leste"
+   ],
+   "alpha3": "TLS",
+   "report_count": 4
+  },
+  {
+   "id": "TM",
+   "canonical_name": "Turkmenistan",
+   "display_name": "Turkmenistán",
+   "aliases": [
+    "TKM",
+    "TM",
+    "Turkmenistan",
+    "Turkmenistán"
+   ],
+   "alpha3": "TKM",
+   "report_count": 14
+  },
+  {
+   "id": "TN",
+   "canonical_name": "Tunisia",
+   "display_name": "Túnez",
+   "aliases": [
+    "TN",
+    "TUN",
+    "Tunisia",
+    "Túnez"
+   ],
+   "alpha3": "TUN",
+   "report_count": 108
+  },
+  {
+   "id": "TO",
+   "canonical_name": "Tonga",
+   "display_name": "Tonga",
+   "aliases": [
+    "TO",
+    "TON",
+    "Tonga"
+   ],
+   "alpha3": "TON",
+   "report_count": 5
+  },
+  {
+   "id": "TR",
+   "canonical_name": "Türkiye",
+   "display_name": "Turquía",
+   "aliases": [
+    "TR",
+    "TUR",
+    "Turkey",
+    "Turquía",
+    "Türkiye"
+   ],
+   "alpha3": "TUR",
+   "report_count": 428
+  },
+  {
+   "id": "TT",
+   "canonical_name": "Trinidad and Tobago",
+   "display_name": "Trinidad y Tobago",
+   "aliases": [
+    "TT",
+    "TTO",
+    "Trinidad and Tobago",
+    "Trinidad y Tobago"
+   ],
+   "alpha3": "TTO",
+   "report_count": 37
+  },
+  {
+   "id": "TV",
+   "canonical_name": "Tuvalu",
+   "display_name": "Tuvalu",
+   "aliases": [
+    "TUV",
+    "TV",
+    "Tuvalu"
+   ],
+   "alpha3": "TUV",
+   "report_count": 2
+  },
+  {
+   "id": "TW",
+   "canonical_name": "Taiwan",
+   "display_name": "Taiwán",
+   "aliases": [
+    "TW",
+    "TWN",
+    "Taiwan",
+    "Taiwán"
+   ],
+   "alpha3": "TWN",
+   "report_count": 93
+  },
+  {
+   "id": "TZ",
+   "canonical_name": "United Republic of Tanzania",
+   "display_name": "Tanzania",
+   "aliases": [
+    "TZ",
+    "TZA",
+    "Tanzania",
+    "United Republic of Tanzania"
+   ],
+   "alpha3": "TZA",
+   "report_count": 33
+  },
+  {
+   "id": "UA",
+   "canonical_name": "Ukraine",
+   "display_name": "Ucrania",
+   "aliases": [
+    "UA",
+    "UKR",
+    "Ucrania",
+    "Ukraine"
+   ],
+   "alpha3": "UKR",
+   "report_count": 469
+  },
+  {
+   "id": "UG",
+   "canonical_name": "Uganda",
+   "display_name": "Uganda",
+   "aliases": [
+    "UG",
+    "UGA",
+    "Uganda"
+   ],
+   "alpha3": "UGA",
+   "report_count": 24
+  },
+  {
+   "id": "UM",
+   "canonical_name": "United States Minor Outlying Islands",
+   "display_name": "Islas menores alejadas de EE. UU.",
+   "aliases": [
+    "Islas menores alejadas de EE. UU.",
+    "UM",
+    "UMI",
+    "United States Minor Outlying Islands"
+   ],
+   "alpha3": "UMI",
+   "report_count": 5
+  },
+  {
+   "id": "US",
+   "canonical_name": "United States of America",
+   "display_name": "Estados Unidos",
+   "aliases": [
+    "EE. UU.",
+    "EE.UU.",
+    "EEUU",
+    "Estados Unidos",
+    "Norteamérica",
+    "U.S.",
+    "U.S.A.",
+    "US",
+    "USA",
+    "United States",
+    "United States of America",
+    "Usa"
+   ],
+   "alpha3": "USA",
+   "report_count": 451027
+  },
+  {
+   "id": "UY",
+   "canonical_name": "Uruguay",
+   "display_name": "Uruguay",
+   "aliases": [
+    "URY",
+    "UY",
+    "Uruguay"
+   ],
+   "alpha3": "URY",
+   "report_count": 524
+  },
+  {
+   "id": "UZ",
+   "canonical_name": "Uzbekistan",
+   "display_name": "Uzbekistán",
+   "aliases": [
+    "UZ",
+    "UZB",
+    "Uzbekistan",
+    "Uzbekistán"
+   ],
+   "alpha3": "UZB",
+   "report_count": 33
+  },
+  {
+   "id": "VA",
+   "canonical_name": "Holy See",
+   "display_name": "Ciudad del Vaticano",
+   "aliases": [
+    "Ciudad del Vaticano",
+    "Holy See",
+    "VA",
+    "VAT"
+   ],
+   "alpha3": "VAT",
+   "report_count": 0
+  },
+  {
+   "id": "VC",
+   "canonical_name": "Saint Vincent and the Grenadines",
+   "display_name": "San Vicente y las Granadinas",
+   "aliases": [
+    "Saint Vincent and the Grenadines",
+    "San Vicente y las Granadinas",
+    "VC",
+    "VCT"
+   ],
+   "alpha3": "VCT",
+   "report_count": 0
+  },
+  {
+   "id": "VE",
+   "canonical_name": "Venezuela (Bolivarian Republic of)",
+   "display_name": "Venezuela",
+   "aliases": [
+    "VE",
+    "VEN",
+    "Venezuela",
+    "Venezuela (Bolivarian Republic of)"
+   ],
+   "alpha3": "VEN",
+   "report_count": 1216
+  },
+  {
+   "id": "VG",
+   "canonical_name": "British Virgin Islands",
+   "display_name": "Islas Vírgenes Británicas",
+   "aliases": [
+    "British Virgin Islands",
+    "Islas Vírgenes Británicas",
+    "VG",
+    "VGB"
+   ],
+   "alpha3": "VGB",
+   "report_count": 9
+  },
+  {
+   "id": "VI",
+   "canonical_name": "United States Virgin Islands",
+   "display_name": "Islas Vírgenes de EE. UU.",
+   "aliases": [
+    "Islas Vírgenes de EE. UU.",
+    "United States Virgin Islands",
+    "VI",
+    "VIR"
+   ],
+   "alpha3": "VIR",
+   "report_count": 44
+  },
+  {
+   "id": "VN",
+   "canonical_name": "Viet Nam",
+   "display_name": "Vietnam",
+   "aliases": [
+    "VN",
+    "VNM",
+    "Viet Nam",
+    "Vietnam"
+   ],
+   "alpha3": "VNM",
+   "report_count": 211
+  },
+  {
+   "id": "VU",
+   "canonical_name": "Vanuatu",
+   "display_name": "Vanuatu",
+   "aliases": [
+    "VU",
+    "VUT",
+    "Vanuatu"
+   ],
+   "alpha3": "VUT",
+   "report_count": 11
+  },
+  {
+   "id": "WF",
+   "canonical_name": "Wallis and Futuna Islands",
+   "display_name": "Wallis y Futuna",
+   "aliases": [
+    "WF",
+    "WLF",
+    "Wallis and Futuna Islands",
+    "Wallis y Futuna"
+   ],
+   "alpha3": "WLF",
+   "report_count": 0
+  },
+  {
+   "id": "WS",
+   "canonical_name": "Samoa",
+   "display_name": "Samoa",
+   "aliases": [
+    "Samoa",
+    "WS",
+    "WSM"
+   ],
+   "alpha3": "WSM",
+   "report_count": 1
+  },
+  {
+   "id": "YE",
+   "canonical_name": "Yemen",
+   "display_name": "Yemen",
+   "aliases": [
+    "YE",
+    "YEM",
+    "Yemen"
+   ],
+   "alpha3": "YEM",
+   "report_count": 11
+  },
+  {
+   "id": "YT",
+   "canonical_name": "Mayotte",
+   "display_name": "Mayotte",
+   "aliases": [
+    "MYT",
+    "Mayotte",
+    "YT"
+   ],
+   "alpha3": "MYT",
+   "report_count": 1
+  },
+  {
+   "id": "ZA",
+   "canonical_name": "South Africa",
+   "display_name": "Sudáfrica",
+   "aliases": [
+    "South Africa",
+    "Sudáfrica",
+    "ZA",
+    "ZAF"
+   ],
+   "alpha3": "ZAF",
+   "report_count": 1715
+  },
+  {
+   "id": "ZM",
+   "canonical_name": "Zambia",
+   "display_name": "Zambia",
+   "aliases": [
+    "ZM",
+    "ZMB",
+    "Zambia"
+   ],
+   "alpha3": "ZMB",
+   "report_count": 48
+  },
+  {
+   "id": "ZW",
+   "canonical_name": "Zimbabwe",
+   "display_name": "Zimbabue",
+   "aliases": [
+    "ZW",
+    "ZWE",
+    "Zimbabue",
+    "Zimbabwe"
+   ],
+   "alpha3": "ZWE",
+   "report_count": 291
+  }
+ ],
+ "shapes": [
+  {
+   "id": "Boomerang",
+   "canonical_name": "Boomerang",
+   "display_name": "Bumerán",
+   "aliases": [
+    "Boomerang",
+    "Bumerán"
+   ]
+  },
+  {
+   "id": "Changing",
+   "canonical_name": "Changing",
+   "display_name": "Cambiante",
+   "aliases": [
+    "Cambiante",
+    "Changing"
+   ]
+  },
+  {
+   "id": "Chevron",
+   "canonical_name": "Chevron",
+   "display_name": "Chevrón",
+   "aliases": [
+    "Chevron",
+    "Chevrón"
+   ]
+  },
+  {
+   "id": "Cigar",
+   "canonical_name": "Cigar",
+   "display_name": "Cigarro",
+   "aliases": [
+    "Cigar",
+    "Cigarro"
+   ]
+  },
+  {
+   "id": "Circle",
+   "canonical_name": "Circle",
+   "display_name": "Círculo",
+   "aliases": [
+    "Circle",
+    "Círculo"
+   ]
+  },
+  {
+   "id": "Cloud",
+   "canonical_name": "Cloud",
+   "display_name": "Nube",
+   "aliases": [
+    "Cloud",
+    "Nube"
+   ]
+  },
+  {
+   "id": "Cone",
+   "canonical_name": "Cone",
+   "display_name": "Cono",
+   "aliases": [
+    "Cone",
+    "Cono"
+   ]
+  },
+  {
+   "id": "Crescent",
+   "canonical_name": "Crescent",
+   "display_name": "Media luna",
+   "aliases": [
+    "Crescent",
+    "Media luna"
+   ]
+  },
+  {
+   "id": "Cross",
+   "canonical_name": "Cross",
+   "display_name": "Cruz",
+   "aliases": [
+    "Cross",
+    "Cruz"
+   ]
+  },
+  {
+   "id": "Cube",
+   "canonical_name": "Cube",
+   "display_name": "Cubo",
+   "aliases": [
+    "Cube",
+    "Cubo"
+   ]
+  },
+  {
+   "id": "Cylinder",
+   "canonical_name": "Cylinder",
+   "display_name": "Cilindro",
+   "aliases": [
+    "Cilindro",
+    "Cylinder"
+   ]
+  },
+  {
+   "id": "Diamond",
+   "canonical_name": "Diamond",
+   "display_name": "Rombo",
+   "aliases": [
+    "Diamond",
+    "Rombo"
+   ]
+  },
+  {
+   "id": "Disc",
+   "canonical_name": "Disc",
+   "display_name": "Disco",
+   "aliases": [
+    "Disc",
+    "Disco"
+   ]
+  },
+  {
+   "id": "Dome",
+   "canonical_name": "Dome",
+   "display_name": "Cúpula",
+   "aliases": [
+    "Cúpula",
+    "Dome"
+   ]
+  },
+  {
+   "id": "Egg",
+   "canonical_name": "Egg",
+   "display_name": "Huevo",
+   "aliases": [
+    "Egg",
+    "Huevo"
+   ]
+  },
+  {
+   "id": "Fireball",
+   "canonical_name": "Fireball",
+   "display_name": "Bola de fuego",
+   "aliases": [
+    "Bola de fuego",
+    "Fireball"
+   ]
+  },
+  {
+   "id": "Flash",
+   "canonical_name": "Flash",
+   "display_name": "Destello",
+   "aliases": [
+    "Destello",
+    "Flash"
+   ]
+  },
+  {
+   "id": "Formation",
+   "canonical_name": "Formation",
+   "display_name": "Formación",
+   "aliases": [
+    "Formación",
+    "Formation"
+   ]
+  },
+  {
+   "id": "Light",
+   "canonical_name": "Light",
+   "display_name": "Luz",
+   "aliases": [
+    "Light",
+    "Luz"
+   ]
+  },
+  {
+   "id": "Other",
+   "canonical_name": "Other",
+   "display_name": "Otra",
+   "aliases": [
+    "Other",
+    "Otra"
+   ]
+  },
+  {
+   "id": "Oval",
+   "canonical_name": "Oval",
+   "display_name": "Óvalo",
+   "aliases": [
+    "Oval",
+    "Óvalo"
+   ]
+  },
+  {
+   "id": "Rectangle",
+   "canonical_name": "Rectangle",
+   "display_name": "Rectángulo",
+   "aliases": [
+    "Rectangle",
+    "Rectángulo"
+   ]
+  },
+  {
+   "id": "Saucer",
+   "canonical_name": "Saucer",
+   "display_name": "Platillo",
+   "aliases": [
+    "Platillo",
+    "Saucer"
+   ]
+  },
+  {
+   "id": "Sphere",
+   "canonical_name": "Sphere",
+   "display_name": "Esfera",
+   "aliases": [
+    "Esfera",
+    "Sphere"
+   ]
+  },
+  {
+   "id": "Star",
+   "canonical_name": "Star",
+   "display_name": "Estrella",
+   "aliases": [
+    "Estrella",
+    "Star"
+   ]
+  },
+  {
+   "id": "Teardrop",
+   "canonical_name": "Teardrop",
+   "display_name": "Lágrima",
+   "aliases": [
+    "Lágrima",
+    "Teardrop"
+   ]
+  },
+  {
+   "id": "Triangle",
+   "canonical_name": "Triangle",
+   "display_name": "Triángulo",
+   "aliases": [
+    "Triangle",
+    "Triángulo"
+   ]
+  },
+  {
+   "id": "Unknown",
+   "canonical_name": "Unknown",
+   "display_name": "Desconocida (declarada)",
+   "aliases": [
+    "Desconocida (declarada)",
+    "Unknown"
+   ]
+  }
+ ],
+ "colors": [
+  {
+   "id": "amber",
+   "canonical_name": "amber",
+   "display_name": "Ámbar",
+   "aliases": [
+    "amber",
+    "Ámbar"
+   ],
+   "family_code": "amber"
+  },
+  {
+   "id": "black",
+   "canonical_name": "black",
+   "display_name": "Negro",
+   "aliases": [
+    "Negro",
+    "black"
+   ],
+   "family_code": "black"
+  },
+  {
+   "id": "blue",
+   "canonical_name": "blue",
+   "display_name": "Azul",
+   "aliases": [
+    "Azul",
+    "blue"
+   ],
+   "family_code": "blue"
+  },
+  {
+   "id": "bright green",
+   "canonical_name": "bright green",
+   "display_name": "Verde brillante",
+   "aliases": [
+    "Verde brillante",
+    "bright green"
+   ],
+   "family_code": "green"
+  },
+  {
+   "id": "bright red",
+   "canonical_name": "bright red",
+   "display_name": "Rojo brillante",
+   "aliases": [
+    "Rojo brillante",
+    "bright red"
+   ],
+   "family_code": "red"
+  },
+  {
+   "id": "bright white",
+   "canonical_name": "bright white",
+   "display_name": "Blanco brillante",
+   "aliases": [
+    "Blanco brillante",
+    "bright white"
+   ],
+   "family_code": "white"
+  },
+  {
+   "id": "brown",
+   "canonical_name": "brown",
+   "display_name": "Marrón",
+   "aliases": [
+    "Marrón",
+    "brown"
+   ],
+   "family_code": "brown"
+  },
+  {
+   "id": "gold",
+   "canonical_name": "gold",
+   "display_name": "Dorado",
+   "aliases": [
+    "Dorado",
+    "gold"
+   ],
+   "family_code": "gold"
+  },
+  {
+   "id": "gray",
+   "canonical_name": "gray",
+   "display_name": "Gris",
+   "aliases": [
+    "Gris",
+    "gray"
+   ],
+   "family_code": "gray"
+  },
+  {
+   "id": "green",
+   "canonical_name": "green",
+   "display_name": "Verde",
+   "aliases": [
+    "Verde",
+    "green"
+   ],
+   "family_code": "green"
+  },
+  {
+   "id": "grey",
+   "canonical_name": "grey",
+   "display_name": "Gris (grey)",
+   "aliases": [
+    "Gris (grey)",
+    "grey"
+   ],
+   "family_code": "gray"
+  },
+  {
+   "id": "metallic silver",
+   "canonical_name": "metallic silver",
+   "display_name": "Plateado metálico",
+   "aliases": [
+    "Plateado metálico",
+    "metallic silver"
+   ],
+   "family_code": "silver"
+  },
+  {
+   "id": "orange",
+   "canonical_name": "orange",
+   "display_name": "Naranja",
+   "aliases": [
+    "Naranja",
+    "orange"
+   ],
+   "family_code": "orange"
+  },
+  {
+   "id": "pink",
+   "canonical_name": "pink",
+   "display_name": "Rosa",
+   "aliases": [
+    "Rosa",
+    "pink"
+   ],
+   "family_code": "pink"
+  },
+  {
+   "id": "purple",
+   "canonical_name": "purple",
+   "display_name": "Púrpura",
+   "aliases": [
+    "Púrpura",
+    "purple"
+   ],
+   "family_code": "purple"
+  },
+  {
+   "id": "red",
+   "canonical_name": "red",
+   "display_name": "Rojo",
+   "aliases": [
+    "Rojo",
+    "red"
+   ],
+   "family_code": "red"
+  },
+  {
+   "id": "silver",
+   "canonical_name": "silver",
+   "display_name": "Plateado",
+   "aliases": [
+    "Plateado",
+    "silver"
+   ],
+   "family_code": "silver"
+  },
+  {
+   "id": "turquoise",
+   "canonical_name": "turquoise",
+   "display_name": "Turquesa",
+   "aliases": [
+    "Turquesa",
+    "turquoise"
+   ],
+   "family_code": "turquoise"
+  },
+  {
+   "id": "violet",
+   "canonical_name": "violet",
+   "display_name": "Violeta",
+   "aliases": [
+    "Violeta",
+    "violet"
+   ],
+   "family_code": "violet"
+  },
+  {
+   "id": "white",
+   "canonical_name": "white",
+   "display_name": "Blanco",
+   "aliases": [
+    "Blanco",
+    "white"
+   ],
+   "family_code": "white"
+  },
+  {
+   "id": "yellow",
+   "canonical_name": "yellow",
+   "display_name": "Amarillo",
+   "aliases": [
+    "Amarillo",
+    "yellow"
+   ],
+   "family_code": "yellow"
+  }
+ ],
+ "nuclear_facilities": [
+  {
+   "id": "area-51-groom-lake",
+   "canonical_name": "Area 51 / Groom Lake",
+   "display_name": "Area 51 / Groom Lake",
+   "aliases": [
+    "Area 51 / Groom Lake",
+    "area-51-groom-lake"
+   ],
+   "facility_ids": [
+    2
+   ],
+   "facility_types": [
+    "military_base"
+   ],
+   "latitude": 37.235,
+   "longitude": -115.8111,
+   "nearest_reports": 24
+  },
+  {
+   "id": "argonne-national-laboratory",
+   "canonical_name": "Argonne National Laboratory",
+   "display_name": "Argonne National Laboratory",
+   "aliases": [
+    "Argonne National Laboratory",
+    "argonne-national-laboratory"
+   ],
+   "facility_ids": [
+    49
+   ],
+   "facility_types": [
+    "national_lab"
+   ],
+   "latitude": 41.717,
+   "longitude": -87.9803,
+   "nearest_reports": 43140
+  },
+  {
+   "id": "ben-guerir-air-base",
+   "canonical_name": "Ben Guerir Air Base",
+   "display_name": "Ben Guerir Air Base",
+   "aliases": [
+    "Ben Guerir Air Base",
+    "ben-guerir-air-base"
+   ],
+   "facility_ids": [
+    73
+   ],
+   "facility_types": [
+    "nuclear_base"
+   ],
+   "latitude": 32.1382,
+   "longitude": -7.8669,
+   "nearest_reports": 5354
+  },
+  {
+   "id": "bikini-atoll",
+   "canonical_name": "Bikini Atoll",
+   "display_name": "Bikini Atoll",
+   "aliases": [
+    "Bikini Atoll",
+    "bikini-atoll"
+   ],
+   "facility_ids": [
+    29
+   ],
+   "facility_types": [
+    "nuclear_test_site"
+   ],
+   "latitude": 11.5847,
+   "longitude": 165.37,
+   "nearest_reports": 2670
+  },
+  {
+   "id": "byelokoroviche-strategic-missile-base",
+   "canonical_name": "Byelokoroviche Strategic Missile Base",
+   "display_name": "Byelokoroviche Strategic Missile Base",
+   "aliases": [
+    "Byelokoroviche Strategic Missile Base",
+    "byelokoroviche-strategic-missile-base"
+   ],
+   "facility_ids": [
+    71
+   ],
+   "facility_types": [
+    "nuclear_base"
+   ],
+   "latitude": 51.0833,
+   "longitude": 28.0167,
+   "nearest_reports": 4922
+  },
+  {
+   "id": "cannon-air-force-base",
+   "canonical_name": "Cannon Air Force Base",
+   "display_name": "Cannon Air Force Base",
+   "aliases": [
+    "Cannon Air Force Base",
+    "cannon-air-force-base"
+   ],
+   "facility_ids": [
+    42
+   ],
+   "facility_types": [
+    "military_base"
+   ],
+   "latitude": 34.3828,
+   "longitude": -103.3219,
+   "nearest_reports": 23129
+  },
+  {
+   "id": "cape-canaveral-space-force-station",
+   "canonical_name": "Cape Canaveral Space Force Station",
+   "display_name": "Cape Canaveral Space Force Station",
+   "aliases": [
+    "Cape Canaveral Space Force Station",
+    "cape-canaveral-space-force-station"
+   ],
+   "facility_ids": [
+    43
+   ],
+   "facility_types": [
+    "military_base"
+   ],
+   "latitude": 28.4889,
+   "longitude": -80.5778,
+   "nearest_reports": 38269
+  },
+  {
+   "id": "cfs-falconbridge",
+   "canonical_name": "CFS Falconbridge",
+   "display_name": "CFS Falconbridge",
+   "aliases": [
+    "CFS Falconbridge",
+    "cfs-falconbridge"
+   ],
+   "facility_ids": [
+    67
+   ],
+   "facility_types": [
+    "nuclear_base"
+   ],
+   "latitude": 46.5931,
+   "longitude": -80.8124,
+   "nearest_reports": 5029
+  },
+  {
+   "id": "dugway-proving-ground",
+   "canonical_name": "Dugway Proving Ground",
+   "display_name": "Dugway Proving Ground",
+   "aliases": [
+    "Dugway Proving Ground",
+    "dugway-proving-ground"
+   ],
+   "facility_ids": [
+    9
+   ],
+   "facility_types": [
+    "military_base"
+   ],
+   "latitude": 40.15,
+   "longitude": -113.0167,
+   "nearest_reports": 3732
+  },
+  {
+   "id": "edwards-air-force-base",
+   "canonical_name": "Edwards Air Force Base",
+   "display_name": "Edwards Air Force Base",
+   "aliases": [
+    "Edwards Air Force Base",
+    "edwards-air-force-base"
+   ],
+   "facility_ids": [
+    10
+   ],
+   "facility_types": [
+    "military_base"
+   ],
+   "latitude": 34.9054,
+   "longitude": -117.8836,
+   "nearest_reports": 6655
+  },
+  {
+   "id": "ellsworth-air-force-base",
+   "canonical_name": "Ellsworth Air Force Base",
+   "display_name": "Ellsworth Air Force Base",
+   "aliases": [
+    "Ellsworth Air Force Base",
+    "ellsworth-air-force-base"
+   ],
+   "facility_ids": [
+    68
+   ],
+   "facility_types": [
+    "nuclear_base"
+   ],
+   "latitude": 44.1452,
+   "longitude": -103.1036,
+   "nearest_reports": 3031
+  },
+  {
+   "id": "eniwetok-atoll-enewetak",
+   "canonical_name": "Eniwetok Atoll (Enewetak)",
+   "display_name": "Eniwetok Atoll (Enewetak)",
+   "aliases": [
+    "Eniwetok Atoll (Enewetak)",
+    "eniwetok-atoll-enewetak"
+   ],
+   "facility_ids": [
+    30
+   ],
+   "facility_types": [
+    "nuclear_test_site"
+   ],
+   "latitude": 11.5,
+   "longitude": 162.33,
+   "nearest_reports": 11151
+  },
+  {
+   "id": "f-e-warren-air-force-base",
+   "canonical_name": "F.E. Warren Air Force Base",
+   "display_name": "F.E. Warren Air Force Base",
+   "aliases": [
+    "F.E. Warren Air Force Base",
+    "f-e-warren-air-force-base"
+   ],
+   "facility_ids": [
+    69
+   ],
+   "facility_types": [
+    "nuclear_base"
+   ],
+   "latitude": 41.1369,
+   "longitude": -104.867,
+   "nearest_reports": 9813
+  },
+  {
+   "id": "fort-bliss",
+   "canonical_name": "Fort Bliss",
+   "display_name": "Fort Bliss",
+   "aliases": [
+    "Fort Bliss",
+    "fort-bliss"
+   ],
+   "facility_ids": [
+    55
+   ],
+   "facility_types": [
+    "military_base"
+   ],
+   "latitude": 31.8124,
+   "longitude": -106.421,
+   "nearest_reports": 2582
+  },
+  {
+   "id": "george-air-force-base-closed-1992",
+   "canonical_name": "George Air Force Base (closed 1992)",
+   "display_name": "George Air Force Base (closed 1992)",
+   "aliases": [
+    "George Air Force Base (closed 1992)",
+    "george-air-force-base-closed-1992"
+   ],
+   "facility_ids": [
+    57
+   ],
+   "facility_types": [
+    "military_base"
+   ],
+   "latitude": 34.5878,
+   "longitude": -117.3833,
+   "nearest_reports": 791
+  },
+  {
+   "id": "hanford-site",
+   "canonical_name": "Hanford Site",
+   "display_name": "Hanford Site",
+   "aliases": [
+    "Hanford Site",
+    "hanford-site"
+   ],
+   "facility_ids": [
+    61
+   ],
+   "facility_types": [
+    "nuclear_base"
+   ],
+   "latitude": 46.55,
+   "longitude": -119.488,
+   "nearest_reports": 31594
+  },
+  {
+   "id": "hanscom-air-force-base",
+   "canonical_name": "Hanscom Air Force Base",
+   "display_name": "Hanscom Air Force Base",
+   "aliases": [
+    "Hanscom Air Force Base",
+    "hanscom-air-force-base"
+   ],
+   "facility_ids": [
+    58
+   ],
+   "facility_types": [
+    "military_base"
+   ],
+   "latitude": 42.47,
+   "longitude": -71.289,
+   "nearest_reports": 37470
+  },
+  {
+   "id": "holloman-air-force-base",
+   "canonical_name": "Holloman Air Force Base",
+   "display_name": "Holloman Air Force Base",
+   "aliases": [
+    "Holloman Air Force Base",
+    "holloman-air-force-base"
+   ],
+   "facility_ids": [
+    36
+   ],
+   "facility_types": [
+    "military_base"
+   ],
+   "latitude": 32.8525,
+   "longitude": -106.1063,
+   "nearest_reports": 620
+  },
+  {
+   "id": "idaho-national-laboratory",
+   "canonical_name": "Idaho National Laboratory",
+   "display_name": "Idaho National Laboratory",
+   "aliases": [
+    "Idaho National Laboratory",
+    "idaho-national-laboratory"
+   ],
+   "facility_ids": [
+    48
+   ],
+   "facility_types": [
+    "national_lab"
+   ],
+   "latitude": 43.5208,
+   "longitude": -112.0436,
+   "nearest_reports": 3072
+  },
+  {
+   "id": "kapustin-yar",
+   "canonical_name": "Kapustin Yar",
+   "display_name": "Kapustin Yar",
+   "aliases": [
+    "Kapustin Yar",
+    "kapustin-yar"
+   ],
+   "facility_ids": [
+    70
+   ],
+   "facility_types": [
+    "nuclear_base"
+   ],
+   "latitude": 48.57,
+   "longitude": 45.75,
+   "nearest_reports": 3839
+  },
+  {
+   "id": "kirtland-air-force-base",
+   "canonical_name": "Kirtland Air Force Base",
+   "display_name": "Kirtland Air Force Base",
+   "aliases": [
+    "Kirtland Air Force Base",
+    "kirtland-air-force-base"
+   ],
+   "facility_ids": [
+    11
+   ],
+   "facility_types": [
+    "military_base"
+   ],
+   "latitude": 35.0402,
+   "longitude": -106.6092,
+   "nearest_reports": 2246
+  },
+  {
+   "id": "kriegsfeld-army-special-weapons-depot",
+   "canonical_name": "Kriegsfeld Army Special Weapons Depot",
+   "display_name": "Kriegsfeld Army Special Weapons Depot",
+   "aliases": [
+    "Kriegsfeld Army Special Weapons Depot",
+    "kriegsfeld-army-special-weapons-depot"
+   ],
+   "facility_ids": [
+    74
+   ],
+   "facility_types": [
+    "nuclear_base"
+   ],
+   "latitude": 49.7,
+   "longitude": 7.7833,
+   "nearest_reports": 55468
+  },
+  {
+   "id": "lawrence-livermore-national-laboratory",
+   "canonical_name": "Lawrence Livermore National Laboratory",
+   "display_name": "Lawrence Livermore National Laboratory",
+   "aliases": [
+    "Lawrence Livermore National Laboratory",
+    "lawrence-livermore-national-laboratory"
+   ],
+   "facility_ids": [
+    5
+   ],
+   "facility_types": [
+    "national_lab"
+   ],
+   "latitude": 37.6819,
+   "longitude": -121.7064,
+   "nearest_reports": 21783
+  },
+  {
+   "id": "lockbourne-air-force-base-now-rickenbacker-air-national-guard-base",
+   "canonical_name": "Lockbourne Air Force Base (now Rickenbacker Air National Guard Base)",
+   "display_name": "Lockbourne Air Force Base (now Rickenbacker Air National Guard Base)",
+   "aliases": [
+    "Lockbourne Air Force Base (now Rickenbacker Air National Guard Base)",
+    "lockbourne-air-force-base-now-rickenbacker-air-national-guard-base"
+   ],
+   "facility_ids": [
+    56
+   ],
+   "facility_types": [
+    "military_base"
+   ],
+   "latitude": 39.8137,
+   "longitude": -82.9277,
+   "nearest_reports": 15656
+  },
+  {
+   "id": "loring-air-force-base",
+   "canonical_name": "Loring Air Force Base",
+   "display_name": "Loring Air Force Base",
+   "aliases": [
+    "Loring Air Force Base",
+    "loring-air-force-base"
+   ],
+   "facility_ids": [
+    65
+   ],
+   "facility_types": [
+    "nuclear_base"
+   ],
+   "latitude": 46.9523,
+   "longitude": -67.8854,
+   "nearest_reports": 1512
+  },
+  {
+   "id": "loring-air-force-base-closed-1994",
+   "canonical_name": "Loring Air Force Base (closed 1994)",
+   "display_name": "Loring Air Force Base (closed 1994)",
+   "aliases": [
+    "Loring Air Force Base (closed 1994)",
+    "loring-air-force-base-closed-1994"
+   ],
+   "facility_ids": [
+    40
+   ],
+   "facility_types": [
+    "military_base"
+   ],
+   "latitude": 46.9519,
+   "longitude": -67.8856,
+   "nearest_reports": 2620
+  },
+  {
+   "id": "los-alamos-national-laboratory",
+   "canonical_name": "Los Alamos National Laboratory",
+   "display_name": "Los Alamos National Laboratory",
+   "aliases": [
+    "Los Alamos National Laboratory",
+    "los-alamos-national-laboratory"
+   ],
+   "facility_ids": [
+    3,
+    60
+   ],
+   "facility_types": [
+    "national_lab",
+    "nuclear_base"
+   ],
+   "latitude": 35.844,
+   "longitude": -106.2872,
+   "nearest_reports": 3448
+  },
+  {
+   "id": "malmstrom-air-force-base",
+   "canonical_name": "Malmstrom Air Force Base",
+   "display_name": "Malmstrom Air Force Base",
+   "aliases": [
+    "Malmstrom Air Force Base",
+    "malmstrom-air-force-base"
+   ],
+   "facility_ids": [
+    38,
+    64
+   ],
+   "facility_types": [
+    "military_base",
+    "nuclear_base"
+   ],
+   "latitude": 47.505,
+   "longitude": -111.183,
+   "nearest_reports": 5519
+  },
+  {
+   "id": "minot-air-force-base",
+   "canonical_name": "Minot Air Force Base",
+   "display_name": "Minot Air Force Base",
+   "aliases": [
+    "Minot Air Force Base",
+    "minot-air-force-base"
+   ],
+   "facility_ids": [
+    39
+   ],
+   "facility_types": [
+    "military_base"
+   ],
+   "latitude": 48.4156,
+   "longitude": -101.358,
+   "nearest_reports": 5205
+  },
+  {
+   "id": "naval-air-station-patuxent-river-nas-pax-river",
+   "canonical_name": "Naval Air Station Patuxent River (NAS Pax River)",
+   "display_name": "Naval Air Station Patuxent River (NAS Pax River)",
+   "aliases": [
+    "Naval Air Station Patuxent River (NAS Pax River)",
+    "naval-air-station-patuxent-river-nas-pax-river"
+   ],
+   "facility_ids": [
+    54
+   ],
+   "facility_types": [
+    "military_base"
+   ],
+   "latitude": 38.286,
+   "longitude": -76.4116,
+   "nearest_reports": 32967
+  },
+  {
+   "id": "naval-support-facility-diego-garcia",
+   "canonical_name": "Naval Support Facility Diego Garcia",
+   "display_name": "Naval Support Facility Diego Garcia",
+   "aliases": [
+    "Naval Support Facility Diego Garcia",
+    "naval-support-facility-diego-garcia"
+   ],
+   "facility_ids": [
+    59
+   ],
+   "facility_types": [
+    "military_base"
+   ],
+   "latitude": -7.3133,
+   "longitude": 72.4111,
+   "nearest_reports": 2865
+  },
+  {
+   "id": "nellis-air-force-base",
+   "canonical_name": "Nellis Air Force Base",
+   "display_name": "Nellis Air Force Base",
+   "aliases": [
+    "Nellis Air Force Base",
+    "nellis-air-force-base"
+   ],
+   "facility_ids": [
+    75
+   ],
+   "facility_types": [
+    "nuclear_base"
+   ],
+   "latitude": 36.2361,
+   "longitude": -115.0343,
+   "nearest_reports": 12651
+  },
+  {
+   "id": "nevada-national-security-site-formerly-nevada-test-site",
+   "canonical_name": "Nevada National Security Site (formerly Nevada Test Site)",
+   "display_name": "Nevada National Security Site (formerly Nevada Test Site)",
+   "aliases": [
+    "Nevada National Security Site (formerly Nevada Test Site)",
+    "nevada-national-security-site-formerly-nevada-test-site"
+   ],
+   "facility_ids": [
+    50
+   ],
+   "facility_types": [
+    "nuclear_test_site"
+   ],
+   "latitude": 37.1167,
+   "longitude": -116.05,
+   "nearest_reports": 1428
+  },
+  {
+   "id": "nevada-test-and-training-range-nttr",
+   "canonical_name": "Nevada Test and Training Range (NTTR)",
+   "display_name": "Nevada Test and Training Range (NTTR)",
+   "aliases": [
+    "Nevada Test and Training Range (NTTR)",
+    "nevada-test-and-training-range-nttr"
+   ],
+   "facility_ids": [
+    25
+   ],
+   "facility_types": [
+    "test_range"
+   ],
+   "latitude": 37.5,
+   "longitude": -115.75,
+   "nearest_reports": 88
+  },
+  {
+   "id": "norton-air-force-base-closed-1994",
+   "canonical_name": "Norton Air Force Base (closed 1994)",
+   "display_name": "Norton Air Force Base (closed 1994)",
+   "aliases": [
+    "Norton Air Force Base (closed 1994)",
+    "norton-air-force-base-closed-1994"
+   ],
+   "facility_ids": [
+    35
+   ],
+   "facility_types": [
+    "military_base"
+   ],
+   "latitude": 34.0954,
+   "longitude": -117.2356,
+   "nearest_reports": 19721
+  },
+  {
+   "id": "oak-ridge-national-laboratory",
+   "canonical_name": "Oak Ridge National Laboratory",
+   "display_name": "Oak Ridge National Laboratory",
+   "aliases": [
+    "Oak Ridge National Laboratory",
+    "oak-ridge-national-laboratory"
+   ],
+   "facility_ids": [
+    12
+   ],
+   "facility_types": [
+    "national_lab"
+   ],
+   "latitude": 35.9311,
+   "longitude": -84.3103,
+   "nearest_reports": 32710
+  },
+  {
+   "id": "phuoc-vinh-1st-cavalry-division-hq-vietnam-war-era",
+   "canonical_name": "Phước Vĩnh (1st Cavalry Division HQ — Vietnam War era)",
+   "display_name": "Phước Vĩnh (1st Cavalry Division HQ — Vietnam War era)",
+   "aliases": [
+    "Phước Vĩnh (1st Cavalry Division HQ — Vietnam War era)",
+    "phuoc-vinh-1st-cavalry-division-hq-vietnam-war-era"
+   ],
+   "facility_ids": [
+    52
+   ],
+   "facility_types": [
+    "military_base"
+   ],
+   "latitude": 11.2833,
+   "longitude": 106.8833,
+   "nearest_reports": 5025
+  },
+  {
+   "id": "sandia-national-laboratories",
+   "canonical_name": "Sandia National Laboratories",
+   "display_name": "Sandia National Laboratories",
+   "aliases": [
+    "Sandia National Laboratories",
+    "sandia-national-laboratories"
+   ],
+   "facility_ids": [
+    4
+   ],
+   "facility_types": [
+    "national_lab"
+   ],
+   "latitude": 35.0494,
+   "longitude": -106.5453,
+   "nearest_reports": 186
+  },
+  {
+   "id": "tonopah-test-range",
+   "canonical_name": "Tonopah Test Range",
+   "display_name": "Tonopah Test Range",
+   "aliases": [
+    "Tonopah Test Range",
+    "tonopah-test-range"
+   ],
+   "facility_ids": [
+    26
+   ],
+   "facility_types": [
+    "test_range"
+   ],
+   "latitude": 37.7889,
+   "longitude": -116.7806,
+   "nearest_reports": 477
+  },
+  {
+   "id": "trinity-site-jornada-del-muerto",
+   "canonical_name": "Trinity Site (Jornada del Muerto)",
+   "display_name": "Trinity Site (Jornada del Muerto)",
+   "aliases": [
+    "Trinity Site (Jornada del Muerto)",
+    "trinity-site-jornada-del-muerto"
+   ],
+   "facility_ids": [
+    28
+   ],
+   "facility_types": [
+    "nuclear_test_site"
+   ],
+   "latitude": 33.6772,
+   "longitude": -106.4756,
+   "nearest_reports": 488
+  },
+  {
+   "id": "vandenberg-air-force-base",
+   "canonical_name": "Vandenberg Air Force Base",
+   "display_name": "Vandenberg Air Force Base",
+   "aliases": [
+    "Vandenberg Air Force Base",
+    "vandenberg-air-force-base"
+   ],
+   "facility_ids": [
+    63
+   ],
+   "facility_types": [
+    "nuclear_base"
+   ],
+   "latitude": 34.742,
+   "longitude": -120.5724,
+   "nearest_reports": 937
+  },
+  {
+   "id": "vandenberg-space-force-base-formerly-vandenberg-afb",
+   "canonical_name": "Vandenberg Space Force Base (formerly Vandenberg AFB)",
+   "display_name": "Vandenberg Space Force Base (formerly Vandenberg AFB)",
+   "aliases": [
+    "Vandenberg Space Force Base (formerly Vandenberg AFB)",
+    "vandenberg-space-force-base-formerly-vandenberg-afb"
+   ],
+   "facility_ids": [
+    37
+   ],
+   "facility_types": [
+    "military_base"
+   ],
+   "latitude": 34.74,
+   "longitude": -120.5725,
+   "nearest_reports": 1597
+  },
+  {
+   "id": "walker-air-force-base",
+   "canonical_name": "Walker Air Force Base",
+   "display_name": "Walker Air Force Base",
+   "aliases": [
+    "Walker Air Force Base",
+    "walker-air-force-base"
+   ],
+   "facility_ids": [
+    62
+   ],
+   "facility_types": [
+    "nuclear_base"
+   ],
+   "latitude": 33.3016,
+   "longitude": -104.5306,
+   "nearest_reports": 2209
+  },
+  {
+   "id": "white-sands-missile-range",
+   "canonical_name": "White Sands Missile Range",
+   "display_name": "White Sands Missile Range",
+   "aliases": [
+    "White Sands Missile Range",
+    "white-sands-missile-range"
+   ],
+   "facility_ids": [
+    27,
+    72
+   ],
+   "facility_types": [
+    "test_range",
+    "nuclear_base"
+   ],
+   "latitude": 32.4,
+   "longitude": -106.4833,
+   "nearest_reports": 3067
+  },
+  {
+   "id": "wright-patterson-air-force-base",
+   "canonical_name": "Wright-Patterson Air Force Base",
+   "display_name": "Wright-Patterson Air Force Base",
+   "aliases": [
+    "Wright-Patterson Air Force Base",
+    "wright-patterson-air-force-base"
+   ],
+   "facility_ids": [
+    1
+   ],
+   "facility_types": [
+    "military_base"
+   ],
+   "latitude": 39.8261,
+   "longitude": -84.0497,
+   "nearest_reports": 14931
+  },
+  {
+   "id": "wurtsmith-air-force-base",
+   "canonical_name": "Wurtsmith Air Force Base",
+   "display_name": "Wurtsmith Air Force Base",
+   "aliases": [
+    "Wurtsmith Air Force Base",
+    "wurtsmith-air-force-base"
+   ],
+   "facility_ids": [
+    66
+   ],
+   "facility_types": [
+    "nuclear_base"
+   ],
+   "latitude": 44.4534,
+   "longitude": -83.3943,
+   "nearest_reports": 1351
+  },
+  {
+   "id": "wurtsmith-air-force-base-closed-1993",
+   "canonical_name": "Wurtsmith Air Force Base (closed 1993)",
+   "display_name": "Wurtsmith Air Force Base (closed 1993)",
+   "aliases": [
+    "Wurtsmith Air Force Base (closed 1993)",
+    "wurtsmith-air-force-base-closed-1993"
+   ],
+   "facility_ids": [
+    41
+   ],
+   "facility_types": [
+    "military_base"
+   ],
+   "latitude": 44.4515,
+   "longitude": -83.394,
+   "nearest_reports": 11977
+  }
+ ],
+ "regions": []
+}

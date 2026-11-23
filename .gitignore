@@ -6,6 +6,9 @@
 !/data/silver/
 /data/silver/*
 !/data/silver/README.md
+!/data/gold/
+/data/gold/*
+!/data/gold/README.md
 __pycache__/
 *.pyc
 .DS_Store

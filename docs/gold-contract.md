@@ -1,0 +1,284 @@
+# Contrato Gold de UFO-Data-Agent
+
+Gold es la capa analítica y semántica del **data agent propio** del proyecto. Se
+construye solo por lectura sobre Silver v6 y no está pensada para integrarse con
+herramientas de BI de terceros. El agente nunca escribe SQL: consulta Gold con
+herramientas tipadas y consultas certificadas.
+
+- Política: [`config/gold/gold.json`](../config/gold/gold.json), versión `gold_version=1`.
+- Catálogos: [`dataset_catalog.json`](../config/gold/dataset_catalog.json),
+  [`metric_catalog.json`](../config/gold/metric_catalog.json) y
+  [`dimension_catalog.json`](../config/gold/dimension_catalog.json).
+- Catálogo generado con perfiles reales: [GOLD_CATALOG.md](GOLD_CATALOG.md).
+- Guía para el agente: [gold-domain-guide.md](gold-domain-guide.md).
+- Verificación: [gold-verification.md](gold-verification.md).
+
+## Entradas fijadas y construcción
+
+| Requisito | Implementación |
+|---|---|
+| Entrada pinneada | `gold.json` fija el SHA-256 de Silver (`72ada367…a92aa25e`) y de Bronze (`0200337e…3820e0`). El build se detiene si no coinciden. |
+| Silver aprobado para el snapshot exacto | El build ejecuta `check_silver_ready.readiness()` sobre esos mismos archivos y exige `ready_for_gold=true` con los mismos SHA. El resultado se guarda en `data/gold/silver.readiness.json`; `data/silver/` no se escribe. |
+| Solo lectura | Silver y Bronze se abren con `mode=ro&immutable=1`. El build vuelve a calcular ambos SHA al final y aborta si cambiaron durante la lectura. |
+| Manifiesto | `data/gold/ufo_gold.manifest.json`: `gold_version`, `load_id`, `built_at`, SHA de Silver, Bronze y Gold, `run_id` y fecha de referencia de Silver, hash de definiciones (código y catálogos) y filas por tabla. |
+| `load_id` determinista | SHA-256 de `gold_version` + SHA de Silver + SHA de Bronze + hash de definiciones. Con las mismas entradas y definiciones se obtiene la misma carga. |
+| Construcción atómica | Se escribe `ufo_gold.db.building`; se valida con `model_checks` (515 controles); si todo pasa, la salida anterior se archiva en `data/gold/.history/<sha256>/` y se renombra. Si falla una validación, se borra el temporal y se conserva la salida anterior. |
+
+El hash de definiciones incluye `scripts/gold_common.py`, `scripts/build_gold.py`,
+la política, los tres catálogos, los nombres de países en español y
+`config/countries.json`. Excluye las consultas certificadas, las correcciones y
+el set de evaluación: registrar una verificación no cambia la carga verificada.
+
+## Grano y vocabulario
+
+- La unidad base es el **informe**: `fact_report` tiene una fila por ID de
+  `sighting` de Bronze. Son **702.572** filas, conciliadas exactamente con Silver
+  y Bronze, en total, por fuente e ID a ID.
+- Los **eventos** existen solo para grupos de duplicados **confirmados**:
+  `fact_event` tiene **6.959** eventos y `event_report` enlaza sus **17.920**
+  informes.
+- Un conteo de informes nunca se llama «avistamientos» ni «eventos».
+
+## Modelo
+
+| Tabla | Grano | Notas |
+|---|---|---|
+| `fact_report` | Informe | Claves a dimensiones, banderas de elegibilidad, motivo de exclusión por análisis, estado de duplicado y bases de evidencia. |
+| `report_model_output` | Informe | Sentimiento, emociones, `hoax_likelihood`, `quality_score`, `richness_score`. Salidas de modelos, separadas de los hechos. |
+| `fact_event` / `event_report` | Evento confirmado / informe miembro | Tamaño, fuentes, fecha, país y forma del representante. |
+| `dim_source`, `dim_origin`, `dim_collection` | — | 4 fuentes con informes, 13 orígenes, 3 colecciones, con etiquetas en español. |
+| `dim_date` | Fecha a su precisión segura | 30.711 claves `AAAA`, `AAAA-MM` o `AAAA-MM-DD`, con precisión explícita, día de la semana y etiquetas. |
+| `dim_country` | País | 249 códigos ISO2 con alfa-3, M49, nombre en inglés (catálogo UN M49) y en español. |
+| `dim_shape`, `dim_color`, `dim_duration_bucket`, `dim_movement` | — | 28 formas, 21 colores en 16 familias, 5 tramos de duración y 6 tipos de movimiento, en español. |
+| `dim_nuclear_facility`, `dim_distance_band` | — | 47 instalaciones del catálogo de Silver, agrupadas por nombre, y 8 bandas de distancia. |
+| `dim_weekday`, `dim_month`, `dim_duplicate_status`, `dim_exclusion_reason`, `dim_eligibility` | — | Vocabularios cerrados. |
+| `agg_year`, `agg_month`, `agg_weekday_hour`, `agg_country`, `agg_shape`, `agg_source`, `agg_spatial_cell`, `agg_nuclear_band` | Ver catálogo | Precalculados desde `fact_report` con su filtro de elegibilidad. |
+| `agg_coverage` | Agregado × estado × motivo × fuente | Informes incluidos y excluidos de cada agregado, con su motivo. |
+
+Lo nulo sigue nulo: no se imputan fechas, coordenadas, países ni formas. Gold
+publica un valor temporal o geográfico **solo si el informe es elegible** para
+ese análisis; si no, la columna queda nula y `*_exclusion` dice por qué.
+
+Un valor desconocido en un vocabulario cerrado (forma, color, fuente, origen…)
+detiene el build: no se reetiqueta en silencio.
+
+## Duplicados no resueltos
+
+No se fusiona ni se borra ningún informe. Los **243.318** pares candidatos
+pendientes (`needs_review`) afectan a **311.628** informes
+(`has_pending_candidate=1`). El estado `duplicate_status` toma, en este orden:
+`confirmed_canonical`, `confirmed_member`, `pending_candidate` y `unique`. Hay
+9.041 informes de grupos confirmados que además tienen un par pendiente:
+conservan su estado confirmado y `has_pending_candidate=1`.
+
+Toda métrica de conteo sensible a duplicados publica dos valores:
+
+| Métrica | Definición | Total |
+|---|---|---:|
+| `report_count` (cota superior) | Todos los informes que cumplen filtros y elegibilidad. | 702.572 |
+| `report_count_excl_candidates` (cota inferior) | Los mismos, sin los informes con algún par pendiente. | 390.944 |
+
+La diferencia es exactamente `pending_candidate_reports` del corte. El motor
+añade la cota inferior siempre que se pide `report_count`, y el catálogo lo
+declara con `duplicate_bound`. La cota inferior es conservadora: retira los dos
+informes de cada par, aunque al menos uno sea distinto. Ninguna de las dos es
+un número de eventos.
+
+## Elegibilidad por análisis
+
+La elegibilidad se impone en el código. En `fact_report` el agente debe
+declararla (`eligibility`) cuando usa una columna que la requiere; los agregados
+la aplican por construcción. Hay implicaciones: día ⇒ mes ⇒ calendario,
+hora ⇒ calendario y proximidad ⇒ mapa. La puerta comprueba que se cumplen en
+los datos.
+
+| Código | Bandera | Regla | Elegibles | Fuera |
+|---|---|---|---:|---:|
+| `calendar` | `usable_for_calendar` | Silver `usable_for_calendar=1` | 695.034 | 7.538 |
+| `month` | `usable_for_month_analysis` | Silver `usable_for_month_analysis=1` | 677.377 | 25.195 |
+| `day` | `usable_for_day_analysis` | Silver `usable_for_day_analysis=1` | 592.979 | 109.593 |
+| `hour` | `usable_for_hour_analysis` | Calendario apto y reloj de minuto, segundo o fracción | 233.854 | 468.718 |
+| `day` + `hour` | ambas | Matriz día de la semana × hora | 213.104 | 489.468 |
+| `map` | `usable_for_map` | Silver `usable_for_map=1` | 495.019 | 207.553 |
+| `country` | `usable_for_country` | Silver `usable_for_country=1` | 626.833 | 75.739 |
+| `nuclear_proximity` | `usable_for_nuclear_proximity` | Silver `usable_for_nuclear_proximity=1` | 495.019 | 207.553 |
+
+La hora exige además calendario apto, porque Silver conserva la precisión de
+reloj de 61 informes de Capella con fecha calificada («approximately 1300
+hours», «Summer 67»). Esa hora no se usa. Los motivos de exclusión
+(`dim_exclusion_reason`, 24 códigos) son excluyentes por análisis. Sumar los
+excluidos de análisis distintos cuenta el mismo informe varias veces.
+
+## Evidencia externa y puntuaciones de modelo
+
+- `uses_external_evidence` (20.751 informes de UFO-search) se conserva por
+  informe, y cada agregado lleva `external_evidence_reports`. Cuando una
+  consulta incluye informes con evidencia externa, el resultado lo declara con
+  su conteo. `coordinate_basis`, `country_basis`, `time_basis` y `clock_basis`
+  permiten separar la procedencia, y `uses_external_evidence=0` da un análisis
+  solo con Bronze.
+- Sentimiento, emociones, `hoax_likelihood` y `quality_score` están en
+  `report_model_output`. Sus métricas llevan `model_output: true`, y el
+  resultado añade la limitación `model_scores`. Nunca se presentan como
+  hechos.
+
+## Capa semántica
+
+### Métricas
+
+`metric_catalog.json` define 21 métricas (10 aditivas, 3 ratios y 8 no aditivas) con código, etiqueta en español,
+definición, unidad, tipo y datasets:
+
+- **Aditivas:** conteos de informes y de eventos.
+- **Ratios:** `external_evidence_pct`, `pending_candidate_pct` y `media_pct`.
+  Declaran numerador, denominador y factor, y se recalculan en cada grupo.
+- **No aditivas:** países distintos, primer y último año, distancia media y
+  medias de modelo. Se calculan sobre las filas de origen de cada grupo.
+
+Las expresiones son operaciones cerradas (`count`, `sum`, `count_distinct`,
+`avg`, `min`, `max`) sobre columnas validadas; el catálogo no contiene SQL.
+
+### Dimensiones
+
+`dimension_catalog.json` define 69 dimensiones con estos campos:
+
+- valores permitidos (enumeración, tabla de dimensión o rango);
+- elegibilidad mínima (`requires`) y precisión mínima;
+- datasets que la contienen y métricas compatibles.
+
+La puerta comprueba que el catálogo coincide con el esquema en ambos sentidos.
+
+### Contrato de consulta (`scripts/gold_query.py`)
+
+```json
+{"dataset": "fact_report", "filters": [{"column": "country_iso2", "op": "eq", "value": "AR"}],
+ "group_by": ["event_year"], "metrics": ["report_count"], "eligibility": ["calendar", "country"],
+ "view": "timeseries", "order_by": null, "descending": true, "limit": 100, "rollup": false, "title": "…"}
+```
+
+- Campos desconocidos → rechazo (equivalente a `extra='forbid'`). No hay campo para SQL.
+- Operadores: `eq`, `ne`, `in` (1–100 valores), `gte`, `lte` e `is_null`.
+- Límites: 12 filtros, 4 dimensiones, 8 métricas y `limit` ≤ 500.
+- Valores escalares finitos; los booleanos no valen como enteros.
+- Identificadores validados contra el catálogo; valores validados contra los
+  permitidos y ligados como parámetros.
+- Presupuesto de instrucciones SQLite: 400 millones de pasos de la VM,
+  comprobados cada 10.000; si se excede, `budget`.
+
+Combinaciones prohibidas, con su código de error:
+
+| Caso | Código |
+|---|---|
+| Agrupar o filtrar por día, mes, año, hora, país, mapa o proximidad sin declarar la elegibilidad | `eligibility_missing` |
+| `is_null` sobre una columna sujeta a elegibilidad (usar `*_exclusion`) | `gated_null_filter` |
+| Sumar o promediar un porcentaje (`sum_*_pct`, `avg_*_pct`) | `ratio_not_summable` |
+| Sumar todas las resoluciones de celdas o todos los agregados de cobertura | `partition_required` |
+| Métrica fuera de su dataset (p. ej., `event_count` sobre informes) | `metric_unavailable` |
+| Métrica inexistente (p. ej., «ovnis reales») | `metric_unknown` |
+| Vista incompatible con el dataset o con la agrupación | `view_incompatible`, `view_contract` |
+| Elegibilidad no disponible en un agregado | `eligibility_unavailable` |
+
+### Vistas (`VIEWS`)
+
+| Vista | Datasets | Contrato |
+|---|---|---|
+| `table` | todos | Tarjetas para un total y tabla para listados o grupos. |
+| `bars` | informes, eventos, modelo y agregados no espaciales | Métricas y una o dos dimensiones. |
+| `timeseries` | `fact_report`, `report_model_output`, `fact_event`, `agg_year`, `agg_month` | La primera dimensión es temporal (`event_year`, `decade`, `year_month` o `event_date`). |
+| `points` | `fact_report` | Filas sin métricas; exige `map`. |
+| `density` | `agg_spatial_cell`, `fact_report` | Agrupa por celda de 1° o 5°. |
+| `choropleth` | `agg_country`, `fact_report`, `report_model_output` | Agrupa solo por `country_iso2`. |
+| `hour_weekday` | `agg_weekday_hour`, `fact_report` | Agrupa exactamente por `weekday` y `event_hour`. |
+
+### Resultado
+
+Cada resultado incluye:
+
+- `rows` (con etiquetas `*_label` en español), `truncated`, `row_count`,
+  `matched_source_rows`, `empty` y `total` si se pidió `rollup`;
+- `result_type` (`certified` o `composed`) y `certified_query_id`;
+- `readable_query`: filtros, agrupación, métricas, elegibilidad, orden y
+  límite, en español, para la opción «ver la consulta»;
+- `eligibility_applied`, con las implicadas, y `exclusions`: base, elegibles,
+  excluidos y motivo;
+- `duplicate_bounds` y `external_evidence_reports`;
+- `provenance`: `gold_load_id` y los SHA-256 de Gold, Silver y Bronze, de las
+  definiciones, del motor, de la caché y de la consulta;
+- `snapshot`: fecha de construcción y fecha de referencia de Silver;
+- `limitations`: las que aplican a la consulta, por código.
+
+### Consultas certificadas
+
+`config/gold/certified_queries.json` contiene 17 consultas para las preguntas
+frecuentes. Cada una lleva:
+
+- título, descripción y 2–3 ejemplos en español;
+- la consulta en el contrato tipado y las vistas recomendadas;
+- la limitación que se debe mencionar;
+- `query_sha256` y el resultado esperado (filas y `rows_sha256`);
+- la verificación (`load_id`, fecha y hash del motor).
+
+Una consulta es certificada solo si su hash actual coincide y su `load_id` es
+el de la carga activa. Si cambia la consulta o la carga, pierde la
+certificación hasta repetir `gold_query.py certify` y
+`verify_gold_independent.py`, que la recalcula desde Silver. El agente usa
+`search_certified` (léxico con pesos IDF) antes de componer.
+
+### Caché de servicio (`scripts/discover_gold.py`)
+
+`discover_gold.py` hace lo siguiente:
+
+1. Verifica el SHA de Gold y que las definiciones no hayan cambiado.
+2. Copia Gold a `data/gold/serving/ufo_gold_serving.db` y añade índices.
+3. Embebe en una tabla `metadata` los catálogos, perfiles, etiquetas, valores
+   permitidos y entidades.
+4. Deja el archivo en modo `0444`.
+5. Escribe un manifiesto con `cache_version`, SHA-256, `load_id` y SHA de Gold.
+
+El consumidor (`Analytics`) rechaza la caché si la versión, el SHA o la carga no
+coinciden, y la abre con `mode=ro&immutable=1` y `query_only`.
+
+## Puerta de aceptación (`scripts/check_gold_ready.py`)
+
+`ready_for_agent=true` solo si pasan todos los controles:
+
+- **Manifiesto y entradas:** SHA de Gold, SHA de Silver y Bronze iguales al
+  manifiesto y a la política, definiciones vigentes, `load_id` recalculado, y
+  una ejecución nueva de la puerta de Silver sobre el snapshot exacto.
+- **Conciliación con Silver y Bronze:** total, conjunto de IDs, conteo por
+  fuente, y banderas, bases y valores informe a informe.
+- **Agregados:** cada uno, grupo a grupo y en ambos sentidos, coincide con
+  `fact_report` bajo su elegibilidad; incluidos + excluidos = total, e
+  incluidos = agregado.
+- **Elegibilidad:** ningún valor de día, mes, mapa u otro análisis aparece en
+  un informe no elegible, ni falta en uno elegible; implicaciones y regla
+  horaria verificadas.
+- **Cotas de duplicados:** inferior ≤ superior, la diferencia igual a los
+  candidatos pendientes de cada fila, y el total de pendientes igual al de
+  Silver.
+- **Catálogos ⇔ esquema** en ambos sentidos, incluidas las métricas
+  compatibles.
+- **Integridad:** referencial (`foreign_key_check` y etiquetas) y claves
+  únicas.
+- **Consultas certificadas:** válidas, sin cambios y que reproducen su hash.
+- **Verificación independiente** y **set de evaluación** aprobados para la
+  carga actual.
+- Silver y Bronze sin cambios al terminar.
+
+## Límites
+
+- Un informe no es un hecho verificado. Que un valor coincida con Bronze o con
+  el catálogo de origen no prueba que sea verdadero.
+- Los 243.318 pares pendientes siguen sin resolver: el número de eventos reales
+  es desconocido y solo se publica un rango de informes.
+- La cobertura depende de cada fuente y época. Predomina Estados Unidos (72 %
+  de los informes con país) y NUFORC aparece en UFOCAT y en UPDB.
+- Los marcadores de día reducen la precisión de 68.588 informes; su año se
+  conserva.
+- La evidencia externa (20.751 informes) no puede confirmarse con Bronze.
+- Las puntuaciones de modelo no son hechos ni verificaciones.
+- La proximidad se mide respecto del catálogo local de 47 instalaciones;
+  cercanía no implica relación.
+- La hora es local y sin zona horaria; muchas horas están redondeadas a la hora
+  en punto.
+- Gold no publica estados, ciudades ni regiones.

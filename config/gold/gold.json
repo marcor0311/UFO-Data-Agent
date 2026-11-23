@@ -1,0 +1,78 @@
+{
+  "gold_version": 1,
+  "scope": "Modelo Gold de UFO-Data-Agent: hechos por informe, eventos confirmados, dimensiones en español y agregados con elegibilidad explícita, construidos solo por lectura sobre Silver v6.",
+  "inputs": {
+    "silver": {
+      "path": "data/silver/ufo.db",
+      "sha256": "72ada3670f79568025bc4f1c0184e4ae3b3c0236ece6f9f4a2483544a92aa25e",
+      "policy_version": 6
+    },
+    "bronze": {
+      "path": "data/bronze/ufo.db",
+      "sha256": "0200337eb1eadabd337ac4f479fceceb5a810eec8ab072cd7a206523703820e0"
+    }
+  },
+  "outputs": {
+    "database": "data/gold/ufo_gold.db",
+    "manifest": "data/gold/ufo_gold.manifest.json",
+    "silver_readiness": "data/gold/silver.readiness.json",
+    "history": "data/gold/.history"
+  },
+  "definitions": [
+    "scripts/gold_common.py",
+    "scripts/build_gold.py",
+    "config/gold/gold.json",
+    "config/gold/dataset_catalog.json",
+    "config/gold/metric_catalog.json",
+    "config/gold/dimension_catalog.json",
+    "config/gold/country_names_es.json",
+    "config/countries.json"
+  ],
+  "eligibility": {
+    "calendar": {"flag": "usable_for_calendar", "exclusion": "calendar_exclusion", "silver": "usable_for_calendar=1"},
+    "month": {"flag": "usable_for_month_analysis", "exclusion": "month_exclusion", "silver": "usable_for_month_analysis=1"},
+    "day": {"flag": "usable_for_day_analysis", "exclusion": "day_exclusion", "silver": "usable_for_day_analysis=1"},
+    "hour": {"flag": "usable_for_hour_analysis", "exclusion": "hour_exclusion", "silver": "usable_for_calendar=1 AND datetime_precision IN ('minute','second','fractional_second')"},
+    "map": {"flag": "usable_for_map", "exclusion": "map_exclusion", "silver": "usable_for_map=1"},
+    "country": {"flag": "usable_for_country", "exclusion": "country_exclusion", "silver": "usable_for_country=1"},
+    "nuclear_proximity": {"flag": "usable_for_nuclear_proximity", "exclusion": "proximity_exclusion", "silver": "usable_for_nuclear_proximity=1"}
+  },
+  "clock_precisions": ["minute", "second", "fractional_second"],
+  "spatial_cells": {
+    "resolutions_deg": [1, 5],
+    "rule": "celda = floor(coordenada / resolución) × resolución; la longitud 180 y la latitud 90 se asignan a la última celda. Identifica la esquina suroeste de la celda."
+  },
+  "distance_bands_km": [
+    {"code": "d0000_0010", "label": "0–10 km", "min": 0, "max": 10},
+    {"code": "d0010_0025", "label": "10–25 km", "min": 10, "max": 25},
+    {"code": "d0025_0050", "label": "25–50 km", "min": 25, "max": 50},
+    {"code": "d0050_0100", "label": "50–100 km", "min": 50, "max": 100},
+    {"code": "d0100_0250", "label": "100–250 km", "min": 100, "max": 250},
+    {"code": "d0250_0500", "label": "250–500 km", "min": 250, "max": 500},
+    {"code": "d0500_1000", "label": "500–1.000 km", "min": 500, "max": 1000},
+    {"code": "d1000_plus", "label": "1.000 km o más", "min": 1000, "max": null}
+  ],
+  "nuclear_facility_types": ["military_base", "national_lab", "nuclear_test_site", "test_range", "nuclear_base"],
+  "nuclear_facility_rule": "Mismas categorías que Silver usa para recalcular la proximidad (scripts/silver_evidence.py, NUCLEAR_TYPES). Las filas con el mismo nombre forman una sola instalación de visualización, porque Silver publica solo el nombre de la más cercana.",
+  "distance_band_rule": "min ≤ distancia < max; la última banda no tiene máximo.",
+  "duplicates": {
+    "pending_decision": "needs_review",
+    "status_precedence": ["confirmed_canonical", "confirmed_member", "pending_candidate", "unique"],
+    "lower_bound": "report_count_excl_candidates cuenta los informes sin ningún par candidato pendiente (has_pending_candidate=0); report_count cuenta todos."
+  },
+  "serving": {
+    "database": "data/gold/serving/ufo_gold_serving.db",
+    "manifest": "data/gold/serving/ufo_gold_serving.manifest.json",
+    "cache_version": 1
+  },
+  "query": {
+    "max_limit": 500,
+    "default_limit": 100,
+    "max_filters": 12,
+    "max_group_by": 4,
+    "max_metrics": 8,
+    "max_in_values": 100,
+    "progress_step": 10000,
+    "instruction_budget": 400000000
+  }
+}
