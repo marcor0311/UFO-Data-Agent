@@ -64,21 +64,49 @@ python3 scripts/review_silver.py
 Consulta la [revisión de Silver](docs/silver-review.md) para los hallazgos,
 correcciones y límites de interpretación de la política v3.
 
-El [contrato analítico de Silver](docs/silver-contract.md) define el grano,
+El [contrato analítico de Silver v4](docs/silver-contract.md) define el grano,
 las recuperaciones de precisión temporal, los intervalos, las vistas por informe,
 los valores rescatados y los controles de aceptación de la capa.
 
-La política actual es **v6**. Exige que cada componente de una fecha aparezca
-en el texto original, marca los días marcadores por fuente, y solo usa la
-geografía del catálogo original de UFO-search para rellenar lo que falta en
-Bronze o corroborarlo; las contradicciones quedan en revisión. Antes de
-consumir esta salida desde Gold:
+## Construir Gold
+
+Gold es la capa analítica y semántica del data agent propio. Se construye solo
+por lectura sobre Silver v6 y Bronze, cuyos SHA-256 están fijados en
+`config/gold/gold.json`. Requiere Python 3.11+; en macOS se usa `python3.14`,
+porque el `python3` del sistema (3.9) no interpreta fechas ISO con fracciones.
+Necesita unos 1,5 GB libres. En orden:
 
 ```bash
-python3 scripts/check_silver_ready.py
+python3.14 scripts/build_gold.py                                   # modelo Gold (ejecuta la puerta de Silver)
+python3.14 scripts/discover_gold.py                                # perfil, catálogo y caché de servicio
+python3.14 scripts/gold_query.py certify                           # resultados esperados de las consultas certificadas
+python3.14 scripts/verify_gold_independent.py --write-references   # verificación independiente desde Silver
+python3.14 scripts/run_gold_evals.py                               # set de evaluación por load_id
+python3.14 scripts/check_gold_ready.py                             # puerta: ready_for_agent
 ```
 
-El comando termina con error si la salida no corresponde a Bronze, código,
-política y referencias actuales o incumple el contrato. Genera
-`data/silver/ufo.readiness.json` con cobertura, incidencias y reglas de consumo.
-Ver el [cierre de Silver para Gold](docs/silver-gold-readiness.md).
+`fact_report` tiene un informe por ID de Bronze (702.572). Los eventos existen
+solo para los 6.959 grupos de duplicados confirmados. Toda cifra de informes es
+un rango: entre 390.944 y 702.572, por los pares candidatos pendientes. Los
+análisis por año, mes, día, hora, mapa, país y proximidad aplican su elegibilidad
+y declaran cuántos informes quedaron fuera.
+
+El agente nunca escribe SQL: usa `scripts/gold_query.py`, que ofrece un
+contrato tipado, consultas certificadas, vistas, procedencia y limitaciones.
+
+- [Contrato Gold](docs/gold-contract.md)
+- [Catálogo generado](docs/GOLD_CATALOG.md) y [entidades](docs/GOLD_ENTITIES.json)
+- [Guía de dominio para el agente](docs/gold-domain-guide.md)
+- [Verificación y evaluación](docs/gold-verification.md)
+- [Consultas certificadas](config/gold/certified_queries.json),
+  [set de evaluación](docs/GOLD_EVALS.json) y
+  [registro de correcciones](config/gold/corrections.json)
+
+Límites: un informe no es un hecho verificado, y coincidir con Bronze no prueba
+que sea verdad. Además:
+
+- hay duplicados pendientes;
+- hay sesgos por fuente y época;
+- los marcadores de día reducen la precisión de algunas fechas;
+- parte de los valores procede de evidencia externa;
+- las puntuaciones de modelo no son hechos.

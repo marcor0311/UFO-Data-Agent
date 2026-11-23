@@ -1,0 +1,17 @@
+{
+  "description": "Registro de correcciones confirmadas del agente o de Gold. Cada error confirmado se registra con la pregunta, la respuesta errónea, la correcta y la causa, y se convierte en una pregunta del set de evaluación (categoría regression) mediante scripts/record_gold_correction.py. Después hay que ejecutar verify_gold_independent.py --write-references y run_gold_evals.py.",
+  "fields": {
+    "id": "Identificador estable (C001, C002…).",
+    "reported_at": "Fecha ISO 8601 en que se confirmó el error.",
+    "question": "Pregunta en español tal como la hizo el usuario.",
+    "wrong_answer": "Respuesta errónea que dio el agente (texto o cifras).",
+    "correct_answer": "Respuesta correcta, verificada contra el resultado de Gold o de la verificación independiente.",
+    "cause": "Causa: agent_routing (eligió mal la consulta), agent_wording (redactó mal un resultado correcto), contract (el contrato permitió algo indebido), gold_data (defecto del modelo Gold), catalog (definición o etiqueta incorrecta) o silver_upstream (defecto de Silver, reportado y no parcheado en Gold).",
+    "layer": "agent | gold | silver",
+    "gold_load_id": "Carga Gold en la que se observó.",
+    "eval_id": "ID de la pregunta agregada a docs/GOLD_EVALS.json.",
+    "fix": "Qué se cambió para corregirlo, o 'pendiente'."
+  },
+  "causes": ["agent_routing", "agent_wording", "contract", "gold_data", "catalog", "silver_upstream"],
+  "corrections": []
+}
