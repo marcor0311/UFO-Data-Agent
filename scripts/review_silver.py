@@ -73,6 +73,23 @@ QUERIES = {
         WHERE rule_id='geographic_dependency' GROUP BY column_name ORDER BY column_name""",
     'coordinate_quarantine': """SELECT table_name,COUNT(*) AS records FROM quality_issue
         WHERE rule_id='coordinate_country_conflict' GROUP BY table_name ORDER BY table_name""",
+    'calendar_precision': """SELECT source_name,calendar_precision,day_placeholder_risk,
+        month_placeholder_risk,COUNT(*) AS reports FROM sighting_analytical
+        GROUP BY 1,2,3,4 ORDER BY 1,2,3,4""",
+    'date_placeholder_profile': """SELECT d.name AS source,p.pattern,p.value,p.observed,
+        p.baseline,p.ratio,p.flagged FROM temporal_placeholder_profile p
+        JOIN source_database d ON d.id=p.source_db_id ORDER BY d.name,p.pattern,p.value""",
+    'unsupported_raw_dates': """SELECT d.name AS source,e.raw_value,COUNT(*) AS reports,
+        MIN(e.sighting_id) AS example_id FROM temporal_evidence e
+        JOIN sighting s ON s.id=e.sighting_id JOIN source_database d ON d.id=s.source_db_id
+        WHERE e.interpretation='unsupported' GROUP BY 1,2 ORDER BY reports DESC,source,e.raw_value""",
+    'source_geography_decisions': """SELECT country_check,coordinate_check,COUNT(*) AS reports,
+        MIN(bronze_distance_km) AS min_distance_km,MAX(bronze_distance_km) AS max_distance_km,
+        MIN(sighting_id) AS example_id FROM source_geography_evidence GROUP BY 1,2 ORDER BY 1,2""",
+    'external_evidence': """SELECT source_name,coordinate_basis,country_basis,time_basis,
+        COUNT(*) AS reports FROM sighting_analytical WHERE uses_external_evidence=1
+        OR coordinate_basis!='bronze' OR country_basis NOT IN ('location')
+        GROUP BY 1,2,3,4 ORDER BY reports DESC""",
 }
 
 

@@ -1,8 +1,9 @@
 """Boundaries for source evidence used by Gold-facing Silver fields."""
+import json
 import unittest
 
-from scripts import silver_analytics as analytics, silver_evidence as evidence
-from scripts.silver_quality import parse_date
+from scripts import build_silver as silver, silver_analytics as analytics, silver_evidence as evidence
+from scripts.silver_quality import Countries, parse_date
 
 
 class SourceEvidenceTests(unittest.TestCase):
@@ -43,6 +44,31 @@ class SourceEvidenceTests(unittest.TestCase):
         self.assertFalse(evidence.valid_source_coordinates({'latitude':0,'longitude':0,'country':'The Moon'}))
         self.assertFalse(evidence.valid_source_coordinates({'latitude':90.000004,'longitude':0,'country':'USA'}))
         self.assertTrue(evidence.valid_source_coordinates({'latitude':0,'longitude':0,'country':''}))
+
+    def test_catalogue_geography_never_overrides_contradicting_bronze(self):
+        countries=Countries(json.loads((silver.ROOT/'config/countries.json').read_text()))
+        policy=json.loads(silver.POLICY.read_text())['quality']
+        threshold,regions=evidence.geography_settings(policy,countries)
+        jerusalem={'latitude':31.766668,'longitude':35.233335,'country':'Israel'}
+        def decide(item,pair,status='valid',code='IL',quarantined=False):
+            return evidence.geography_decision(item,pair,status,code,quarantined,countries,regions,threshold)
+        # Texas geocode of "Palestine" versus the catalogue place in Jerusalem.
+        self.assertEqual(decide(jerusalem,(31.76212,-95.63079),code='US'),
+                         {'country_check':'conflict','coordinate_check':'conflict','distance':11263.3})
+        self.assertEqual(decide(jerusalem,(31.77,35.22))['coordinate_check'],'corroborated')
+        self.assertEqual(decide(jerusalem,(31.77,35.22))['country_check'],'corroborated')
+        self.assertEqual(decide(jerusalem,None,'missing',None),{'country_check':'fill','coordinate_check':'fill','distance':None})
+        self.assertEqual(decide(jerusalem,None,'valid','US')['coordinate_check'],'conflict')
+        quarantined=decide(jerusalem,(31.77,35.22),'conflict',None,True)
+        self.assertEqual((quarantined['country_check'],quarantined['coordinate_check']),('bronze_conflict','quarantined'))
+        kent={'latitude':51.166669,'longitude':1.316667,'country':'Great Britain and Ireland'}
+        self.assertEqual(decide(kent,(51.2,1.3),code='GB')['country_check'],'corroborated')
+        self.assertEqual(decide(kent,(47.38,-122.23),code='US')['country_check'],'conflict')
+        self.assertEqual(decide(kent,None,'missing',None)['country_check'],'no_evidence')
+        moon={'latitude':0,'longitude':0,'country':'The Moon'}
+        self.assertEqual(decide(moon,(1,1))['coordinate_check'],'non_terrestrial')
+        with self.assertRaises(ValueError):
+            evidence.geography_settings({'source_geography_policy':{'corroboration_km':50,'region_members':{'X':['ZZ']}}},countries)
 
 
 if __name__=='__main__':unittest.main()

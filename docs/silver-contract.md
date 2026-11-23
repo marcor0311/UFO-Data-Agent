@@ -1,10 +1,10 @@
-# Contrato de Silver para analítica — políticas v4 y v5
+# Contrato de Silver para analítica — políticas v4 a v6
 
-La política vigente es **v5**. Sus recuperaciones de fuente, excepciones
-geográficas y aceptación para Gold se documentan en
-[Silver lista para Gold](silver-gold-readiness.md). Los resultados numéricos de
-v4 que aparecen al final son históricos; el informe generado de v5 identifica
-la salida actual mediante SHA-256.
+La política vigente es **v6**. Sus correcciones de la auditoría Silver–Bronze,
+las recuperaciones de fuente, las excepciones geográficas y la aceptación para
+Gold se documentan en [Silver lista para Gold](silver-gold-readiness.md). Los
+resultados numéricos de v4 que aparecen al final son históricos; el informe
+generado identifica la salida actual mediante SHA-256.
 
 ## Criterio y alcance
 
@@ -61,6 +61,10 @@ El calendario validado es el gregoriano proléptico de `datetime`; no se
 convierten calendarios históricos sin metadatos.
 Winter y prosa relativa permanecen calificadas. No se obtiene la fecha del
 evento de un año que únicamente corresponde a su publicación o reporte.
+Desde v6, el texto libre fuera de la gramática solo certifica los componentes
+que contiene: cada año, mes y día canónico debe aparecer en `date_event_raw`
+en una expresión de fecha explícita (numérica, con nombre de mes en inglés o
+italiano, compacta o grupo militar día-hora). Lo demás se retira o califica.
 
 `temporal_evidence` conserva expresión, interpretación, candidato, límites de
 años y si cambió algún campo de origen. `applied=0` en un intervalo puede
