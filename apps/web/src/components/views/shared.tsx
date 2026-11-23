@@ -1,0 +1,173 @@
+"use client";
+
+import { useCallback, useEffect, useRef, useState, type ReactNode } from "react";
+import type { Catalog, GoldResult, Row } from "@/lib/contracts";
+import { cell, dimensionLabel, metricLabel, num, percent } from "@/lib/format";
+
+/* Sequential ramp (one hue, light → dark), validated reference steps. */
+export const RAMP = ["var(--seq-100)", "var(--seq-200)", "var(--seq-300)", "var(--seq-400)", "var(--seq-500)", "var(--seq-600)", "var(--seq-700)"];
+
+/** Metric columns present in the rows, the requested ones first. */
+export function metricsOf(result: GoldResult, catalog: Catalog | null): string[] {
+  const keys = result.rows[0] ? Object.keys(result.rows[0]) : [...result.query.metrics];
+  const present = keys.filter((k) => catalog?.metrics[k] || result.query.metrics.includes(k));
+  return [...result.query.metrics.filter((m) => present.includes(m)), ...present.filter((m) => !result.query.metrics.includes(m))];
+}
+
+/** Metrics drawn as their own panel: the lower duplicate bound rides inside its upper bound. */
+export function panelMetrics(result: GoldResult, catalog: Catalog | null): string[] {
+  const lower = result.duplicate_bounds?.lower;
+  return metricsOf(result, catalog).filter((m) => m !== lower || !metricsOf(result, catalog).includes("report_count"));
+}
+
+export function lowerBound(result: GoldResult, metric: string): string | null {
+  return metric === result.duplicate_bounds?.upper && result.duplicate_bounds.lower ? result.duplicate_bounds.lower : null;
+}
+
+export function value(row: Row, metric: string): number | null {
+  const v = row[metric];
+  return typeof v === "number" ? v : null;
+}
+
+export function formatMetric(v: number | null, metric: string, catalog: Catalog | null): string {
+  if (v === null) return "—";
+  return num(v) + (percent(metric, catalog) ? " %" : "");
+}
+
+/** "390.944 – 702.572" for a bounded report count, or the plain value. */
+export function rangeText(row: Row, metric: string, result: GoldResult, catalog: Catalog | null): string {
+  const lower = lowerBound(result, metric);
+  const upper = value(row, metric);
+  if (lower && typeof row[lower] === "number") return `${num(row[lower])} – ${num(upper)}`;
+  return formatMetric(upper, metric, catalog);
+}
+
+export function groupLabel(row: Row, groups: string[]): string {
+  return groups.map((g) => cell(row, g)).join(" · ") || "Total";
+}
+
+export function niceMax(max: number): number {
+  if (max <= 0) return 1;
+  const exp = Math.pow(10, Math.floor(Math.log10(max)));
+  for (const step of [1, 2, 2.5, 5, 10]) if (step * exp >= max) return step * exp;
+  return 10 * exp;
+}
+
+export function ticks(max: number, count = 4): number[] {
+  const top = niceMax(max);
+  return Array.from({ length: count + 1 }, (_, i) => (top * i) / count);
+}
+
+/** Sequential step (0 → no fill). Log scale for heavy-tailed counts (maps), linear otherwise. */
+export function rampIndex(v: number, max: number, scale: "log" | "linear" = "log"): number {
+  if (v <= 0 || max <= 0) return -1;
+  if (max <= 1) return RAMP.length - 1;
+  const share = scale === "log" ? Math.log(v) / Math.log(max) : v / max;
+  return Math.min(RAMP.length - 1, Math.floor(share * RAMP.length - 1e-9 * (scale === "linear" ? 1 : 0)));
+}
+
+export function rampLegend(max: number, scale: "log" | "linear" = "log"): { color: string; from: number }[] {
+  return RAMP.map((color, i) => ({
+    color,
+    from: i === 0 ? 1 : scale === "log" ? Math.ceil(Math.exp((i / RAMP.length) * Math.log(Math.max(max, 1)))) : Math.ceil((i / RAMP.length) * max),
+  }));
+}
+
+/** Caption of a metric panel: a bounded report count is a range, not the upper bound alone. */
+export function panelTitle(result: GoldResult, metric: string, catalog: Catalog | null): string {
+  return lowerBound(result, metric) ? "Informes (rango por duplicados pendientes)" : metricLabel(catalog, metric);
+}
+
+/** Round, evenly spaced year ticks. */
+export function yearTicks(x0: number, x1: number, max = 7): number[] {
+  const span = Math.max(1, x1 - x0);
+  const step = [1, 2, 5, 10, 20, 25, 50, 100, 200, 250, 500].find((s) => span / s <= max - 1) ?? 1000;
+  const out = [];
+  for (let t = Math.ceil(x0 / step) * step; t <= x1 + 1e-9; t += step) out.push(t);
+  return out;
+}
+
+type Tip = { x: number; y: number; title: string; lines: { key?: string; value: string; label: string }[] } | null;
+
+/** One positioned tooltip per chart; values lead, labels follow. Uses text nodes only.
+    Also measures the container so charts draw at real pixel size (text never scales). */
+export function useTooltip(fallbackWidth = 720) {
+  const ref = useRef<HTMLDivElement>(null);
+  const [tip, setTip] = useState<Tip>(null);
+  const [width, setWidth] = useState(fallbackWidth);
+  useEffect(() => {
+    const node = ref.current;
+    if (!node || typeof ResizeObserver === "undefined") return;
+    const observer = new ResizeObserver(([entry]) => setWidth(Math.max(320, Math.floor(entry.contentRect.width))));
+    observer.observe(node);
+    return () => observer.disconnect();
+  }, []);
+  const show = useCallback((event: { clientX: number; clientY: number } | DOMRect, content: Omit<NonNullable<Tip>, "x" | "y">) => {
+    const box = ref.current?.getBoundingClientRect();
+    if (!box) return;
+    const x = "clientX" in event ? event.clientX : event.left + event.width / 2;
+    const y = "clientY" in event ? event.clientY : event.top;
+    setTip({ ...content, x: x - box.left, y: y - box.top });
+  }, []);
+  const hide = useCallback(() => setTip(null), []);
+  const layer = tip ? (
+    <div className="viz-tip" role="status" style={{ left: tip.x, top: tip.y }}>
+      <div className="viz-tip-title">{tip.title}</div>
+      {tip.lines.map((line, i) => (
+        <div className="viz-tip-row" key={i}>
+          {line.key ? <span className="viz-tip-key" style={{ background: line.key }} /> : null}
+          <strong>{line.value}</strong>
+          <span>{line.label}</span>
+        </div>
+      ))}
+    </div>
+  ) : null;
+  return { ref, show, hide, layer, width };
+}
+
+export function BoundLegend({ result, metric }: { result: GoldResult; metric: string }) {
+  if (!lowerBound(result, metric)) return null;
+  return (
+    <div className="viz-legend" aria-label="Leyenda">
+      <span><i className="swatch" style={{ background: "var(--bound-upper)" }} />Todos los informes (cota superior)</span>
+      <span><i className="swatch" style={{ background: "var(--series-1)" }} />Sin candidatos de duplicado pendientes (cota inferior)</span>
+    </div>
+  );
+}
+
+export function DataTable({ result, catalog, caption }: { result: GoldResult; catalog: Catalog | null; caption?: string }) {
+  const groups = result.query.group_by.length ? result.query.group_by
+    : result.rows[0] ? Object.keys(result.rows[0]).filter((k) => !k.endsWith("_label") && !metricsOf(result, catalog).includes(k)) : [];
+  const metrics = metricsOf(result, catalog);
+  return (
+    <div className="viz-table-wrap">
+      <table className="viz-table">
+        {caption ? <caption>{caption}</caption> : null}
+        <thead>
+          <tr>
+            {groups.map((g) => <th key={g} scope="col">{dimensionLabel(catalog, g)}</th>)}
+            {metrics.map((m) => <th key={m} scope="col" className="num">{metricLabel(catalog, m)}</th>)}
+          </tr>
+        </thead>
+        <tbody>
+          {result.rows.map((row, i) => (
+            <tr key={i}>
+              {groups.map((g) => <td key={g}>{cell(row, g)}</td>)}
+              {metrics.map((m) => <td key={m} className="num">{formatMetric(value(row, m), m, catalog)}</td>)}
+            </tr>
+          ))}
+          {result.total ? (
+            <tr className="total">
+              {groups.map((g, i) => <td key={g}>{i === 0 ? "Total (recalculado)" : ""}</td>)}
+              {metrics.map((m) => <td key={m} className="num">{formatMetric(value(result.total as Row, m), m, catalog)}</td>)}
+            </tr>
+          ) : null}
+        </tbody>
+      </table>
+    </div>
+  );
+}
+
+export function Empty({ children }: { children?: ReactNode }) {
+  return <p className="viz-empty">{children ?? "La consulta no devolvió filas: no hay informes que cumplan esos filtros y elegibilidad."}</p>;
+}
