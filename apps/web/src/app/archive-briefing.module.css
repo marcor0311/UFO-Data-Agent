@@ -1,0 +1,124 @@
+.briefing {
+  border-top: 1px solid var(--rule);
+  background: var(--surface);
+}
+
+.inner {
+  max-width: 100rem;
+  margin-inline: auto;
+  padding: clamp(4rem, 7.4vw, 7rem) var(--gutter);
+}
+
+.intro {
+  margin-bottom: clamp(1.8rem, 3.8vw, 3.5rem);
+}
+
+.intro blockquote {
+  margin: 0.8rem 0 0;
+  color: var(--signal);
+  font-size: clamp(1.3rem, 2.65vw, 2.5rem);
+  font-weight: 650;
+  letter-spacing: -0.035em;
+  line-height: 1.22;
+  text-wrap: balance;
+}
+
+.references {
+  margin-top: clamp(2rem, 4vw, 4rem);
+  border-block: 1px solid var(--rule);
+}
+
+.references summary {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 0.95rem 0;
+  cursor: pointer;
+  font-size: 1.075rem;
+  font-weight: 750;
+  list-style: none;
+}
+
+.references summary::-webkit-details-marker {
+  display: none;
+}
+
+.references summary::after {
+  flex: none;
+  width: 0.8rem;
+  height: 0.8rem;
+  background:
+    linear-gradient(currentColor, currentColor) center / 100% 1px no-repeat,
+    linear-gradient(currentColor, currentColor) center / 1px 100% no-repeat;
+  content: "";
+}
+
+.references[open] summary::after {
+  background-size: 100% 1px, 0 0;
+}
+
+.references > p {
+  max-width: 59ch;
+  margin: 0.2rem 0 1.6rem;
+  color: var(--muted);
+  font-size: 1.075rem;
+}
+
+.platformHead, .platforms li {
+  display: grid;
+  grid-template-columns: minmax(12rem, 0.82fr) 1fr 1fr;
+  align-items: center;
+  gap: clamp(1rem, 4vw, 3.5rem);
+}
+
+.platformHead {
+  padding-bottom: 0.5rem;
+  color: var(--muted);
+  font-size: 0.9375rem;
+}
+
+.platforms {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.platforms li {
+  padding: 0.95rem 0;
+  border-top: 1px solid var(--rule);
+  font-size: 1.075rem;
+}
+
+.platforms p {
+  margin: 0;
+}
+
+.platforms p:first-of-type {
+  color: var(--muted);
+}
+
+.platformName {
+  display: flex;
+  align-items: center;
+  gap: 0.8rem;
+  font-weight: 750;
+}
+
+.platformName img {
+  flex: none;
+}
+
+.researchLink {
+  display: inline-block;
+  margin: 0.65rem 0 1.25rem;
+  font-weight: 750;
+}
+
+.references a {
+  text-underline-offset: 0.2em;
+}
+
+.references a:hover, .references summary:hover {
+  color: var(--signal);
+}
