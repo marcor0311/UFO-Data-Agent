@@ -122,3 +122,14 @@
 .references a:hover, .references summary:hover {
   color: var(--signal);
 }
+
+@media (max-width: 760px) {
+  .platformHead {
+    display: none;
+  }
+
+  .platforms li {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 0.55rem;
+  }
+}

@@ -45,14 +45,36 @@
   border-color: var(--muted);
 }
 
-.chartTitle button {
-  padding: 0.35rem 0.55rem;
+.chartActions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  margin-top: 0.75rem;
+}
+
+.chartActions button {
+  min-height: 2.4rem;
+  padding: 0.35rem 0.7rem;
   white-space: nowrap;
 }
 
-.chartTitle button[aria-pressed="true"] {
+.chartActions button[aria-pressed="true"] {
   border-color: #677e92;
   color: var(--signal);
+}
+
+.chartProgress {
+  height: 2px;
+  margin-top: 0.65rem;
+  background: var(--rule);
+}
+
+.chartProgress span {
+  display: block;
+  height: 100%;
+  transform: scaleX(0);
+  transform-origin: left;
+  background: var(--selection);
 }
 
 .chartInstruction, .chartNote, .demo figcaption, .mapFooter, .selection {
@@ -199,6 +221,8 @@
 }
 
 .mapControls {
+  flex-wrap: wrap;
+  max-width: 100%;
   margin-inline-start: auto;
 }
 
@@ -228,4 +252,11 @@
   grid-column: 1 / -1;
   padding-top: 0.85rem;
   border-top: 1px solid var(--rule);
+}
+
+@media (max-width: 900px) {
+  .demo {
+    grid-template-columns: minmax(0, 1fr);
+    row-gap: 1.5rem;
+  }
 }
