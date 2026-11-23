@@ -1,0 +1,7 @@
+# DB Test/sketchbook-v2/generar.py, líneas 55–60. Usar exportar-estatico.py.
+# D3 uniform bins, same visual language as D1; tails explicit.
+fig,ax=new();style(ax);bins=np.arange(0,65,5);cts,edges=np.histogram(dur[dur<=60],bins);ax.bar(edges[:-1],cts,width=4.85,align='edge',color=GREEN);ax.set_xticks(np.arange(0,65,5));ax.set_xlim(-.5,61);ax.set_xlabel('Duración reportada (minutos)');ax.set_ylabel('Reportes');ax.set_ylim(0,max(cts)*1.22)
+for x,v in zip(edges[:-1]+2.5,cts):
+ if v:ax.text(x,v+max(cts)*.025,str(v),ha='center',fontsize=11)
+q=np.quantile(dur,[.25,.5,.75]);note(fig,f'N válido: {len(dur)} / {n} · mediana {q[1]:g} min · IQR {q[0]:g}–{q[2]:g} min · >60 min: {sum(dur>60)} (abrir cola) · sin duración: {n-len(dur)}')
+save('D3','Duración · histograma','Parte de la sencillez de D1: barras contiguas en intervalos iguales de cinco minutos. La cola superior a una hora queda contada y accesible; la implementación permitirá ampliar el rango, cambiar bins y alternar a logaritmo.',fig,'California · 1990–1999')

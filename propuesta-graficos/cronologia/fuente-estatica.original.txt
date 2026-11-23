@@ -1,0 +1,10 @@
+# DB Test/sketchbook-v2/generar.py, líneas 74–82.
+# D9 original alternating cards, chronological order with explicit uniform spacing.
+fig,ax=new();ax.axis('off');rs=[r for r in ca if r['year']==1995 and r['dt'] and r['dt']['ordinal'] is not None];rs.sort(key=lambda r:(r['dt']['ordinal'],r['dbId']));chosen=[rs[int(i)] for i in np.linspace(0,len(rs)-1,6).astype(int)];ax.set_xlim(-.55,5.55);ax.set_ylim(-1.7,1.7);ax.plot([0,5],[0,0],color='#b9cfb1',lw=2.5)
+from matplotlib.patches import FancyBboxPatch
+for i,r in enumerate(chosen):
+ top=i%2==0;y=.53 if top else -1.30;ax.plot([i,i],[0,.53 if top else -.53],color='#b9cfb1',lw=1);ax.scatter([i],[0],s=90,color=GREEN,zorder=4)
+ ax.add_patch(FancyBboxPatch((i-.46,y),.92,.77,boxstyle='round,pad=.025,rounding_size=.04',fc='#edf2e7',ec='none'))
+ ax.text(i-.39,y+.56,r['date'][:10],fontsize=11,color=INK);ax.text(i-.39,y+.34,r['city'][:17],fontsize=9.5,color=MUTED);ax.text(i-.39,y+.12,'DB #'+str(r['dbId']),fontsize=10,color=MUTED)
+note(fig,f'6 fichas de ejemplo / {len(rs)} reportes con día · orden cronológico, separación visual uniforme · sin día: {sum(r["year"]==1995 for r in ca)-len(rs)}')
+save('D9','Cronología de registros','Vuelve a las tarjetas alternadas de la referencia, con fecha, localidad e ID. La secuencia tendrá paginación, ficha al seleccionar y zoom temporal; los reportes con fecha parcial se consultarán aparte.',fig,'California · 1995')

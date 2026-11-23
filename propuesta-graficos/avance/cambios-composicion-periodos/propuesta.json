@@ -1,0 +1,18 @@
+{
+  "title": "Cambios de composición entre períodos",
+  "engine": "sketchbook",
+  "id": "D12",
+  "cohort": "ca",
+  "start": 1990,
+  "end": 1999,
+  "scope": "California, 1990–1999",
+  "promptOriginal": "En California, 1990–1999, mostrame cambios de composición entre períodos.",
+  "card": {
+    "id": "D12",
+    "title": "Cambios de composición entre períodos",
+    "explanation": "El gráfico de puntos unidos muestra qué formas ganan o pierden participación sin confundirlo con el crecimiento del total. La implementación permitirá elegir dos intervalos y ver conteos junto con porcentajes.",
+    "file": "D12.svg",
+    "scope": "California, 1990–1999",
+    "prompt": "En California, 1990–1999, mostrame cambios de composición entre períodos."
+  }
+}

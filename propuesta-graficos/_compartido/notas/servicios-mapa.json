@@ -1,0 +1,103 @@
+{
+  "scope": "HTTP GET with Origin:null. Not a browser, WebGL or visual coverage test.",
+  "results": [
+    {
+      "name": "OpenFreeMap style",
+      "url": "https://tiles.openfreemap.org/styles/positron",
+      "status": 200,
+      "bytes": 25153,
+      "cors": "*",
+      "contentType": "application/json"
+    },
+    {
+      "name": "Vector catalogue",
+      "url": "https://tiles.openfreemap.org/planet",
+      "status": 200,
+      "bytes": 19254,
+      "cors": "*",
+      "contentType": "application/json"
+    },
+    {
+      "name": "Roswell vector",
+      "url": "https://tiles.openfreemap.org/planet/20261011_080001_pt/12/858/1644.pbf",
+      "status": 200,
+      "bytes": 20707,
+      "cors": "*",
+      "contentType": "application/vnd.mapbox-vector-tile"
+    },
+    {
+      "name": "Roswell terrain",
+      "url": "https://s3.amazonaws.com/elevation-tiles-prod/terrarium/12/858/1644.png",
+      "status": 200,
+      "bytes": 77525,
+      "cors": "*",
+      "contentType": "image/png"
+    },
+    {
+      "name": "Socorro vector",
+      "url": "https://tiles.openfreemap.org/planet/20261011_080001_pt/12/831/1635.pbf",
+      "status": 200,
+      "bytes": 33885,
+      "cors": "*",
+      "contentType": "application/vnd.mapbox-vector-tile"
+    },
+    {
+      "name": "Socorro terrain",
+      "url": "https://s3.amazonaws.com/elevation-tiles-prod/terrarium/12/831/1635.png",
+      "status": 200,
+      "bytes": 111018,
+      "cors": "*",
+      "contentType": "image/png"
+    },
+    {
+      "name": "Nimitz vector",
+      "url": "https://tiles.openfreemap.org/planet/20261011_080001_pt/12/707/1670.pbf",
+      "status": 200,
+      "bytes": 58,
+      "cors": "*",
+      "contentType": "application/vnd.mapbox-vector-tile"
+    },
+    {
+      "name": "Nimitz terrain",
+      "url": "https://s3.amazonaws.com/elevation-tiles-prod/terrarium/12/707/1670.png",
+      "status": 200,
+      "bytes": 70308,
+      "cors": "*",
+      "contentType": "image/png"
+    },
+    {
+      "name": "Sprite JSON",
+      "url": "https://tiles.openfreemap.org/sprites/ofm_f384/ofm.json",
+      "status": 200,
+      "bytes": 27737,
+      "cors": "*",
+      "contentType": "application/json"
+    },
+    {
+      "name": "Sprite PNG",
+      "url": "https://tiles.openfreemap.org/sprites/ofm_f384/ofm.png",
+      "status": 200,
+      "bytes": 49454,
+      "cors": "*",
+      "contentType": "image/png"
+    },
+    {
+      "name": "Glyphs",
+      "url": "https://tiles.openfreemap.org/fonts/Noto%20Sans%20Regular/0-255.pbf",
+      "status": 200,
+      "bytes": 76580,
+      "cors": "*",
+      "contentType": "application/x-protobuf"
+    },
+    {
+      "name": "Mapterhorn catalogue",
+      "url": "https://tiles.mapterhorn.com/tilejson.json",
+      "status": 200,
+      "bytes": 270,
+      "cors": "*",
+      "contentType": "text/plain;charset=UTF-8",
+      "encoding": "terrarium",
+      "tileTemplate": "https://tiles.mapterhorn.com/{z}/{x}/{y}.webp"
+    }
+  ]
+}

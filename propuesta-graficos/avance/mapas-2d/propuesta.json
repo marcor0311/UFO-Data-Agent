@@ -1,0 +1,20 @@
+{
+  "title": "Mapas 2D",
+  "engine": "map",
+  "cohort": "general",
+  "start": 1990,
+  "end": 1999,
+  "scope": "California y Nevada, 1990–1999",
+  "bounds": [
+    [
+      -126,
+      31
+    ],
+    [
+      -113,
+      43
+    ]
+  ],
+  "promptOriginal": "¿Dónde ocurrieron estos reportes? Mapa 2D.",
+  "promptOrigen": "DB Test/experiencia-conversacional.js"
+}

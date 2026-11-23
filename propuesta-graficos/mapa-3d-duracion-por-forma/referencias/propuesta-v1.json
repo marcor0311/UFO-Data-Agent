@@ -1,0 +1,23 @@
+{
+  "id": "D4",
+  "title": "Comparación de duraciones por forma",
+  "question": "¿Las medianas y la dispersión cambian entre descripciones?",
+  "references": [
+    "verificacion-uap/distribution.png"
+  ],
+  "keep": "La lectura de distribución, ampliada a una comparación entre categorías.",
+  "change": "Box plots con escala común y N por fila. Máximo ocho filas por página; todas las formas accesibles.",
+  "interaction": "Abrir una forma para revisar sus reportes, extremos y faltantes; conservar el subconjunto.",
+  "limit": "Grupos pequeños se señalan; no se fuerza una diferencia. Cuartiles calculados antes de transformar el eje.",
+  "prompt": "Compará la duración por forma en California entre 1990 y 1999.",
+  "scope": "California · 1990-1999",
+  "population": "La base es el mismo corte, sin ocultar formas poco frecuentes.",
+  "controls": [
+    "Lineal / log",
+    "Formas paginadas",
+    "Abrir fila"
+  ],
+  "status": "Propuesto",
+  "image": "sketchbook/D4.png",
+  "section": "Datos"
+}

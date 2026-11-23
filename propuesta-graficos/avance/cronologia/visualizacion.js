@@ -1,0 +1,6 @@
+/* Renderizador recuperado de DB Test/sketchbook-integrado.js. */
+(function(root){'use strict';
+const {A,esc,f,txt,line,svg,pick,sel,frame,blue,gray,grid,colors,memo,keyOf}=root.UAPSketchbookDrawing;
+function sequence(rows,o){const sorted=rows.filter(r=>r.dt?.day).sort((a,b)=>a.date.localeCompare(b.date)||a.dbId-b.dbId),page=+o.page||0,shown=sorted.slice(page*8,page*8+8),groups=new Map();let body=line(420,20,420,520,'stroke="#a9b8c8"');shown.forEach((r,i)=>{const left=i%2===0,x=left?35:455,y=25+i*60;groups.set(String(i),{key:'DB #'+r.dbId,rows:[r]});body+=pick(`<rect x="${x}" y="${y}" width="345" height="48" rx="7" fill="#f3f6fa"/>`+txt(x+12,y+19,r.date.slice(0,16)+' · '+String(r.city).slice(0,32))+txt(x+12,y+38,r.shape+' · DB #'+r.dbId)+`<circle cx="420" cy="${y+24}" r="5" fill="${blue}"/>`,i,r.date+' DB '+r.dbId)});return frame('D9',rows,{body,groups,height:530,controls:sel('page','Cronología',Array.from({length:Math.max(1,Math.ceil(sorted.length/8))},(_,i)=>[i,'Página '+(i+1)]),page),note:`${sorted.length} con día válido / ${rows.length}. Las fechas parciales no reciben día ni hora; consultables en el archivo.`})}
+A.renderers['D9']=(rows,o={})=>rows.length?sequence(rows,o):frame('D9',rows,{lead:'No hay registros en este alcance.'});
+})(window);

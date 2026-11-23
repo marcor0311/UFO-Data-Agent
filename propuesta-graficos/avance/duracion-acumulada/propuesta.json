@@ -1,0 +1,18 @@
+{
+  "title": "Duración acumulada",
+  "engine": "sketchbook",
+  "id": "D13",
+  "cohort": "ca",
+  "start": 1990,
+  "end": 1999,
+  "scope": "California, 1990–1999",
+  "promptOriginal": "En California, 1990–1999, mostrame duración acumulada · ecdf.",
+  "card": {
+    "id": "D13",
+    "title": "Duración acumulada · ECDF",
+    "explanation": "Permite responder «¿qué porcentaje dura hasta cinco minutos?» y comparar percentiles sin depender del ancho de los bins. Seleccionar un umbral abrirá los registros a cada lado.",
+    "file": "D13.svg",
+    "scope": "California, 1990–1999",
+    "prompt": "En California, 1990–1999, mostrame duración acumulada · ecdf."
+  }
+}

@@ -1,0 +1,18 @@
+{
+  "title": "Día de la semana por hora consignada",
+  "engine": "sketchbook",
+  "id": "D15",
+  "cohort": "ml",
+  "start": 2001,
+  "end": 2007,
+  "scope": "California y entorno, 2001–2007",
+  "promptOriginal": "En California y entorno, 2001–2007, mostrame día de la semana × hora consignada.",
+  "card": {
+    "id": "D15",
+    "title": "Día de la semana × hora consignada",
+    "explanation": "Explora patrones de documentación horaria y permite abrir cualquier bloque. Es una comparación de las horas escritas en el archivo; el gráfico avisará sobre zonas desconocidas y posibles valores por defecto.",
+    "file": "D15.svg",
+    "scope": "California y entorno, 2001–2007",
+    "prompt": "En California y entorno, 2001–2007, mostrame día de la semana × hora consignada."
+  }
+}
