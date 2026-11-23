@@ -134,25 +134,22 @@
 }
 
 .bars button {
-  display: grid;
-  grid-template-rows: var(--plot-height) auto;
-  justify-items: center;
+  appearance: none;
+  display: block;
   min-width: 0;
   padding: 0;
   border: 0;
 }
 
 .barSpace {
-  display: flex;
-  align-items: end;
-  width: 100%;
-  padding: 0 9%;
+  position: relative;
+  display: block;
+  height: var(--plot-height);
 }
 
 .bar {
-  position: relative;
-  display: block;
-  width: 100%;
+  position: absolute;
+  inset: auto 9% 0;
   height: var(--bar-height);
   background: #91aabd;
 }
@@ -176,6 +173,7 @@
 }
 
 .month {
+  display: block;
   padding-top: 0.5rem;
   font-size: clamp(0.62rem, 0.9vw, 0.82rem);
 }

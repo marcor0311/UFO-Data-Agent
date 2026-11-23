@@ -1,5 +1,20 @@
 # UFO Data Agent
 
+## Ejecutar la aplicación local
+
+Desde la raíz del repositorio, prepara la API y la web una vez:
+
+```bash
+python3.14 -m venv apps/api/.venv
+apps/api/.venv/bin/python -m pip install -e apps/api
+npm --prefix apps/web ci
+```
+
+`npm --prefix apps/web run dev` inicia la web y la API. Abre `http://127.0.0.1:3000`
+para que el navegador conserve la cookie al volver de ChatGPT. El catálogo
+requiere la caché de servicio generada al construir Gold. Si ya tienes una API
+en ejecución, puedes iniciar solo la web con `npm --prefix apps/web run dev:web`.
+
 ## Fuentes de datos
 
 La base integra datos de:
