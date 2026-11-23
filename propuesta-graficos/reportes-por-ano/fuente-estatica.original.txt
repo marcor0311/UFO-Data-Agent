@@ -1,0 +1,6 @@
+# DB Test/sketchbook-v2/generar.py, líneas 49–53.
+# D1: restore the original single, quiet bar chart.
+fig,ax=new();style(ax);ax.bar(years,counts,width=.64,color=GREEN,zorder=3);ax.set_xticks(years);ax.set_ylim(0,520);ax.set_yticks([0,100,200,300,400,500]);ax.set_ylabel('Reportes');
+for x,v in zip(years,counts):ax.text(x,v+12,str(v),ha='center',fontsize=12)
+note(fig,f'California · 1990–1999 · {fnum(n)} reportes · fecha del evento validada')
+save('D1','Reportes por año','Recupera las barras de la referencia: una sola comparación, valores visibles y eje desde cero. Seleccionar un año abrirá sus registros; año/mes será un cambio de granularidad, sin añadir paneles.',fig)

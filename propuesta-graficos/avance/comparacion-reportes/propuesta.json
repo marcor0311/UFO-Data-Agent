@@ -1,0 +1,7 @@
+{
+  "title": "Comparación de reportes",
+  "engine": "compare",
+  "scope": "Muestra original de 240 registros",
+  "promptOriginal": "Compará las características de dos eventos UAP",
+  "promptOrigen": "DB Test/mejoras-data-agent.js"
+}

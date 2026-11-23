@@ -1,0 +1,8 @@
+{
+  "id": "D1",
+  "title": "Reportes por año",
+  "explanation": "Recupera las barras de la referencia: una sola comparación, valores visibles y eje desde cero. Seleccionar un año abrirá sus registros; año/mes será un cambio de granularidad, sin añadir paneles.",
+  "file": "D1.svg",
+  "scope": "California, 1990–1999",
+  "prompt": "En California, 1990–1999, mostrame reportes por año."
+}

@@ -1,0 +1,8 @@
+{
+  "id": "D6",
+  "title": "Región × año",
+  "explanation": "Matriz de California y Nevada: cada celda conserva conteo e IDs. Alternar a porcentaje de cada región permitirá comparar perfiles temporales; la selección podrá pasar al mapa.",
+  "file": "D6.svg",
+  "scope": "California y Nevada, 1990–1999",
+  "prompt": "En California y Nevada, 1990–1999, mostrame región × año."
+}

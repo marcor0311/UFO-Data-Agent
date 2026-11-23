@@ -1,0 +1,55 @@
+{
+  "scope": "Mesh topology, cached geometry, instancing budgets and SDK-adapter contracts. No browser/GPU performance certification.",
+  "limits": {
+    "maxModels": 60,
+    "maxTriangles": 18000,
+    "compactModels": 30,
+    "compactTriangles": 9000,
+    "cellPixels": 40
+  },
+  "trianglesPerMesh": {
+    "sphere": {
+      "low": 252,
+      "medium": 440,
+      "high": 840
+    },
+    "cigar": {
+      "low": 252,
+      "medium": 440,
+      "high": 840
+    },
+    "disc": {
+      "low": 192,
+      "medium": 288,
+      "high": 480
+    },
+    "triangle": {
+      "low": 48,
+      "medium": 96,
+      "high": 144
+    }
+  },
+  "scenarioCount": 224,
+  "worstInstancedTriangles": {
+    "desktop": 15120,
+    "compact": 8640
+  },
+  "passed": [
+    "sphere / low: volumen, normales, caché y detalle creciente",
+    "sphere / medium: volumen, normales, caché y detalle creciente",
+    "sphere / high: volumen, normales, caché y detalle creciente",
+    "cigar / low: volumen, normales, caché y detalle creciente",
+    "cigar / medium: volumen, normales, caché y detalle creciente",
+    "cigar / high: volumen, normales, caché y detalle creciente",
+    "disc / low: volumen, normales, caché y detalle creciente",
+    "disc / medium: volumen, normales, caché y detalle creciente",
+    "disc / high: volumen, normales, caché y detalle creciente",
+    "triangle / low: volumen, normales, caché y detalle creciente",
+    "triangle / medium: volumen, normales, caché y detalle creciente",
+    "triangle / high: volumen, normales, caché y detalle creciente",
+    "224 combinaciones respetan el presupuesto contando todas las instancias",
+    "El detalle se recupera al acercarse a pocas figuras",
+    "Escritorio: presupuesto real del adaptador y todos los registros conservados",
+    "Vista estrecha: presupuesto real del adaptador y todos los registros conservados"
+  ]
+}

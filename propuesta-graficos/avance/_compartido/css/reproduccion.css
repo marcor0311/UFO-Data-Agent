@@ -1,0 +1,9 @@
+:root { font: 15px/1.5 system-ui, sans-serif; color: #273442; background: #fff; }
+body { margin: 0; }
+main { max-width: 1120px; margin: 24px auto; padding-inline: 20px; }
+h1 { font-size: 1.3rem; margin: 0; }
+header p { margin: 4px 0 18px; }
+button, select, input { font: inherit; }
+.map-host { position: relative; height: 600px; }
+#record { max-width: min(760px, 85vw); }
+#record-content { max-height: 65vh; overflow: auto; white-space: pre-wrap; overflow-wrap: anywhere; }

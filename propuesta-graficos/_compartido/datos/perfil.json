@@ -1,0 +1,145 @@
+{
+  "generated": "2026-10-20",
+  "database": "ufo_public.db",
+  "database_bytes": 733192192,
+  "grain": "sighting.id; reports, not unique physical events",
+  "coordinates": "sighting.lat/lng; location fallback only if null. Precision not verified.",
+  "regional_rule": "State label or explicit context bounds; known non-US countries excluded. Unknown countries retained and counted.",
+  "snapshot": "complete query results, compact field projection, no sampling",
+  "cohorts": {
+    "general": {
+      "start": 1990,
+      "end": 2023,
+      "region": "California y Nevada",
+      "intervals": [
+        [
+          1990,
+          1999
+        ],
+        [
+          2020,
+          2023
+        ]
+      ],
+      "bounds": [
+        -126,
+        31,
+        -113,
+        43
+      ],
+      "query": "SELECT s.id, s.source_db_id, s.source_record_id, s.date_event, s.date_event_raw,\ns.date_reported, s.date_posted, s.shape, s.standardized_shape, s.duration_seconds,\ns.num_witnesses, s.source_ref, s.lat, s.lng, s.has_photo, s.has_video,\nl.city, l.state AS region, l.country, l.latitude AS location_lat,\nl.longitude AS location_lon, l.geocode_src, d.name AS database_name, d.url AS database_url FROM sighting s LEFT JOIN location l ON l.id=s.location_id LEFT JOIN source_database d ON d.id=s.source_db_id WHERE lower(l.state) IN ('ca','california','nv','nevada') AND ((s.date_event >= '1990' AND s.date_event < '2000') OR (s.date_event >= '2020' AND s.date_event < '2024')) AND (l.country IS NULL OR trim(l.country)='' OR lower(l.country) IN ('us','usa','united states','united states of america')) ORDER BY s.date_event,s.id",
+      "profile": {
+        "records": 4141,
+        "distinct_ids": 4141,
+        "valid_date": 4141,
+        "day_precision": 3962,
+        "valid_duration": 2431,
+        "duration_gt_60_min": 127,
+        "duration_max_min": 360.0,
+        "valid_coordinates": 3612,
+        "shape_present": 3081,
+        "witnesses_present": 214,
+        "country_missing": 3421,
+        "sources": {
+          "Capella": 310,
+          "UFO-search": 152,
+          "UFOCAT": 3434,
+          "UPDB": 245
+        }
+      }
+    },
+    "roswell": {
+      "start": 1944,
+      "end": 1950,
+      "region": "Nuevo México y entorno",
+      "bounds": [
+        -109,
+        31,
+        -103,
+        37
+      ],
+      "query": "SELECT s.id, s.source_db_id, s.source_record_id, s.date_event, s.date_event_raw,\ns.date_reported, s.date_posted, s.shape, s.standardized_shape, s.duration_seconds,\ns.num_witnesses, s.source_ref, s.lat, s.lng, s.has_photo, s.has_video,\nl.city, l.state AS region, l.country, l.latitude AS location_lat,\nl.longitude AS location_lon, l.geocode_src, d.name AS database_name, d.url AS database_url FROM sighting s LEFT JOIN location l ON l.id=s.location_id LEFT JOIN source_database d ON d.id=s.source_db_id WHERE s.date_event >= '1944' AND s.date_event < '1951' AND (l.country IS NULL OR trim(l.country)='' OR lower(l.country) IN ('us','usa','united states','united states of america')) AND (lower(l.state) IN ('nm','new mexico','nuevo mexico') OR (coalesce(s.lat,l.latitude) BETWEEN 31 AND 37 AND coalesce(s.lng,l.longitude) BETWEEN -109 AND -103)) ORDER BY s.date_event,s.id",
+      "profile": {
+        "records": 1316,
+        "distinct_ids": 1316,
+        "valid_date": 1316,
+        "day_precision": 1155,
+        "valid_duration": 352,
+        "duration_gt_60_min": 10,
+        "duration_max_min": 240.0,
+        "valid_coordinates": 1043,
+        "shape_present": 443,
+        "witnesses_present": 54,
+        "country_missing": 828,
+        "sources": {
+          "Capella": 53,
+          "UFO-search": 324,
+          "UFOCAT": 834,
+          "UPDB": 105
+        }
+      }
+    },
+    "socorro": {
+      "start": 1961,
+      "end": 1967,
+      "region": "Nuevo México y entorno",
+      "bounds": [
+        -109,
+        31,
+        -103,
+        37
+      ],
+      "query": "SELECT s.id, s.source_db_id, s.source_record_id, s.date_event, s.date_event_raw,\ns.date_reported, s.date_posted, s.shape, s.standardized_shape, s.duration_seconds,\ns.num_witnesses, s.source_ref, s.lat, s.lng, s.has_photo, s.has_video,\nl.city, l.state AS region, l.country, l.latitude AS location_lat,\nl.longitude AS location_lon, l.geocode_src, d.name AS database_name, d.url AS database_url FROM sighting s LEFT JOIN location l ON l.id=s.location_id LEFT JOIN source_database d ON d.id=s.source_db_id WHERE s.date_event >= '1961' AND s.date_event < '1968' AND (l.country IS NULL OR trim(l.country)='' OR lower(l.country) IN ('us','usa','united states','united states of america')) AND (lower(l.state) IN ('nm','new mexico','nuevo mexico') OR (coalesce(s.lat,l.latitude) BETWEEN 31 AND 37 AND coalesce(s.lng,l.longitude) BETWEEN -109 AND -103)) ORDER BY s.date_event,s.id",
+      "profile": {
+        "records": 826,
+        "distinct_ids": 826,
+        "valid_date": 826,
+        "day_precision": 760,
+        "valid_duration": 218,
+        "duration_gt_60_min": 9,
+        "duration_max_min": 450.0,
+        "valid_coordinates": 749,
+        "shape_present": 354,
+        "witnesses_present": 26,
+        "country_missing": 628,
+        "sources": {
+          "Capella": 19,
+          "UFO-search": 70,
+          "UFOCAT": 632,
+          "UPDB": 105
+        }
+      }
+    },
+    "nimitz": {
+      "start": 2001,
+      "end": 2007,
+      "region": "California y entorno",
+      "bounds": [
+        -125,
+        31,
+        -114,
+        42
+      ],
+      "query": "SELECT s.id, s.source_db_id, s.source_record_id, s.date_event, s.date_event_raw,\ns.date_reported, s.date_posted, s.shape, s.standardized_shape, s.duration_seconds,\ns.num_witnesses, s.source_ref, s.lat, s.lng, s.has_photo, s.has_video,\nl.city, l.state AS region, l.country, l.latitude AS location_lat,\nl.longitude AS location_lon, l.geocode_src, d.name AS database_name, d.url AS database_url FROM sighting s LEFT JOIN location l ON l.id=s.location_id LEFT JOIN source_database d ON d.id=s.source_db_id WHERE s.date_event >= '2001' AND s.date_event < '2008' AND (l.country IS NULL OR trim(l.country)='' OR lower(l.country) IN ('us','usa','united states','united states of america')) AND (lower(l.state) IN ('ca','california') OR (coalesce(s.lat,l.latitude) BETWEEN 31 AND 42 AND coalesce(s.lng,l.longitude) BETWEEN -125 AND -114)) ORDER BY s.date_event,s.id",
+      "profile": {
+        "records": 7490,
+        "distinct_ids": 7490,
+        "valid_date": 7490,
+        "day_precision": 7478,
+        "valid_duration": 3523,
+        "duration_gt_60_min": 124,
+        "duration_max_min": 1440.0,
+        "valid_coordinates": 7202,
+        "shape_present": 3306,
+        "witnesses_present": 620,
+        "country_missing": 3171,
+        "sources": {
+          "Capella": 253,
+          "UFO-search": 17,
+          "UFOCAT": 3173,
+          "UPDB": 4047
+        }
+      }
+    }
+  }
+}

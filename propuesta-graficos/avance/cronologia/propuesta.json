@@ -1,0 +1,18 @@
+{
+  "title": "Cronología",
+  "engine": "sketchbook",
+  "id": "D9",
+  "cohort": "ca",
+  "start": 1995,
+  "end": 1995,
+  "scope": "California, 1995",
+  "promptOriginal": "En California, 1995, mostrame cronología de registros.",
+  "card": {
+    "id": "D9",
+    "title": "Cronología de registros",
+    "explanation": "Vuelve a las tarjetas alternadas de la referencia, con fecha, localidad e ID. La secuencia tendrá paginación, ficha al seleccionar y zoom temporal; los reportes con fecha parcial se consultarán aparte.",
+    "file": "D9.svg",
+    "scope": "California, 1995",
+    "prompt": "En California, 1995, mostrame cronología de registros."
+  }
+}

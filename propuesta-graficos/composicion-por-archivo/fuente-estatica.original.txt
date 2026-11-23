@@ -1,0 +1,6 @@
+# DB Test/sketchbook-v2/generar.py, líneas 115–119.
+fig,ax=new();bottom=np.zeros(10)
+for j,s in enumerate(sources):
+ a=np.array([sum(r['year']==y and r['source']==s for r in ca) for y in years]);v=a/np.array(counts)*100;ax.bar(years,v,bottom=bottom,color=PAL[j],label=s,width=.7);bottom+=v
+ax.set_xticks(years);ax.set_ylim(0,100);ax.set_ylabel('% de reportes del año');ax.legend(frameon=False,ncol=4,loc='upper center',bbox_to_anchor=(.5,1.12));style(ax);note(fig,'Denominador: total de cada año · permite alternar porcentaje / conteo · mismos colores por fuente')
+save('D16','Composición del archivo por fuente','Barras al 100% para detectar cambios en la mezcla de procedencias. Se complementa con D1 y D11, que muestran magnitudes; cada segmento mantendrá acceso a sus conteos e IDs.',fig)
