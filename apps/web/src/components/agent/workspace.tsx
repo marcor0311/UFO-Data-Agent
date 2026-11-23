@@ -74,6 +74,7 @@ export default function AgentWorkspace() {
   const [failure, setFailure] = useState<Failure | null>(null);
   const [announcement, setAnnouncement] = useState("");
   const [startupError, setStartupError] = useState<string | null>(null);
+  const [authError, setAuthError] = useState<string | null>(null);
   const log = useRef<HTMLDivElement>(null);
   const followLatest = useRef(true);
   const history = useRef<HTMLDetailsElement>(null);
@@ -123,7 +124,7 @@ export default function AgentWorkspace() {
           .catch(savedConversation.clear)
           .finally(() => setRestoring(false));
       }
-    }).catch(() => setSession({ authenticated: false }));
+    }).catch((error) => setAuthError(failureFrom(error, "No se pudo verificar la sesión.").message));
   }, [loadConversations]);
 
   useEffect(() => {
@@ -314,7 +315,7 @@ export default function AgentWorkspace() {
               ) : null}
             </div>
           </header>
-          {startupError && view !== "explore" ? <p className="banner" role="alert">{startupError}</p> : null}
+          {(authError || startupError) && view !== "explore" ? <p className="banner" role="alert">{authError || startupError}</p> : null}
           <div className="chat-log" ref={log} role="log" aria-label="Mensajes" tabIndex={0} hidden={view !== "chat"}
                onScroll={(event) => {
                  const { scrollHeight, scrollTop, clientHeight } = event.currentTarget;
