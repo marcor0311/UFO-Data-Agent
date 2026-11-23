@@ -14,7 +14,9 @@ export default function ArchiveGallery() {
           </div>
           <div>
             <dt>La solución</dt>
-            <dd>Reunimos y normalizamos los registros en Gold para investigarlos con preguntas en lenguaje natural y visualizaciones trazables.</dd>
+            <dd>
+              Un agente de datos con analítica conversacional para investigar casos UAP y explorar más de 700.000 reportes.
+            </dd>
           </div>
         </dl>
       </div>
@@ -24,7 +26,6 @@ export default function ArchiveGallery() {
           alt="Carpeta de archivo sobre un mapa topográfico y una tira de negativos"
           sizes="(max-width: 760px) 92vw, (max-width: 1460px) 49vw, 700px"
         />
-        <figcaption>Recreación editorial</figcaption>
       </figure>
     </section>
   );

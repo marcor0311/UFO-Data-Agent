@@ -3,9 +3,9 @@ import localFont from "next/font/local";
 import Image from "next/image";
 import Link from "next/link";
 import cierre from "../../public/archivo-uap/cierre.webp";
-import portada from "../../public/archivo-uap/portada.webp";
 import ArchiveBriefing from "./archive-briefing";
 import ArchiveGallery from "./archive-gallery";
+import LandingHero from "./landing-hero";
 import styles from "./landing.module.css";
 
 const displayFont = localFont({
@@ -23,7 +23,7 @@ const bodyFont = localFont({
 
 export const metadata: Metadata = {
   title: "UFO Data Agent | Archivo UAP",
-  description: "Consulta informes sobre fenómenos aéreos no identificados con preguntas en lenguaje natural.",
+  description: "Analítica de datos conversacional para explorar informes sobre fenómenos aéreos no identificados.",
 };
 
 export default function Home() {
@@ -42,15 +42,7 @@ export default function Home() {
         </nav>
       </header>
       <main id="contenido">
-        <section className={styles.hero} id="portada" aria-labelledby="landing-title">
-          <Image className={styles.heroImage} src={portada} alt="" fill sizes="100vw" preload />
-          <div className={styles.heroContent}>
-            <h1 id="landing-title">UFO <span>Data Agent</span></h1>
-            <p>Consulta informes sobre fenómenos aéreos no identificados (UAP) con preguntas en lenguaje natural.</p>
-            <Link className={styles.button} href="/agent">Entrar al Data Agent</Link>
-          </div>
-          <p className={styles.photoCaption}>Recreación editorial</p>
-        </section>
+        <LandingHero />
         <ArchiveGallery />
         <ArchiveBriefing />
       </main>

@@ -23,14 +23,14 @@ const platforms = [
     name: "Databricks Genie Agents",
     href: "https://docs.databricks.com/aws/en/genie-agents/",
     focus: "Analítica en lenguaje natural sobre datos gobernados por Unity Catalog.",
-    application: "Gold aplica reglas para decidir qué registros entran en cada análisis.",
+    application: "Cada análisis sigue criterios definidos para seleccionar los registros.",
   },
   {
     icon: "tableau",
     name: "Tableau Knowledge",
     href: "https://help.tableau.com/current/online/en-gb/tableau_knowledge_about.htm",
     focus: "Contexto semántico y definiciones de negocio para agentes.",
-    application: "Gold cuenta informes por registro y documenta posibles duplicados.",
+    application: "Contamos cada informe como un registro y documentamos los posibles duplicados.",
   },
 ];
 
@@ -40,7 +40,7 @@ export default function ArchiveBriefing() {
       <div className={styles.inner}>
         <div className={styles.intro}>
           <h2 className={landingStyles.sectionTitle} id="method-title">Cómo funciona</h2>
-          <blockquote>«Muéstrame los reportes de 1990 en California»</blockquote>
+          <blockquote>“Muéstrame los reportes de 1990 en California”</blockquote>
         </div>
         <CaliforniaDemo />
         <details className={styles.references} id="plataformas">

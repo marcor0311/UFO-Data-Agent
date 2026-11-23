@@ -150,16 +150,26 @@
   display: grid;
   align-items: center;
   min-height: max(34rem, calc(100svh - var(--header-height)));
-  padding: 3rem var(--gutter) 4.75rem;
+  padding: 3rem var(--gutter) 6rem;
+}
+
+.heroMedia {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+  z-index: -2;
 }
 
 .heroImage, .entranceImage {
-  z-index: -2;
   object-fit: cover;
 }
 
 .heroImage {
   object-position: 58% 55%;
+}
+
+.entranceImage {
+  z-index: -2;
 }
 
 .hero::before, .entrance::before {
@@ -172,7 +182,7 @@
 .hero::before {
   background:
     linear-gradient(90deg, #090e15ed 0%, #090e15ce 26%, #090e156b 52%, transparent 75%),
-    linear-gradient(0deg, #090e15bb 0%, transparent 28%);
+    linear-gradient(0deg, #090e15e6 0%, transparent 32%);
 }
 
 .heroContent {
@@ -203,15 +213,6 @@
   margin: 1.4rem 0 1.55rem;
   font-size: clamp(1.125rem, 1.55vw, 1.4rem);
   line-height: 1.5;
-}
-
-.photoCaption {
-  position: absolute;
-  right: var(--gutter);
-  bottom: 1.35rem;
-  margin: 0;
-  color: var(--ink);
-  font-size: 0.875rem;
 }
 
 .sectionTitle {
@@ -275,12 +276,6 @@
   background: var(--surface);
 }
 
-.archivePhoto figcaption {
-  margin-top: 0.65rem;
-  color: var(--muted);
-  font-size: 0.875rem;
-}
-
 .entrance {
   display: flex;
   flex-direction: column;
@@ -302,4 +297,54 @@
 
 .entrance h2 {
   font-size: clamp(2.8rem, 5vw, 5rem);
+}
+
+@media (max-width: 760px) {
+  .archive {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .archiveText, .archivePhoto {
+    grid-area: auto;
+  }
+}
+
+@media (max-width: 640px) {
+  .landing {
+    --header-height: 6.4rem;
+  }
+
+  .header {
+    flex-wrap: wrap;
+    gap: 0.3rem;
+  }
+
+  .header nav {
+    width: 100%;
+    justify-content: space-between;
+    gap: 0.5rem;
+  }
+
+  .landing .headerButton {
+    padding-inline: 0.6rem;
+  }
+
+  .hero {
+    align-items: end;
+    padding-top: 10rem;
+  }
+
+  .heroImage {
+    object-position: 72% 50%;
+  }
+
+  .hero::before {
+    background:
+      linear-gradient(0deg, #090e15 0%, #090e15e6 24%, #090e1573 55%, transparent 81%),
+      linear-gradient(90deg, #090e1573, transparent 70%);
+  }
+
+  .hero h1 {
+    font-size: clamp(3.8rem, 11vw, 5.6rem);
+  }
 }
