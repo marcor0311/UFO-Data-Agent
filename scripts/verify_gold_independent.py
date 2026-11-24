@@ -4,10 +4,17 @@
 This script deliberately imports no Gold module (gold_common, build_gold,
 gold_query, check_gold_ready). It reads Silver directly, derives every report
 attribute with its own code, evaluates the certified queries and the evaluation
-questions with its own interpreter and compares the results with Gold.
+questions with its own interpreter and compares the results with Gold. Only
+the catalog lookup (scripts/releases.py) is shared, to find the approved
+version, and the pipeline may pass its memoised file hasher.
 
-  verify_gold_independent.py                    verify and write the report
+  verify_gold_independent.py                    verify the approved load; report in data/gold/
+  verify_gold_independent.py --version DIR      verify one version directory
   verify_gold_independent.py --write-references also store reference answers in docs/GOLD_EVALS.json
+                                                (explicit update of the versioned references)
+
+The pipeline (scripts/build_all.py) writes the references of each load into
+its candidate directory and never rewrites docs/GOLD_EVALS.json.
 """
 from __future__ import annotations
 
@@ -25,6 +32,9 @@ import unicodedata
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
+sys.path.insert(0, str(ROOT / "scripts"))
+import releases  # noqa: E402  (catalog lookup only; no Gold logic)
+
 CLOCK = ("minute", "second", "fractional_second")
 # Attributes kept in the virtual rows of partitioned aggregates.
 LIGHT = ("source_code", "has_pending_candidate", "uses_external_evidence", "usable_for_map")
@@ -314,21 +324,55 @@ def same_rows(expected, actual) -> bool:
 
 
 # ---------------------------------------------------------------- verification
-def verify(root: Path = ROOT, write_references: bool = False) -> dict:
-    config = json.loads((root / "config/gold/gold.json").read_text())
-    datasets = json.loads((root / "config/gold/dataset_catalog.json").read_text())["datasets"]
-    labels = json.loads((root / "config/gold/dimension_catalog.json").read_text())["labels"]
-    silver = root / config["inputs"]["silver"]["path"]
-    gold = root / config["outputs"]["database"]
-    manifest = json.loads(gold.with_name(gold.stem + ".manifest.json").read_text())
+def read_json(path: Path):
+    return json.loads(Path(path).read_text(encoding="utf-8"))
+
+
+def write_json(path: Path, value) -> None:
+    Path(path).write_text(json.dumps(value, ensure_ascii=False, indent=2) + "\n", encoding="utf-8", newline="\n")
+
+
+def verify(root: Path = ROOT, write_references: bool = False, *, gold: Path | None = None, silver: Path | None = None,
+           certified: Path | None = None, evals: Path | None = None, references_out: Path | None = None,
+           output: Path | None = None, hasher=None, data: Path | None = None) -> dict:
+    """Verify one Gold version against Silver.
+
+    ``gold`` defaults to the approved version and ``silver`` to the Silver it
+    was built from. ``evals`` is the evaluation set to read (default: the
+    version's copy, else docs/GOLD_EVALS.json); with ``write_references`` the
+    independent answers go to ``references_out`` (default: docs/GOLD_EVALS.json).
+    """
+    sha256 = hasher or sha256_file
+    config = read_json(root / "config/gold/gold.json")
+    datasets = read_json(root / "config/gold/dataset_catalog.json")["datasets"]
+    labels = read_json(root / "config/gold/dimension_catalog.json")["labels"]
+    data = Path(data or releases.data_root(root))
+    if gold is None:
+        current = releases.approved(data, "gold")
+        if current is None:
+            raise ValueError("No hay una carga Gold aprobada; indica --version DIR")
+        gold = releases.GoldLayout(current["path"]).database
+        if silver is None and current["parent_version"]:
+            silver = releases.SilverLayout(data / "silver" / "versions" / current["parent_version"]).database
+    gold = Path(gold)
+    version = releases.GoldLayout(gold.parent)
+    manifest = read_json(gold.with_name(gold.stem + ".manifest.json"))
+    if silver is None:
+        stored = Path(manifest["silver"]["path"])
+        silver = stored if stored.is_absolute() else data / stored
+    silver = Path(silver)
+    certified = Path(certified or version.certified)
+    evals_path = Path(evals or (version.evals_spec if version.evals_spec.exists() else root / "docs/GOLD_EVALS.json"))
     checks = []
 
     def record(name, passed, detail=None):
         checks.append({"check": name, "passed": bool(passed), "detail": detail})
 
-    silver_sha = sha256_file(silver)
-    record("silver.pinned", silver_sha == config["inputs"]["silver"]["sha256"] == manifest["silver"]["sha256"], silver_sha)
-    record("gold.manifest_sha256", sha256_file(gold) == manifest["gold_sha256"])
+    silver_sha = sha256(silver)
+    validation = read_json(silver.with_suffix(".validation.json"))
+    record("silver.validated_and_used_by_gold", validation.get("passed") is True
+           and silver_sha == validation.get("sha256") == manifest["silver"]["sha256"], silver_sha)
+    record("gold.manifest_sha256", sha256(gold) == manifest["gold_sha256"])
     reports = load_reports(silver, config, labels)
     by_id = {r["report_id"]: r for r in reports}
     events = load_events(silver, by_id)
@@ -363,7 +407,7 @@ def verify(root: Path = ROOT, write_references: bool = False) -> dict:
                sum(e["member_count"] for e in events))
         # Sample of individual reports (fixed seed, plus the extremes of the ID range).
         ids = sorted(by_id)
-        sample = sorted(set(random.Random(20261122).sample(ids, 2000)) | {ids[0], ids[-1]})
+        sample = sorted(set(random.Random(20261122).sample(ids, min(2000, len(ids)))) | {ids[0], ids[-1]})
         columns = [c for c in ("source_code", "origin_code", "collection_code", "date_key", "event_year", "decade", "event_month",
                                "year_month", "event_date", "weekday", "event_hour", "lat", "lng", "cell1_lat", "cell1_lng",
                                "cell5_lat", "cell5_lng", "country_iso2", "shape_code", "color_code", "color_family",
@@ -382,15 +426,14 @@ def verify(root: Path = ROOT, write_references: bool = False) -> dict:
                     mismatches.append({"report_id": rid, "column": column, "silver_derived": by_id[rid][column], "gold": value})
         record("sample.reports", not mismatches, {"sampled": len(sample), "columns": len(columns), "mismatches": mismatches[:10]})
     interpreter = Interpreter(reports, events, datasets, config)
-    certified = json.loads((root / "config/gold/certified_queries.json").read_text())
+    certified = read_json(certified)
     for item in certified["queries"]:
         expected = item.get("expected_result") or {}
         result = interpreter.evaluate(item["query"])
         ok = (item.get("verification") or {}).get("load_id") == manifest["load_id"] and same_rows(result["rows"], expected.get("rows", [])) \
             and result["matched_source_rows"] == expected.get("matched_source_rows") and result["truncated"] == expected.get("truncated")
         record(f"certified.{item['id']}", ok, {"independent_rows": len(result["rows"]), "gold_rows": len(expected.get("rows", []))})
-    evals_path = root / "docs/GOLD_EVALS.json"
-    evals = json.loads(evals_path.read_text())
+    evals = read_json(evals_path)
     for item in evals["questions"]:
         if item["expected_behavior"] != "answer":
             continue
@@ -407,8 +450,8 @@ def verify(root: Path = ROOT, write_references: bool = False) -> dict:
         evals["reference_load"] = {"load_id": manifest["load_id"], "silver_sha256": silver_sha,
                                    "computed_by": "scripts/verify_gold_independent.py",
                                    "computed_at": dt.datetime.now(dt.timezone.utc).replace(microsecond=0).isoformat()}
-        evals_path.write_text(json.dumps(evals, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
-    record("silver.unchanged", sha256_file(silver) == silver_sha)
+        write_json(references_out or root / "docs/GOLD_EVALS.json", evals)
+    record("silver.unchanged", sha256(silver) == silver_sha)
     passed = all(c["passed"] for c in checks)
     report = {"load_id": manifest["load_id"], "silver_sha256": silver_sha, "gold_sha256": manifest["gold_sha256"],
               "passed": passed, "checks": len(checks), "failed": [c for c in checks if not c["passed"]], "results": checks,
@@ -417,17 +460,23 @@ def verify(root: Path = ROOT, write_references: bool = False) -> dict:
                                      "by_source": dict(sorted(independent["by_source"].items()))},
               "method": "Recalculado desde Silver sin importar código Gold: lectura directa de sighting_analytical, duplicate_candidate/"
                         "duplicate_resolution y event_membership; día de la semana por strftime de SQLite; celdas y bandas con aritmética propia."}
-    out = gold.with_name(gold.stem + ".verification.json")
-    out.write_text(json.dumps(report, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
+    write_json(output or gold.with_name(gold.stem + ".verification.json"), report)
     return report
 
 
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
-    parser.add_argument("--write-references", action="store_true")
+    parser.add_argument("--write-references", action="store_true",
+                        help="Actualizar las respuestas de referencia versionadas en docs/GOLD_EVALS.json")
+    parser.add_argument("--version", type=Path, help="Directorio de versión Gold (por defecto, la aprobada)")
+    parser.add_argument("--output", type=Path, help="Informe (por defecto: <datos>/gold/ufo_gold.verification.json "
+                                                     "para la versión aprobada, o el de la versión indicada)")
     args = parser.parse_args()
     try:
-        report = verify(write_references=args.write_references)
+        gold = releases.GoldLayout(args.version).database if args.version else None
+        output = args.output or (None if args.version else releases.data_root() / "gold" / "ufo_gold.verification.json")
+        evals = ROOT / "docs/GOLD_EVALS.json" if args.write_references else None
+        report = verify(write_references=args.write_references, gold=gold, output=output, evals=evals)
     except (OSError, ValueError, KeyError, sqlite3.Error) as exc:
         print(f"VERIFICACIÓN INDEPENDIENTE FALLIDA: {exc}", file=sys.stderr)
         return 1

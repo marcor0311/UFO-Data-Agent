@@ -9,8 +9,12 @@ import sqlite3
 
 try:
     from . import build_silver as silver
+    from .pipeline_context import write_text
+    from .releases import data_root, default_silver
 except ImportError:
     import build_silver as silver
+    from pipeline_context import write_text
+    from releases import data_root, default_silver
 
 
 QUERIES = {
@@ -125,9 +129,18 @@ def candidate_query(minimum=2, require_time=True, check_certainty=False):
 
 def review(source, database, policy):
     # Verify the controlling artifacts before interpreting derived quality states.
-    manifest = json.loads(silver.MANIFEST.read_text())
-    verification = silver.verify(source, database, manifest, policy)
-    if not verification['passed']:
+    # The full acceptance runs once per exact snapshot and invocation (shared
+    # with check_silver_ready and the Gold gate through the run context).
+    try:
+        from . import check_silver_ready
+        from .pipeline_context import silver_acceptance
+    except ImportError:
+        import check_silver_ready
+        from pipeline_context import silver_acceptance
+    manifest = json.loads(silver.MANIFEST.read_text(encoding='utf-8'))
+    accepted = silver_acceptance(database, source, lambda s, b: check_silver_ready.readiness(b, s, manifest, policy))
+    verification = accepted.get('verification') or {}
+    if not accepted.get('ready_for_gold') or not verification.get('passed'):
         raise ValueError('Silver no validada')
     queries = dict(QUERIES)
     dedup = policy['quality']['deduplication']
@@ -157,14 +170,17 @@ def review(source, database, policy):
 
 def main():
     parser=argparse.ArgumentParser(description=__doc__)
-    parser.add_argument('--source',type=Path,default=silver.ROOT/'data/bronze/ufo.db')
-    parser.add_argument('--database',type=Path,default=silver.ROOT/'data/silver/ufo.db')
-    parser.add_argument('--output',type=Path,default=silver.ROOT/'data/silver/ufo.review.json')
+    data=data_root()
+    parser.add_argument('--source',type=Path,default=data/'bronze/ufo.db')
+    parser.add_argument('--database',type=Path,default=None,
+                        help='Silver a revisar (por defecto: la versión aprobada del catálogo)')
+    parser.add_argument('--output',type=Path,default=data/'silver/ufo.review.json')
     args=parser.parse_args()
+    args.database=args.database or default_silver(data)
     if args.output.resolve() in (args.source.resolve(),args.database.resolve()):
         parser.error('El informe no puede sustituir una base de datos')
-    result=review(args.source,args.database,json.loads(silver.POLICY.read_text()))
-    args.output.write_text(json.dumps(result,ensure_ascii=False,indent=2)+'\n')
+    result=review(args.source,args.database,json.loads(silver.POLICY.read_text(encoding='utf-8')))
+    write_text(args.output,json.dumps(result,ensure_ascii=False,indent=2)+'\n')
     print(f"Revisión guardada: {args.output}; {result['candidate_pairs_classified']:,} pares clasificados.")
 
 

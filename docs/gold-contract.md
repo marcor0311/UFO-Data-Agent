@@ -17,16 +17,17 @@ herramientas tipadas y consultas certificadas.
 
 | Requisito | Implementación |
 |---|---|
-| Entrada pinneada | `gold.json` fija el SHA-256 de Silver (`72ada367…a92aa25e`) y de Bronze (`0200337e…3820e0`). El build se detiene si no coinciden. |
-| Silver aprobado para el snapshot exacto | El build ejecuta `check_silver_ready.readiness()` sobre esos mismos archivos y exige `ready_for_gold=true` con los mismos SHA. El resultado se guarda en `data/gold/silver.readiness.json`; `data/silver/` no se escribe. |
+| Cadena de custodia | Bronze se fija por tamaño y SHA-256 en `config/bronze.json`. Silver se reconstruye en cada equipo, así que su SHA no se fija: identifica el archivo exacto que aprobó su informe. `gold_common.silver_provenance()` exige un informe válido (`layer="silver"`, `passed` exactamente `true`, SHA y tamaño del archivo) y un linaje completo hacia la Bronze y la receta vigentes. Rechaza un informe ausente, vacío o mal formado y los snapshots con WAL pendiente. |
+| Silver aprobado para el snapshot exacto | El build ejecuta `check_silver_ready.readiness()` sobre la Silver aprobada en el catálogo y exige `ready_for_gold=true` con los mismos SHA. Dentro de una misma ejecución, la aceptación completa corre una sola vez por Silver exacta. El resultado se guarda en `silver.readiness.json` de la versión Gold, y Silver no se escribe. |
 | Solo lectura | Silver y Bronze se abren con `mode=ro&immutable=1`. El build vuelve a calcular ambos SHA al final y aborta si cambiaron durante la lectura. |
-| Manifiesto | `data/gold/ufo_gold.manifest.json`: `gold_version`, `load_id`, `built_at`, SHA de Silver, Bronze y Gold, `run_id` y fecha de referencia de Silver, hash de definiciones (código y catálogos) y filas por tabla. |
+| Manifiesto | `ufo_gold.manifest.json` de la versión: `gold_version`, `load_id`, `built_at`, SHA de Silver, Bronze y Gold, `run_id` y fecha de referencia de Silver, hash de definiciones (código y catálogos) y filas por tabla. |
 | `load_id` determinista | SHA-256 de `gold_version` + SHA de Silver + SHA de Bronze + hash de definiciones. Con las mismas entradas y definiciones se obtiene la misma carga. |
-| Construcción atómica | Se escribe `ufo_gold.db.building`; se valida con `model_checks` (515 controles); si todo pasa, la salida anterior se archiva en `data/gold/.history/<sha256>/` y se renombra. Si falla una validación, se borra el temporal y se conserva la salida anterior. |
+| Publicación por versión | Gold, la caché, sus manifiestos, las certificaciones, las referencias y las evaluaciones se construyen en un candidato nuevo (`data/gold/versions/<versión>/`). Nunca se reemplaza una base publicada. La verificación independiente y `ready_for_agent` se ejecutan sobre ese candidato exacto, y después se promueve con una sola transacción en `data/releases.sqlite3` (`scripts/releases.py`). Si algo falla o el proceso se interrumpe, sigue vigente la carga aprobada anterior. |
 
 El hash de definiciones incluye `scripts/gold_common.py`, `scripts/build_gold.py`,
 la política, los tres catálogos, los nombres de países en español y
-`config/countries.json`. Excluye las consultas certificadas, las correcciones y
+`config/countries.json`, con los finales de línea normalizados a LF. Así, un
+checkout de Windows con CRLF da la misma huella. Excluye las consultas certificadas, las correcciones y
 el set de evaluación: registrar una verificación no cambia la carga verificada.
 
 ## Grano y vocabulario
@@ -218,8 +219,10 @@ frecuentes. Cada una lleva:
 
 Una consulta es certificada solo si su hash actual coincide y su `load_id` es
 el de la carga activa. Si cambia la consulta o la carga, pierde la
-certificación hasta repetir `gold_query.py certify` y
-`verify_gold_independent.py`, que la recalcula desde Silver. El agente usa
+certificación hasta repetir el build de Gold, que certifica y verifica desde
+Silver una copia dentro de la versión. `config/gold/certified_queries.json`
+contiene las definiciones y solo cambia con `build_all.py --actualizar-referencias`
+o con `gold_query.py certify`. El agente usa
 `search_certified` (léxico con pesos IDF) antes de componer.
 
 ### Caché de servicio (`scripts/discover_gold.py`)
@@ -227,7 +230,8 @@ certificación hasta repetir `gold_query.py certify` y
 `discover_gold.py` hace lo siguiente:
 
 1. Verifica el SHA de Gold y que las definiciones no hayan cambiado.
-2. Copia Gold a `data/gold/serving/ufo_gold_serving.db` y añade índices.
+2. Copia Gold a `serving/ufo_gold_serving.db` de la misma versión y añade
+   índices. Si ya existe una caché, no la reemplaza.
 3. Embebe en una tabla `metadata` los catálogos, perfiles, etiquetas, valores
    permitidos y entidades.
 4. Deja el archivo en modo `0444`.
@@ -240,9 +244,10 @@ coinciden, y la abre con `mode=ro&immutable=1` y `query_only`.
 
 `ready_for_agent=true` solo si pasan todos los controles:
 
-- **Manifiesto y entradas:** SHA de Gold, SHA de Silver y Bronze iguales al
-  manifiesto y a la política, definiciones vigentes, `load_id` recalculado, y
-  una ejecución nueva de la puerta de Silver sobre el snapshot exacto.
+- **Manifiesto y entradas:** SHA de Gold, cadena de custodia de Silver, SHA de
+  Silver y Bronze iguales al manifiesto, definiciones vigentes, `load_id`
+  recalculado y la aceptación de Silver sobre el snapshot exacto, compartida con
+  el resto de la ejecución.
 - **Conciliación con Silver y Bronze:** total, conjunto de IDs, conteo por
   fuente, y banderas, bases y valores informe a informe.
 - **Agregados:** cada uno, grupo a grupo y en ambos sentidos, coincide con

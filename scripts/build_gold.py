@@ -1,10 +1,16 @@
 #!/usr/bin/env python3
-"""Build the Gold model from the pinned, accepted Silver snapshot (read-only).
+"""Build the Gold model from the approved, accepted Silver snapshot (read-only).
 
-The build never writes to Silver or Bronze. It checks the pinned SHA-256 of
-both inputs, runs the Silver acceptance gate on that exact snapshot, writes a
-``*.building`` database, validates it and only then publishes it, archiving the
-previous output. If either input changes while it is read, the build aborts.
+The build never writes to Silver or Bronze and never replaces a published
+file. It checks the chain of custody Bronze → Silver, runs the Silver
+acceptance gate on that exact snapshot (once per run, shared with the other
+steps), writes a ``*.building`` database inside a fresh version directory,
+validates it and renames it in place. Publishing that version as the current
+load is a separate, transactional step (``scripts/build_all.py``). If either
+input changes while it is read, the build aborts.
+
+    build_gold.py                 build a new, unpromoted candidate and print its path
+    build_gold.py --version DIR   build into an empty version directory
 """
 from __future__ import annotations
 
@@ -13,16 +19,20 @@ from contextlib import closing
 from datetime import date, datetime, timezone
 import json
 import math
+import os
 from pathlib import Path
 import re
-import shutil
 import sqlite3
 import sys
 
 if __package__:
-    from .gold_common import ROOT, definitions_digest, digest, load_catalogs, load_id_for, load_policy, normalize
+    from .gold_common import ROOT, definitions_digest, digest, silver_provenance, load_catalogs, load_id_for, load_policy, normalize
+    from .pipeline_context import silver_acceptance, write_text
+    from . import releases
 else:
-    from gold_common import ROOT, definitions_digest, digest, load_catalogs, load_id_for, load_policy, normalize
+    from gold_common import ROOT, definitions_digest, digest, silver_provenance, load_catalogs, load_id_for, load_policy, normalize
+    from pipeline_context import silver_acceptance, write_text
+    import releases
 
 AGG_MEASURES = ("report_count INTEGER NOT NULL, report_count_excl_candidates INTEGER NOT NULL, "
                 "pending_candidate_reports INTEGER NOT NULL, external_evidence_reports INTEGER NOT NULL")
@@ -126,15 +136,27 @@ def band_for(distance: float, bands: list) -> str:
     raise GoldBuildError(f"Distancia sin banda: {distance}")
 
 
-def silver_gate(silver_path: Path, bronze_path: Path, output: Path) -> dict:
-    """Run the official Silver acceptance on the exact snapshot (read-only)."""
+def official_acceptance(silver_path: Path, bronze_path: Path) -> dict:
+    """The Silver acceptance gate (check_silver_ready.readiness) on one snapshot."""
     sys.path.insert(0, str(ROOT / "scripts"))
     import build_silver
     import check_silver_ready
-    result = check_silver_ready.readiness(bronze_path, silver_path, json.loads(build_silver.MANIFEST.read_text()),
-                                          json.loads(build_silver.POLICY.read_text()))
-    output.parent.mkdir(parents=True, exist_ok=True)
-    output.write_text(json.dumps(result, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
+    return check_silver_ready.readiness(bronze_path, silver_path,
+                                        json.loads(build_silver.MANIFEST.read_text(encoding="utf-8")),
+                                        json.loads(build_silver.POLICY.read_text(encoding="utf-8")))
+
+
+def silver_gate(silver_path: Path, bronze_path: Path, output: Path | None = None) -> dict:
+    """Run the official Silver acceptance on the exact snapshot (read-only).
+
+    The result is shared through the run context: within one invocation the
+    full acceptance runs once per exact (Silver, Bronze) pair, however many
+    steps ask for it. ``output`` receives a copy of the report.
+    """
+    result = silver_acceptance(silver_path, bronze_path, official_acceptance)
+    if output is not None:
+        Path(output).parent.mkdir(parents=True, exist_ok=True)
+        write_text(output, json.dumps(result, ensure_ascii=False, indent=2) + "\n")
     return result
 
 
@@ -478,34 +500,43 @@ def build_database(path: Path, silver_path: Path, policy: dict, catalogs: dict) 
         conn.execute("DETACH DATABASE silver")
 
 
-def archive_previous(output: Path, manifest_path: Path, history: Path) -> Path | None:
-    if not output.exists():
-        return None
-    previous = json.loads(manifest_path.read_text()) if manifest_path.exists() else {}
-    folder = history / (previous.get("gold_sha256") or digest(output))
-    folder.mkdir(parents=True, exist_ok=True)
-    shutil.copy2(output, folder / output.name)
-    if manifest_path.exists():
-        shutil.copy2(manifest_path, folder / manifest_path.name)
-    return folder
+def stored_path(path: Path, data: Path) -> str:
+    try:
+        return releases.relative(data, path)
+    except ValueError:
+        return str(Path(path).resolve())
 
 
 def build(root: Path = ROOT, policy: dict | None = None, gate=silver_gate, silver_path: Path | None = None,
-          bronze_path: Path | None = None, output: Path | None = None, validate=None) -> dict:
+          bronze_path: Path | None = None, output: Path | None = None, validate=None,
+          provenance=silver_provenance, readiness_path: Path | None = None, data: Path | None = None,
+          bronze_manifest: Path | None = None) -> dict:
+    """Build Gold into ``output``, which must not exist (default: a new candidate)."""
     policy = policy or load_policy(root)
     catalogs = load_catalogs(root)
-    silver_path = silver_path or root / policy["inputs"]["silver"]["path"]
-    bronze_path = bronze_path or root / policy["inputs"]["bronze"]["path"]
-    output = output or root / policy["outputs"]["database"]
+    data = Path(data or releases.data_root(root))
+    if silver_path is None:
+        current = releases.layout(data, "silver")
+        if current is None:
+            raise GoldBuildError("No hay una Silver aprobada en el catálogo. Ejecuta `python scripts/build_all.py --desde silver`.")
+        silver_path = current.database
+    bronze_path = Path(bronze_path or data / policy["inputs"]["bronze"]["path"])
+    bronze_manifest = Path(bronze_manifest or root / policy["inputs"]["bronze"]["manifest"])
+    output = Path(output or releases.GoldLayout(releases.new_candidate(data, "gold")).database)
     manifest_path = output.with_name(output.stem + ".manifest.json")
-    readiness_path = root / policy["outputs"]["silver_readiness"]
-    silver_sha, bronze_sha = digest(silver_path), digest(bronze_path)
-    if silver_sha != policy["inputs"]["silver"]["sha256"]:
-        raise GoldBuildError(f"Silver no coincide con el SHA fijado: {silver_sha}")
-    if bronze_sha != policy["inputs"]["bronze"]["sha256"]:
-        raise GoldBuildError(f"Bronze no coincide con el SHA fijado: {bronze_sha}")
+    readiness_path = Path(readiness_path or output.with_name("silver.readiness.json"))
+    building = output.with_name(output.name + ".building")
+    for existing in (output, manifest_path):
+        if existing.exists():
+            raise GoldBuildError(f"Se conserva {existing}: Gold se construye siempre en una versión nueva, "
+                                 "nunca sobre una base publicada que pueda tener lectores.")
+    custody = provenance(silver_path, bronze_path, bronze_manifest)
+    if not custody["passed"]:
+        raise GoldBuildError("Silver no es apta para Gold: " + "; ".join(custody["problems"])
+                             + ". Ejecuta `python scripts/build_all.py` (o `--desde silver`).")
+    silver_sha, bronze_sha = custody["silver_sha256"], custody["bronze_sha256"]
     readiness = gate(silver_path, bronze_path, readiness_path)
-    with closing(sqlite3.connect(silver_path.resolve().as_uri() + "?mode=ro&immutable=1", uri=True)) as conn:
+    with closing(sqlite3.connect(Path(silver_path).resolve().as_uri() + "?mode=ro&immutable=1", uri=True)) as conn:
         runs = [json.loads(m) for (m,) in conn.execute("SELECT metadata FROM silver_run").fetchall()]
     silver_reference_date = runs[0].get("reference_date") if len(runs) == 1 else None
     if not readiness.get("ready_for_gold") or readiness.get("silver_sha256") != silver_sha or readiness.get("bronze_sha256") != bronze_sha:
@@ -513,10 +544,9 @@ def build(root: Path = ROOT, policy: dict | None = None, gate=silver_gate, silve
     definitions_sha, definition_files = definitions_digest(policy, root)
     load_id = load_id_for(policy, silver_sha, bronze_sha, definitions_sha)
     output.parent.mkdir(parents=True, exist_ok=True)
-    building = output.with_name(output.name + ".building")
     building.unlink(missing_ok=True)
     try:
-        build_database(building, silver_path, policy, catalogs)
+        build_database(building, Path(silver_path), policy, catalogs)
         if validate is None:
             if __package__:
                 from .check_gold_ready import model_checks
@@ -537,40 +567,46 @@ def build(root: Path = ROOT, policy: dict | None = None, gate=silver_gate, silve
                               conn.execute("""SELECT COUNT(*), SUM(has_pending_candidate=0), SUM(has_pending_candidate),
                                   SUM(uses_external_evidence), (SELECT COUNT(*) FROM fact_event), SUM(in_confirmed_group)
                                   FROM fact_report""").fetchone()))
-        archived = archive_previous(output, manifest_path, root / policy["outputs"]["history"])
-        building.replace(output)
+        if output.exists():
+            raise GoldBuildError(f"Otro proceso escribió {output} durante la construcción")
+        os.replace(building, output)
     except BaseException:
         building.unlink(missing_ok=True)
         raise
     manifest = {
         "gold_version": policy["gold_version"], "load_id": load_id,
         "built_at": datetime.now(timezone.utc).replace(microsecond=0).isoformat(),
-        "silver": {"path": policy["inputs"]["silver"]["path"], "sha256": silver_sha,
+        "silver": {"path": stored_path(silver_path, data), "sha256": silver_sha,
                    "policy_version": readiness.get("policy_version"), "reference_date": silver_reference_date,
                    "run_id": readiness.get("verification", {}).get("run_id"),
                    "readiness": {"ready_for_gold": readiness["ready_for_gold"],
                                  "checks": readiness.get("verification", {}).get("checks"),
-                                 "report": policy["outputs"]["silver_readiness"]}},
-        "bronze": {"path": policy["inputs"]["bronze"]["path"], "sha256": bronze_sha},
+                                 "report": readiness_path.name}},
+        "bronze": {"path": stored_path(bronze_path, data), "sha256": bronze_sha},
+        "silver_run_id": custody["silver_run_id"],
         "definitions_sha256": definitions_sha, "definitions": definition_files,
         "gold_sha256": digest(output), "tables": tables, "totals": totals,
         "validation": {"checks": len(checks), "passed": True},
-        "archived_previous": (str(archived.relative_to(root)) if archived.is_relative_to(root) else str(archived)) if archived else None,
     }
-    manifest_path.write_text(json.dumps(manifest, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
+    write_text(manifest_path, json.dumps(manifest, ensure_ascii=False, indent=2) + "\n")
     return manifest
 
 
 def main() -> int:
-    parser = argparse.ArgumentParser(description=__doc__)
-    parser.parse_args()
+    parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
+    parser.add_argument("--version", type=Path, help="Directorio de versión vacío (por defecto, un candidato nuevo)")
+    args = parser.parse_args()
     try:
-        manifest = build()
+        output = None
+        if args.version:
+            args.version.mkdir(parents=True, exist_ok=True)
+            output = releases.GoldLayout(args.version).database
+        manifest = build(output=output)
     except (OSError, ValueError, sqlite3.Error, GoldBuildError) as exc:
-        print(f"GOLD NO PUBLICADA: {exc}", file=sys.stderr)
+        print(f"GOLD NO CONSTRUIDA: {exc}", file=sys.stderr)
         return 1
-    print(f"Gold publicada: load_id {manifest['load_id']}; {manifest['totals']['reports']} informes; "
-          f"{manifest['validation']['checks']} controles")
+    print(f"Gold construida (candidato sin promover): load_id {manifest['load_id']}; {manifest['totals']['reports']} informes; "
+          f"{manifest['validation']['checks']} controles. Para publicarla usa `python scripts/build_all.py --desde gold`.")
     return 0
 
 

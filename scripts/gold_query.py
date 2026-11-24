@@ -11,7 +11,8 @@ looked up first; any other query is marked as composed.
 CLI:
   gold_query.py run '<json query>'      run a query and print the result
   gold_query.py certified <id>          run a certified query
-  gold_query.py certify                 record expected results for the current load
+  gold_query.py certify                 record expected results of the approved load in
+                                        config/gold/certified_queries.json (explicit update)
   gold_query.py search '<pregunta>'     find certified queries for a question
 """
 from __future__ import annotations
@@ -30,8 +31,12 @@ import sys
 
 if __package__:
     from .gold_common import ROOT, digest, load_json, normalize, text_digest
+    from .pipeline_context import write_text
+    from . import releases
 else:
     from gold_common import ROOT, digest, load_json, normalize, text_digest
+    from pipeline_context import write_text
+    import releases
 
 CACHE_VERSION = 1
 OPS = ("eq", "ne", "in", "gte", "lte", "is_null")
@@ -204,23 +209,47 @@ def rows_digest(rows: list) -> str:
 
 
 class Analytics:
-    """Read-only access to the verified serving cache."""
+    """Read-only access to the verified serving cache of one Gold load.
+
+    Without ``serving`` it opens the load approved in the catalog
+    (``<datos>/releases.sqlite3``) and refuses to start if there is none: files
+    outside the catalog are never adopted as current. The serving path and the
+    certified queries are fixed when the instance is created, so every query
+    of this instance answers from the same load.
+    """
 
     def __init__(self, root: Path = ROOT, serving: Path | None = None, certified_path: Path | None = None,
-                 instruction_budget: int | None = None, progress_step: int | None = None):
+                 instruction_budget: int | None = None, progress_step: int | None = None, data: Path | None = None):
         self.root = Path(root)
         self.policy = load_json(self.root / "config/gold/gold.json")
         self.limits = self.policy["query"]
-        self.path = Path(serving or self.root / self.policy["serving"]["database"])
+        if serving is None:
+            try:
+                layout, self.release = releases.open_approved_gold(Path(data or releases.data_root(self.root)))
+            except (releases.ReleaseError, OSError, ValueError) as exc:
+                raise GoldUnavailable(str(exc)) from exc
+            serving = layout.serving
+        else:
+            layout = releases.GoldLayout.of_serving(serving)
+            self.release = {"source": "override", "version": layout.directory.name if layout else None}
+            if layout and layout.readiness.exists():
+                try:
+                    readiness = json.loads(layout.readiness.read_text(encoding="utf-8"))
+                    self.release["readiness_load_id"] = readiness.get("load_id")
+                    self.release["ready_for_agent"] = readiness.get("ready_for_agent")
+                except (OSError, ValueError):
+                    self.release["readiness_load_id"] = None
+        self.layout = layout
+        self.path = Path(serving)
         manifest_path = self.path.with_name(self.path.stem + ".manifest.json")
         try:
-            cache = json.loads(manifest_path.read_text())
+            cache = json.loads(manifest_path.read_text(encoding="utf-8"))
             if cache["cache_version"] != CACHE_VERSION or cache["cache_version"] != self.policy["serving"]["cache_version"]:
                 raise ValueError("Versión de caché incompatible")
             if digest(self.path) != cache["sha256"]:
                 raise ValueError("SHA-256 de la caché incorrecto")
         except (OSError, ValueError, KeyError) as exc:
-            raise GoldUnavailable("Caché Gold ausente, corrupta o desactualizada. Ejecuta scripts/discover_gold.py.") from exc
+            raise GoldUnavailable("Caché Gold ausente, corrupta o desactualizada. Ejecuta scripts/build_all.py --desde gold.") from exc
         self.cache = cache
         with closing(self.connect()) as con:
             self.meta = json.loads(con.execute("SELECT catalog FROM metadata").fetchone()[0])
@@ -236,7 +265,28 @@ class Analytics:
         self.engine_sha = digest(Path(__file__))
         self.budget = instruction_budget or self.limits["instruction_budget"]
         self.step = progress_step or self.limits["progress_step"]
-        self.certified_path = Path(certified_path or self.root / "config/gold/certified_queries.json")
+        if certified_path is None:
+            certified_path = layout.certified if layout and layout.certified.exists() else self.root / "config/gold/certified_queries.json"
+        self.certified_path = Path(certified_path)
+        try:
+            self._certified = load_json(self.certified_path)
+        except (OSError, ValueError) as exc:
+            raise GoldUnavailable(f"Consultas certificadas ausentes o ilegibles: {self.certified_path}") from exc
+
+    def coherence_problems(self) -> list[str]:
+        """Why serving, certified queries and readiness are not one load (empty if they are)."""
+        problems = []
+        stale = [i.get("id") for i in self._certified.get("queries", [])
+                 if (i.get("verification") or {}).get("load_id") != self.load_id]
+        if stale:
+            problems.append(f"las consultas certificadas de {self.certified_path} no se verificaron con la carga "
+                            f"{self.load_id[:12]} ({len(stale)} de {len(self._certified.get('queries', []))})")
+        readiness = self.release.get("readiness_load_id", self.load_id)
+        if readiness != self.load_id:
+            problems.append(f"el informe ready_for_agent corresponde a otra carga ({str(readiness)[:12]})")
+        if self.release.get("ready_for_agent") is False:
+            problems.append("la carga no está aprobada (ready_for_agent=false)")
+        return problems
 
     # -- infrastructure -------------------------------------------------
     def connect(self):
@@ -298,7 +348,7 @@ class Analytics:
 
     # -- certified queries ----------------------------------------------
     def certified(self) -> dict:
-        return load_json(self.certified_path)
+        return self._certified
 
     def certification_status(self, item: dict) -> dict:
         reasons = []
@@ -729,15 +779,19 @@ STOPWORDS = {"de", "la", "el", "los", "las", "en", "y", "a", "por", "que", "un",
              "registro", "registros", "cuanto", "cuantos", "cuantas", "hubo", "son", "se", "ven", "qu"}
 
 
-def certify(root: Path = ROOT, analytics: Analytics | None = None) -> dict:
-    """Record expected results of every certified query for the current load.
+def certify(root: Path = ROOT, analytics: Analytics | None = None, source: Path | None = None) -> dict:
+    """Record expected results of every certified query for the analytics' load.
 
+    Reads the definitions from ``source`` (default: the analytics' certified
+    file) and writes the results to the analytics' certified file. The build
+    certifies a copy inside the candidate version; ``gold_query.py certify``
+    is the explicit operation that rewrites config/gold/certified_queries.json.
     Verification against the independent recomputation is separate
     (scripts/verify_gold_independent.py); the gate requires both.
     """
     analytics = analytics or Analytics(root=root)
     path = analytics.certified_path
-    data = load_json(path)
+    data = load_json(source or path)
     now = datetime.now(timezone.utc).replace(microsecond=0).isoformat()
     for item in data["queries"]:
         q = Query.parse(item["query"], analytics.limits)
@@ -751,7 +805,8 @@ def certify(root: Path = ROOT, analytics: Analytics | None = None) -> dict:
         item["verification"] = {"load_id": analytics.load_id, "verified_at": now,
                                 "query_engine_sha256": analytics.engine_sha,
                                 "independent_check": "scripts/verify_gold_independent.py"}
-    path.write_text(json.dumps(data, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
+    write_text(path, json.dumps(data, ensure_ascii=False, indent=2) + "\n")
+    analytics._certified = data
     return data
 
 
@@ -765,7 +820,9 @@ def main() -> int:
     sub.add_parser("entities").add_argument("text")
     args = parser.parse_args()
     try:
-        analytics = Analytics()
+        # ``certify`` is the explicit operation that updates the versioned
+        # definitions file; every other command reads the approved load.
+        analytics = Analytics(certified_path=ROOT / "config/gold/certified_queries.json") if args.command == "certify" else Analytics()
         if args.command == "run":
             out = analytics.query(json.loads(args.query))
         elif args.command == "certified":

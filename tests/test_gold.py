@@ -10,7 +10,7 @@ import unittest
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
-from gold_fixture import build_fixture, environment, fake_gate, serving_fixture, sha
+from gold_fixture import build_fixture, environment, fake_gate, serving_fixture, sha, write_provenance
 
 import build_gold
 import check_gold_ready
@@ -70,12 +70,125 @@ class GoldBuildTest(unittest.TestCase):
                 self.assertEqual(conn.execute("SELECT SUM(report_count) FROM agg_coverage WHERE aggregate_code=?", (aggregate,)).fetchone()[0], 12)
             self.assertEqual(conn.execute("SELECT COUNT(*) FROM agg_year WHERE report_count_excl_candidates > report_count").fetchone()[0], 0)
 
-    def test_pinned_input_mismatch_is_refused(self):
-        policy, silver, bronze, output = environment(self.folder)
-        policy["inputs"]["silver"]["sha256"] = "0" * 64
-        with self.assertRaises(build_gold.GoldBuildError):
+    def refused(self, policy, silver, bronze, output, problem):
+        with self.assertRaises(build_gold.GoldBuildError) as raised:
             build_gold.build(policy=policy, gate=fake_gate, silver_path=silver, bronze_path=bronze, output=output)
+        self.assertIn(problem, str(raised.exception))
         self.assertFalse(output.exists())
+
+    def test_rebuilt_silver_is_accepted_without_a_fixed_pin(self):
+        policy, silver, bronze, output = environment(self.folder)
+        self.assertNotIn("sha256", policy["inputs"]["silver"])
+        manifest = build_gold.build(policy=policy, gate=fake_gate, silver_path=silver, bronze_path=bronze, output=output)
+        self.assertEqual(manifest["silver"]["sha256"], sha(silver))
+        self.assertEqual(len(manifest["silver_run_id"]), 64)
+
+    def test_silver_modified_after_validation_is_refused(self):
+        policy, silver, bronze, output = environment(self.folder)
+        with closing(sqlite3.connect(silver)) as conn:
+            conn.execute("CREATE TABLE tampered (x)"); conn.commit()
+        self.refused(policy, silver, bronze, output, "modificado o sustituido")
+
+    def test_silver_without_validation_is_refused(self):
+        policy, silver, bronze, output = environment(self.folder)
+        silver.with_suffix(".validation.json").unlink()
+        self.refused(policy, silver, bronze, output, "falta o es ilegible")
+
+    def test_failed_silver_validation_is_refused(self):
+        policy, silver, bronze, output = environment(self.folder)
+        write_provenance(self.folder, policy, silver, bronze, passed=False)
+        self.refused(policy, silver, bronze, output, "no fue aprobada")
+
+    def test_silver_from_another_bronze_is_refused(self):
+        policy, silver, bronze, output = environment(self.folder)
+        lineage = json.loads(silver.with_suffix(".validation.json").read_text())["lineage"]
+        write_provenance(self.folder, policy, silver, bronze, lineage={**lineage, "bronze_sha256": "0" * 64})
+        self.refused(policy, silver, bronze, output, "otra Bronze")
+
+    def test_outdated_silver_is_refused(self):
+        policy, silver, bronze, output = environment(self.folder)
+        lineage = json.loads(silver.with_suffix(".validation.json").read_text())["lineage"]
+        write_provenance(self.folder, policy, silver, bronze, lineage={**lineage, "run_id": "1" * 64})
+        self.refused(policy, silver, bronze, output, "desactualizada")
+
+    def test_unofficial_bronze_is_refused(self):
+        policy, silver, bronze, output = environment(self.folder)
+        Path(policy["inputs"]["bronze"]["manifest"]).write_text(json.dumps({"sha256": "0" * 64, "size_bytes": bronze.stat().st_size}))
+        self.refused(policy, silver, bronze, output, "no es el snapshot oficial")
+
+    # Strict custody: the report must exist, be complete and match exactly.
+    def test_empty_report_is_refused(self):
+        policy, silver, bronze, output = environment(self.folder)
+        silver.with_suffix(".validation.json").write_text("{}")
+        self.refused(policy, silver, bronze, output, "vacío o mal formado")
+
+    def test_malformed_report_is_refused(self):
+        policy, silver, bronze, output = environment(self.folder)
+        for content in ("[]", '"passed"', "{not json"):
+            with self.subTest(content=content):
+                silver.with_suffix(".validation.json").write_text(content)
+                self.refused(policy, silver, bronze, output, "validation.json")
+
+    def test_passed_must_be_exactly_true(self):
+        policy, silver, bronze, output = environment(self.folder)
+        for value in ("true", 1, None):
+            with self.subTest(passed=value):
+                write_provenance(self.folder, policy, silver, bronze, passed=value)
+                self.refused(policy, silver, bronze, output, "no fue aprobada")
+
+    def test_report_without_sha_or_lineage_is_refused(self):
+        policy, silver, bronze, output = environment(self.folder)
+        write_provenance(self.folder, policy, silver, bronze, sha256=None)
+        self.refused(policy, silver, bronze, output, "no registra el SHA-256")
+        write_provenance(self.folder, policy, silver, bronze, lineage=None)
+        self.refused(policy, silver, bronze, output, "no registra el linaje")
+        write_provenance(self.folder, policy, silver, bronze)
+        lineage = json.loads(silver.with_suffix(".validation.json").read_text())["lineage"]
+        incomplete = {k: v for k, v in lineage.items() if k != "code_sha256"}
+        write_provenance(self.folder, policy, silver, bronze, lineage=incomplete)
+        self.refused(policy, silver, bronze, output, "linaje de Silver incompleto")
+
+    def test_wrong_bronze_size_is_refused(self):
+        policy, silver, bronze, output = environment(self.folder)
+        manifest = Path(policy["inputs"]["bronze"]["manifest"])
+        manifest.write_text(json.dumps({"sha256": sha(bronze), "size_bytes": bronze.stat().st_size + 1}))
+        self.refused(policy, silver, bronze, output, "no es el snapshot oficial")
+
+    def test_outdated_recipe_field_is_refused(self):
+        policy, silver, bronze, output = environment(self.folder)
+        lineage = json.loads(silver.with_suffix(".validation.json").read_text())["lineage"]
+        write_provenance(self.folder, policy, silver, bronze,
+                         lineage={**lineage, "code_sha256": {**lineage["code_sha256"], "build_silver.py": "2" * 64}})
+        self.refused(policy, silver, bronze, output, "desactualizada")
+        write_provenance(self.folder, policy, silver, bronze, policy={"version": 0})
+        self.refused(policy, silver, bronze, output, "desactualizada")
+
+    def test_truncated_silver_is_refused(self):
+        policy, silver, bronze, output = environment(self.folder)
+        data = silver.read_bytes()
+        silver.write_bytes(data[:-4096])
+        self.refused(policy, silver, bronze, output, "modificado")
+
+    def test_pending_wal_is_refused_before_reading(self):
+        policy, silver, bronze, output = environment(self.folder)
+        for path in (silver, bronze):
+            with self.subTest(path=path.name):
+                wal = path.with_name(path.name + "-wal")
+                wal.write_bytes(b"\0" * 32)
+                try:
+                    self.refused(policy, silver, bronze, output, "cambios pendientes en WAL")
+                finally:
+                    wal.unlink()
+        silver.with_name(silver.name + "-wal").write_bytes(b"")        # empty WAL: a clean snapshot
+        build_gold.build(policy=policy, gate=fake_gate, silver_path=silver, bronze_path=bronze, output=output)
+
+    def test_existing_valid_report_is_accepted(self):
+        import gold_common
+        policy, silver, bronze, output = environment(self.folder)
+        custody = gold_common.silver_provenance(silver, bronze, Path(policy["inputs"]["bronze"]["manifest"]))
+        self.assertEqual(custody["problems"], [])
+        self.assertTrue(custody["passed"])
+        self.assertEqual(custody["silver_sha256"], sha(silver))
 
     def test_silver_gate_must_approve_exact_snapshot(self):
         policy, silver, bronze, output = environment(self.folder)
@@ -83,14 +196,21 @@ class GoldBuildTest(unittest.TestCase):
         with self.assertRaises(build_gold.GoldBuildError):
             build_gold.build(policy=policy, gate=gate, silver_path=silver, bronze_path=bronze, output=output)
 
-    def test_failed_validation_keeps_previous_output(self):
-        manifest, policy, silver, bronze, output = build_fixture(self.folder)
-        before = sha(output)
+    def test_failed_validation_publishes_nothing(self):
+        policy, silver, bronze, output = environment(self.folder)
         failing = lambda *a: [{"check": "forced", "passed": False, "detail": "test"}]
         with self.assertRaises(build_gold.GoldBuildError):
             build_gold.build(policy=policy, gate=fake_gate, silver_path=silver, bronze_path=bronze, output=output, validate=failing)
-        self.assertEqual(sha(output), before)
+        self.assertFalse(output.exists())
         self.assertFalse(output.with_name(output.name + ".building").exists())
+
+    def test_published_output_is_never_replaced(self):
+        manifest, policy, silver, bronze, output = build_fixture(self.folder)
+        before = sha(output), sha(output.with_name(output.stem + ".manifest.json"))
+        with self.assertRaises(build_gold.GoldBuildError) as raised:
+            build_gold.build(policy=policy, gate=fake_gate, silver_path=silver, bronze_path=bronze, output=output)
+        self.assertIn("Se conserva", str(raised.exception))
+        self.assertEqual((sha(output), sha(output.with_name(output.stem + ".manifest.json"))), before)
 
     def test_silver_changed_during_read_aborts(self):
         manifest, policy, silver, bronze, output = build_fixture(self.folder)
@@ -102,12 +222,13 @@ class GoldBuildTest(unittest.TestCase):
         with self.assertRaises(build_gold.GoldBuildError):
             build_gold.build(policy=policy, gate=fake_gate, silver_path=silver, bronze_path=bronze, output=output, validate=tamper)
 
-    def test_rebuild_archives_previous_output(self):
+    def test_rebuild_goes_to_a_new_version(self):
         manifest, policy, silver, bronze, output = build_fixture(self.folder)
-        second = build_gold.build(policy=policy, gate=fake_gate, silver_path=silver, bronze_path=bronze, output=output)
+        before = sha(output)
+        other = self.folder / "gold-2" / "ufo_gold.db"
+        second = build_gold.build(policy=policy, gate=fake_gate, silver_path=silver, bronze_path=bronze, output=other)
         self.assertEqual(second["load_id"], manifest["load_id"])      # same inputs and definitions → same load
-        archived = Path(policy["outputs"]["history"]) / manifest["gold_sha256"]
-        self.assertTrue((archived / output.name).exists())
+        self.assertEqual(sha(output), before)                          # the first version is untouched
 
     def test_unlabelled_value_stops_build(self):
         from gold_fixture import reports

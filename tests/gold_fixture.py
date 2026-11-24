@@ -152,6 +152,25 @@ def sha(path: Path) -> str:
     return hashlib.sha256(path.read_bytes()).hexdigest()
 
 
+def write_provenance(folder: Path, gold_policy: dict | None, silver: Path, bronze: Path, manifest: Path | None = None, **override):
+    """Write what the official Bronze/Silver builds leave behind: the Bronze
+    manifest (size and SHA-256) and a passed Silver validation report with the
+    current lineage, source and policy. Returns the manifest path."""
+    import json
+    import build_silver
+    manifest = manifest or folder / "bronze.json"
+    manifest.write_text(json.dumps({"sha256": sha(bronze), "size_bytes": bronze.stat().st_size}))
+    if gold_policy is not None:
+        gold_policy["inputs"]["bronze"]["manifest"] = str(manifest)
+    silver_policy = json.loads(build_silver.POLICY.read_text(encoding="utf-8"))
+    lineage, _ = build_silver.lineage_for(sha(bronze), silver_policy)
+    report = {"layer": "silver", "passed": True, "policy": silver_policy,
+              "source": {"database": str(bronze), "sha256": sha(bronze), "size_bytes": bronze.stat().st_size},
+              "lineage": lineage, "size_bytes": silver.stat().st_size, "sha256": sha(silver), **override}
+    silver.with_suffix(".validation.json").write_text(json.dumps(report))
+    return manifest
+
+
 def environment(folder: Path, rows=None):
     """Write fixtures and return (policy, silver, bronze, output) for build()."""
     from gold_common import load_policy
@@ -159,9 +178,7 @@ def environment(folder: Path, rows=None):
     write_silver(silver, rows)
     write_bronze(bronze, rows)
     policy = copy.deepcopy(load_policy())
-    policy["inputs"]["silver"]["sha256"] = sha(silver)
-    policy["inputs"]["bronze"]["sha256"] = sha(bronze)
-    policy["outputs"].update(silver_readiness=str(folder / "silver.readiness.json"), history=str(folder / "history"))
+    write_provenance(folder, policy, silver, bronze)
     return policy, silver, bronze, folder / "gold" / "ufo_gold.db"
 
 
@@ -174,7 +191,7 @@ def build_fixture(folder: Path, rows=None, **kw):
     import build_gold
     policy, silver, bronze, output = environment(folder, rows)
     manifest = build_gold.build(policy=policy, gate=kw.pop("gate", fake_gate), silver_path=silver, bronze_path=bronze,
-                                output=output, **kw)
+                                output=output, data=folder, bronze_manifest=Path(policy["inputs"]["bronze"]["manifest"]), **kw)
     return manifest, policy, silver, bronze, output
 
 
