@@ -296,6 +296,26 @@ class GoldQueryTest(unittest.TestCase):
         self.assertEqual(self.code(dataset="fact_report", group_by=["source_code"]), "metrics_required")
         self.assertEqual(self.code(dataset="fact_report", metrics=["real_ufo_count"]), "metric_unknown")
 
+    def test_month_calendar_contract(self):
+        cal = dict(dataset="agg_month", group_by=["event_year", "event_month"], metrics=["report_count"], view="month_calendar")
+        years = lambda lo, hi: [{"column": "event_year", "op": "gte", "value": lo}, {"column": "event_year", "op": "lte", "value": hi}]
+        self.assertEqual(self.code(**cal), "view_contract")                                   # sin rango de años
+        self.assertEqual(self.code(**cal, filters=years(1950, 2000), limit=500), "view_contract")  # 51 años
+        self.assertEqual(self.code(**cal, filters=years(1990, 1999), limit=100), "limit")      # 120 celdas
+        self.assertEqual(self.code(**{**cal, "group_by": ["event_month", "event_year"]}, filters=years(1997, 1997)), "view_contract")
+        ok = self.q(**cal, filters=[{"column": "event_year", "op": "eq", "value": 1997}], limit=12)
+        months = [r for r in ok["rows"] if r["event_month"] is not None]
+        unknown = [r for r in ok["rows"] if r["event_month"] is None]
+        self.assertEqual([r["event_month"] for r in months], sorted(r["event_month"] for r in months))
+        self.assertEqual(sum(r["report_count"] for r in months), 3)
+        # One «Mes desconocido» row per year: year-level reports minus those with a reliable month.
+        yearly = self.q(dataset="agg_year", filters=[{"column": "event_year", "op": "eq", "value": 1997}], group_by=["event_year"], metrics=["report_count"])
+        year_total = yearly["rows"][0]["report_count"]
+        self.assertEqual([(r["event_year"], r["event_month_label"], r["report_count"]) for r in unknown], [(1997, "Mes desconocido", year_total - 3)])
+        self.assertEqual(ok["calendar_totals"], {"reports": year_total, "with_month": 3, "without_month": year_total - 3})
+        self.assertEqual(ok["rows"][-1]["event_month"], None)                                   # después de diciembre
+        self.assertEqual(ok["limitations"][0]["code"], "unknown_month")
+
     def test_implied_eligibility(self):
         result = self.q(dataset="agg_month", filters=[{"column": "event_year", "op": "eq", "value": 1997}], group_by=["year_month"], metrics=["report_count"])
         self.assertEqual(result["rows"][0]["report_count"], 3)

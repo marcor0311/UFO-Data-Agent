@@ -40,6 +40,7 @@ else:
 
 CACHE_VERSION = 1
 OPS = ("eq", "ne", "in", "gte", "lte", "is_null")
+MAX_CALENDAR_YEARS = 40
 TIME_DIMENSIONS = ("event_year", "decade", "year_month", "event_date")
 VIEWS = {
     "table": {"label": "Cifras y tabla", "datasets": "*",
@@ -57,6 +58,9 @@ VIEWS = {
                    "description": "Informes por país ISO2. No normaliza por población."},
     "hour_weekday": {"label": "Matriz hora × día de la semana", "datasets": ["agg_weekday_hour", "fact_report"],
                      "description": "Informes por día de la semana y hora local declarada; solo días y relojes fiables."},
+    "month_calendar": {"label": "Calendario año × mes", "datasets": ["agg_month", "fact_report"],
+                       "description": "Informes por año y mes, un año por fila. Exige filtrar event_year a un rango "
+                                      f"de hasta {MAX_CALENDAR_YEARS} años y un limit de 12 filas por año."},
 }
 POINT_COLUMNS = ["report_id", "lat", "lng", "source_code", "date_key", "shape_code", "coordinate_basis",
                  "uses_external_evidence", "duplicate_status"]
@@ -543,6 +547,8 @@ class Analytics:
             raise QueryError("view_contract", "La coropleta agrupa solo por country_iso2")
         if q.view == "hour_weekday" and list(q.group_by) != ["weekday", "event_hour"]:
             raise QueryError("view_contract", "La matriz agrupa exactamente por weekday y event_hour")
+        if q.view == "month_calendar":
+            self._check_calendar(q)
         if q.view == "density" and list(q.group_by) not in DENSITY_GROUPS.get(q.dataset, []):
             raise QueryError("view_contract", f"La densidad agrupa por {DENSITY_GROUPS.get(q.dataset)}")
         if q.view == "bars" and (not metrics or not 1 <= len(q.group_by) <= 2):
@@ -554,6 +560,34 @@ class Analytics:
         return {"spec": spec, "metrics": metrics, "applied": sorted(applied), "inherent": bool(inherent),
                 "closure": sorted(closure(applied)),
                 "where": where, "params": params, "base_where": base_where, "base_params": base_params}
+
+    def _check_calendar(self, q: Query) -> None:
+        """A year × month matrix must fit in one result: bounded years, every cell within limit."""
+        if list(q.group_by) != ["event_year", "event_month"]:
+            raise QueryError("view_contract", "El calendario agrupa exactamente por event_year y event_month")
+        low = high = None
+        for f in q.filters:
+            if f.column != "event_year":
+                continue
+            values = f.value if f.op == "in" and isinstance(f.value, list) else [f.value]
+            if not all(isinstance(v, int) and not isinstance(v, bool) for v in values):
+                continue
+            if f.op in ("eq", "in"):
+                low = max(low, min(values)) if low is not None else min(values)
+                high = min(high, max(values)) if high is not None else max(values)
+            elif f.op == "gte":
+                low = max(low, values[0]) if low is not None else values[0]
+            elif f.op == "lte":
+                high = min(high, values[0]) if high is not None else values[0]
+        if low is None or high is None or high < low:
+            raise QueryError("view_contract", "El calendario exige filtrar event_year con gte y lte (o eq/in) "
+                                              f"a un rango de hasta {MAX_CALENDAR_YEARS} años")
+        span = high - low + 1
+        if span > MAX_CALENDAR_YEARS:
+            raise QueryError("view_contract", f"El calendario admite hasta {MAX_CALENDAR_YEARS} años; "
+                                              f"el filtro cubre {span} ({low}–{high})")
+        if q.limit < span * 12:
+            raise QueryError("limit", f"El calendario de {span} años necesita limit ≥ {span * 12}")
 
     def _metric_sql(self, dataset: str, code: str) -> str:
         metric = self.metrics[code]
@@ -581,6 +615,43 @@ class Analytics:
 
     # -- execution ------------------------------------------------------
     def query(self, request) -> dict:
+        result = self._query(request)
+        return self._with_unknown_month(result) if result["view"] == "month_calendar" else result
+
+    def _with_unknown_month(self, result: dict) -> dict:
+        """Calendar: add, per year, the reports whose month cannot be known.
+
+        Each year gets one extra row with event_month = null («Mes desconocido»):
+        reports of that year counted at year level (calendar eligibility) minus
+        the ones with a reliable month. Both counts come from Gold with the same
+        non-temporal filters, so the chart, the exact data and the totals agree.
+        """
+        q = result["query"]
+        if "report_count" not in q["metrics"] or any(f["column"] in ("event_month", "year_month") for f in q["filters"]):
+            return result
+        yearly = {"dataset": "agg_year" if q["dataset"] == "agg_month" else q["dataset"], "filters": q["filters"],
+                  "group_by": ["event_year"], "metrics": ["report_count"], "limit": self.limits["max_limit"],
+                  "eligibility": [] if q["dataset"] == "agg_month" else
+                                 sorted({e for e in q["eligibility"] if e not in ("month", "day", "hour")} | {"calendar"})}
+        per_year = {r["event_year"]: r["report_count"] for r in self._query(yearly)["rows"]}
+        known: dict = {}
+        for row in result["rows"]:
+            known[row["event_year"]] = known.get(row["event_year"], 0) + (row["report_count"] or 0)
+        rows = []
+        for year in sorted(set(per_year) | set(known)):
+            rows += [r for r in result["rows"] if r["event_year"] == year]
+            rows.append({"event_year": year, "event_month": None, "event_month_label": "Mes desconocido",
+                         "report_count": max(0, per_year.get(year, 0) - known.get(year, 0))})
+        with_month = sum(known.values())
+        reports = sum(per_year.values())
+        result.update(rows=rows, row_count=len(rows), empty=not rows,
+                      calendar_totals={"reports": reports, "with_month": with_month, "without_month": max(0, reports - with_month)})
+        result["limitations"] = [{"code": "unknown_month",
+                                  "text": "«Mes desconocido» reúne los informes del año cuyo mes no es fiable (solo consignan el año, "
+                                          "fecha aproximada o marcador de día); no se reparten entre los meses."}] + result["limitations"]
+        return result
+
+    def _query(self, request) -> dict:
         q = Query.parse(request, self.limits)
         plan = self._plan(q)
         spec, metrics = plan["spec"], plan["metrics"]
@@ -592,7 +663,7 @@ class Analytics:
             group = " GROUP BY " + ", ".join(groups) if groups else ""
             if q.order_by:
                 order = f' ORDER BY "{q.order_by}" {"DESC" if q.descending else "ASC"}'
-            elif q.view in ("timeseries", "hour_weekday", "density") or not groups:
+            elif q.view in ("timeseries", "hour_weekday", "month_calendar", "density") or not groups:
                 order = " ORDER BY " + ", ".join(groups) if groups else ""
             else:
                 order = f' ORDER BY "{metrics[0]}" DESC, ' + ", ".join(groups)

@@ -40,7 +40,8 @@ export function cell(row: Row, column: string): string {
   const label = row[column + "_label"];
   if (typeof label === "string") return label;
   const value = row[column];
-  return value === null || value === undefined ? "sin dato" : typeof value === "number" ? num(value) : String(value);
+  // Dimensions are codes, not quantities: a year reads 1996, never «1.996».
+  return value === null || value === undefined ? "sin dato" : String(value);
 }
 
 export function isMetric(catalog: Catalog | null, column: string): boolean {

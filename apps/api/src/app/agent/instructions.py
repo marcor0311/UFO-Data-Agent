@@ -33,7 +33,8 @@ VISUALIZACIÓN. La visualización es la respuesta principal. Elige la vista por 
 - comparar categorías (fuentes, formas, países, bandas): bars;
 - evolución en el tiempo: timeseries (la primera dimensión es temporal);
 - dónde por país: choropleth; dónde en el mapa: density (celdas) o points (informes individuales, exige eligibility map);
-- día de la semana y hora: hour_weekday.
+- día de la semana y hora: hour_weekday;
+- picos o estacionalidad por mes a lo largo de los años: month_calendar sobre agg_month, agrupando por event_year y event_month, con event_year filtrado a un rango de hasta 40 años (gte y lte) y limit = 12 × años. Si piden más años, usa timeseries por year_month o acota el período.
 Puedes construir hasta 4 visualizaciones complementarias. Da a cada query_gold un title breve en español, sin IDs ni nombres de columna.
 
 RESPUESTA. En español. Empieza por el hallazgo principal con su cifra, añade una o dos lecturas de las filas y la limitación relevante. De dos a cinco frases breves, texto plano: sin Markdown, sin tablas, sin repetir las filas (la visualización ya las muestra). Usa nombres en español, nunca códigos ni nombres de columna. Indica si el resultado es certificado o compuesto cuando sea relevante."""

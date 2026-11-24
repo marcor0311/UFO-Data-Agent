@@ -12,7 +12,7 @@ Recuperación del prototipo **DB Test** y de su Sketchbook v2 para evaluación v
 | [Formas reportadas](formas-reportadas/) | Composición | Recuperada |
 | [Histograma de duración](histograma-duracion/) | Distribución | Recuperada |
 | [Región por año](region-por-ano/) | Tiempo y región | Recuperada |
-| [Calendario por meses del año](calendario-meses/) | Tiempo | Recuperada |
+| [Calendario por meses del año](done/calendario-meses/) | Tiempo | Implementada (`month_calendar`) |
 | [Día de la semana por hora consignada](dia-semana-hora/) | Tiempo | Recuperada |
 | [Composición por archivo](composicion-por-archivo/) | Procedencia | Recuperada |
 | [Mapa 2D de clusters](mapa-2d-clusters/) | Cartografía | Recuperada |
@@ -23,6 +23,8 @@ Recuperación del prototipo **DB Test** y de su Sketchbook v2 para evaluación v
 | [Duración de testigos](duracion-testigos/) | Relación entre variables | Experimental |
 | [Machine Learning – Clustering](machine-learning-clustering/) | Método analítico | Solo idea |
 | [Perfiles de duración y K-means](perfiles-duracion-k-means/) | Método analítico | Solo idea |
+
+Las propuestas ya implementadas en el Data Agent se mueven a [done/](done/).
 
 ## Consultar las propuestas
 

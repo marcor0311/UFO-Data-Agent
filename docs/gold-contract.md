@@ -188,6 +188,7 @@ Combinaciones prohibidas, con su código de error:
 | `density` | `agg_spatial_cell`, `fact_report` | Agrupa por celda de 1° o 5°. |
 | `choropleth` | `agg_country`, `fact_report`, `report_model_output` | Agrupa solo por `country_iso2`. |
 | `hour_weekday` | `agg_weekday_hour`, `fact_report` | Agrupa exactamente por `weekday` y `event_hour`. |
+| `month_calendar` | `agg_month`, `fact_report` | Agrupa exactamente por `event_year` y `event_month`. Exige filtrar `event_year` a un rango de hasta 40 años y un `limit` de al menos 12 × años. |
 
 ### Resultado
 
