@@ -257,3 +257,37 @@ button.turn-question[aria-pressed="true"] { box-shadow: inset 0 0 0 1.5px var(--
   .composer { position: sticky; bottom: 0; z-index: 2; background: var(--chat-background); }
   .results-body:has(> .ambient-particles) { min-height: 420px; }
 }
+
+/* Points map: 2D/3D switch and 3D controls */
+.map-mode { display: inline-flex; gap: 0.25rem; margin-left: auto; }
+.map-mode button, .map-3d-controls button { border: 1px solid var(--rule, #c9d3dc); background: transparent; color: var(--ink-2); border-radius: 6px; padding: 0.2rem 0.6rem; font: inherit; font-size: 0.82rem; cursor: pointer; }
+.map-mode button[aria-pressed="true"] { background: var(--ink-1, #10202f); color: #fff; border-color: transparent; }
+.map-3d { position: relative; }
+.map-3d-controls { position: absolute; top: 0.5rem; right: 0.5rem; display: flex; gap: 0.25rem; }
+.map-3d-controls button { background: rgba(15, 29, 41, 0.75); color: #e0edf3; border-color: rgba(176, 213, 226, 0.4); }
+
+/* Geographic map (MapLibre + deck.gl) */
+.geo-map { display: grid; gap: 0.5rem; }
+.geo-map-toolbar { display: flex; flex-wrap: wrap; align-items: center; gap: 0.6rem; }
+.geo-map-toolbar .map-mode { margin-left: 0; }
+.geo-map-reset { margin-left: auto; border: 1px solid var(--rule, #c9d3dc); background: transparent; color: var(--ink-2); border-radius: 6px; padding: 0.2rem 0.6rem; font: inherit; font-size: 0.82rem; cursor: pointer; }
+.map-mode button:disabled { opacity: 0.45; cursor: not-allowed; }
+/* Explicit height and absolute SDK children: fixes the DB Test regression where
+   .maplibregl-map (position:relative) collapsed the map to 0 px. */
+.geo-map-canvas { position: relative; width: 100%; height: clamp(340px, 52vh, 560px); border-radius: 8px; overflow: hidden; background: #e9eef2; }
+.geo-map-canvas.maplibregl-map { position: relative; }
+.geo-map-loading { display: grid; place-items: center; color: var(--ink-2); font-size: 0.9rem; }
+
+/* 3D model catalog (ported from DB Test visor) */
+.model-viewer { width: 100%; box-sizing: border-box; border: 1px solid var(--rule, #c9d3dc); border-radius: 12px; padding: 1.25rem 1.5rem; color: var(--ink-1, #10202f); background: var(--surface, #fff); outline: none; }
+.model-viewer-heading { display: flex; justify-content: space-between; align-items: center; }
+.model-viewer-heading h2 { margin: 0; }
+.model-viewer p { color: var(--ink-2); font-size: 0.9rem; }
+.model-viewer-toolbar { display: flex; flex-wrap: wrap; gap: 1rem; align-items: center; margin: 0.5rem 0 0.75rem; font-size: 0.88rem; }
+.model-viewer button, .model-viewer select { color: var(--ink-1, #10202f); font: inherit; font-size: 0.85rem; border: 1px solid var(--rule, #c9d3dc); border-radius: 6px; background: transparent; padding: 0.25rem 0.6rem; cursor: pointer; }
+.model-viewer-stage { position: relative; width: 100%; aspect-ratio: 4 / 5; max-height: 62vh; }
+.model-viewer-stage.single { aspect-ratio: 4 / 3; }
+.model-viewer-stage canvas { width: 100%; height: 100%; display: block; border-radius: 8px; cursor: grab; touch-action: none; }
+.model-viewer-labels { position: absolute; inset: 0; display: grid; pointer-events: none; }
+.model-viewer-labels span { align-self: end; justify-self: center; font-size: 0.78rem; color: var(--ink-2); padding-bottom: 0.2rem; }
+button.explore-link { background: none; border: 0; padding: 0; font: inherit; color: inherit; text-decoration: underline; cursor: pointer; }
