@@ -13,9 +13,12 @@ ACCOUNT = {"access_token": "token"}
 
 
 def test_direct_answer(gold):
-    stream = ScriptedStream([message("Pide un dato concreto.")])
+    """A greeting answered without tools gets one nudge; the model may repeat its answer."""
+    stream = ScriptedStream([message("Pide un dato concreto.")], [message("Pide un dato concreto.")])
     turn = DataAgent(gold, stream=stream).answer(ACCOUNT, "Hola", [], "model-a")
     assert turn["answer"] == "Pide un dato concreto." and turn["visualizations"] == [] and turn["load_id"] == gold.load_id
+    assert turn["trace"] == [{"tool": "verificar", "ok": False, "code": "no_data_used"}]
+    assert stream.payloads[1]["input"][-1]["content"] == graph.UNGROUNDED and "tool_choice" not in stream.payloads[1]
     payload = stream.payloads[0]
     assert payload["model"] == "model-a" and payload["parallel_tool_calls"] is True and "tool_choice" not in payload
     assert "search_certified" in payload["instructions"] and "CQ_TEST_SOURCES" in payload["instructions"]
@@ -108,10 +111,10 @@ def test_unexpected_tool_failure_goes_back_to_the_model(gold, monkeypatch):
     ("La métrica report_count da 9 informes.", "code_in_answer"),
 ])
 def test_rule_breaking_answers_are_rewritten_once(gold, text, code):
-    stream = ScriptedStream([message(text)], [message("Hay 9 informes.")])
+    stream = ScriptedStream([call("run_certified", {"id": "CQ_TEST_SOURCES"}, "a")], [message(text)], [message("Hay 9 informes.")])
     turn = DataAgent(gold, stream=stream).answer(ACCOUNT, "?", [], "model-a")
     assert turn["answer"] == "Hay 9 informes." and {"tool": "verificar", "ok": False, "code": code} in turn["trace"]
-    assert stream.payloads[1]["tool_choice"] == "none"
+    assert stream.payloads[2]["tool_choice"] == "none"
 
 
 def test_clean_answers_pass_the_checks(gold):
@@ -197,8 +200,26 @@ def test_range_answer_is_rewritten_once(gold):
     assert "una sola cifra" in stream.payloads[2]["input"][-1]["content"]
 
 
+def test_ungrounded_answer_is_sent_back_to_gold(gold):
+    stream = ScriptedStream([message("Las coordenadas vienen de las fuentes.")],
+                            [call("run_certified", {"id": "CQ_TEST_SOURCES"}, "a")], [message("Hay 9 informes.")])
+    turn = DataAgent(gold, stream=stream).answer(ACCOUNT, "¿De dónde vienen las coordenadas?", [], "model-a")
+    assert turn["answer"] == "Hay 9 informes." and len(turn["visualizations"]) == 1
+    assert [t["tool"] for t in turn["trace"]] == ["verificar", "run_certified"]
+
+
+def test_clarifications_and_follow_ups_are_not_nudged(gold):
+    asked = ScriptedStream([message("¿Te refieres a la República del Congo o a la República Democrática del Congo?")])
+    assert DataAgent(gold, stream=asked).answer(ACCOUNT, "Congo", [], "model-a")["trace"] == []
+    first = DataAgent(gold, stream=ScriptedStream([call("run_certified", {"id": "CQ_TEST_SOURCES"})], [message("Uno.")])).answer(
+        ACCOUNT, "Primera", [], "model-a")
+    follow = ScriptedStream([message("UFOCAT es la mayor.")])
+    assert DataAgent(gold, stream=follow).answer(ACCOUNT, "¿Y la mayor?", [first], "model-a")["answer"] == "UFOCAT es la mayor."
+
+
 def test_second_range_is_accepted_to_avoid_loops(gold):
-    stream = ScriptedStream([message("Entre 8 y 12 informes.")], [message("De 8 a 12 informes.")])
+    stream = ScriptedStream([call("run_certified", {"id": "CQ_TEST_SOURCES"}, "a")],
+                            [message("Entre 8 y 12 informes.")], [message("De 8 a 12 informes.")])
     assert DataAgent(gold, stream=stream).answer(ACCOUNT, "?", [], "model-a")["answer"] == "De 8 a 12 informes."
 
 
@@ -234,3 +255,10 @@ def test_stream_retries_a_transient_failure_once(transport):
     with pytest.raises(HTTPException) as err:
         runtime.response_stream(ACCOUNT, {"model": "m"})
     assert err.value.status_code == 502
+
+
+def test_instructions_carry_the_domain_guide_and_allowed_values(gold):
+    from app.agent import instructions
+    text = instructions.build(gold)
+    assert "GUÍA DE DOMINIO" in text and "Cómo responder las preguntas típicas" in text
+    assert "VALORES PERMITIDOS" in text and "color_family" in text

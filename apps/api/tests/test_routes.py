@@ -20,7 +20,8 @@ def test_health_and_catalog(client, gold):
     catalog = client.get("/api/agent/catalog").json()
     assert catalog["certified_queries"][0] == {**catalog["certified_queries"][0], "id": "CQ_TEST_SOURCES", "valid": True}
     assert set(catalog["views"]) == {"table", "bars", "timeseries", "points", "density", "choropleth", "hour_weekday", "month_calendar",
-                                     "stacked", "matrix", "dumbbell", "timeline", "histogram", "ecdf", "globe"}
+                                     "stacked", "matrix", "dumbbell", "timeline", "histogram", "ecdf", "globe", "boxplot", "scatter",
+                                     "waterfall", "bump", "curve", "clusters", "links", "funnel", "upset", "compare"}
     assert catalog["country_m49"]["US"] == "840" and catalog["dimensions"]["country_iso2"]["label"] == "País"
     for code, metric in gold.metrics.items():
         if metric["type"] == "ratio":
@@ -111,7 +112,7 @@ def test_chat_stores_owner_scoped_history(client):
 
 def test_follow_up_appends_turn(client):
     login(client)
-    use_stream([message("Uno.")])
+    use_stream([call("run_certified", {"id": "CQ_TEST_SOURCES"})], [message("Uno.")])
     cid = client.post("/api/agent/chat", json={"question": "Uno"}).json()["conversation_id"]
     use_stream([message("Dos.")])
     r = client.post("/api/agent/chat", json={"question": "Dos", "conversation_id": cid})
