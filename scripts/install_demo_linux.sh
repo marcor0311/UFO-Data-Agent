@@ -1,5 +1,6 @@
 #!/usr/bin/env bash
 set -euo pipefail
+launcher=$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)/run_demo.py
 
 # Debian/Ubuntu. Node is installed for the current user.
 case "$(uname -m)" in
@@ -29,6 +30,6 @@ awk -v name="$archive" '$2 == name {print}' SHASUMS256.txt | sha256sum --check -
 mkdir -p "$HOME/.local"
 tar -xJf "$archive" -C "$HOME/.local"
 
-printf 'Desde la raiz del repositorio, ejecuta:\n'
-printf 'export PATH="%s/bin:$PATH"\n' "$HOME/.local/${archive%.tar.xz}"
-printf 'python3 scripts/run_demo.py\n'
+export PATH="$HOME/.local/${archive%.tar.xz}/bin:$PATH"
+cd -- "$(dirname -- "$launcher")/.."
+python3 "$launcher" "$@"

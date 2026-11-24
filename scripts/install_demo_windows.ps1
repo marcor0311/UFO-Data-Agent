@@ -1,10 +1,12 @@
 $ErrorActionPreference = 'Stop'
+$launcher = Join-Path $PSScriptRoot 'run_demo.py'
 
 if ($env:PROCESSOR_ARCHITECTURE -ne 'AMD64') {
     throw 'Este instalador requiere Windows x64.'
 }
 
 $downloads = Join-Path ([System.IO.Path]::GetTempPath()) ("ufo-demo-" + [guid]::NewGuid())
+$pythonDir = Join-Path $env:LocalAppData 'Programs\Python\Python313'
 New-Item -ItemType Directory -Path $downloads | Out-Null
 
 function Get-SignedInstaller($url, $name) {
@@ -26,7 +28,7 @@ function Invoke-Installer($file, $arguments) {
 try {
     $pythonName = 'python-3.13.13-amd64.exe'
     $python = Get-SignedInstaller "https://www.python.org/ftp/python/3.13.13/$pythonName" $pythonName
-    Invoke-Installer $python @('/quiet', 'InstallAllUsers=0', 'PrependPath=1', 'Include_test=0')
+    Invoke-Installer $python @('/quiet', 'InstallAllUsers=0', 'PrependPath=1', 'Include_test=0', ('TargetDir="{0}"' -f $pythonDir))
 
     $nodeRelease = 'https://nodejs.org/download/release/latest-v22.x'
     $checksums = (Invoke-WebRequest -UseBasicParsing -Uri "$nodeRelease/SHASUMS256.txt").Content
@@ -43,4 +45,11 @@ try {
     Remove-Item -LiteralPath $downloads
 }
 
-Write-Host 'Abre una nueva PowerShell y ejecuta python scripts/run_demo.py desde la raiz del repositorio.'
+$env:Path = (@($env:Path, [Environment]::GetEnvironmentVariable('Path', 'Machine'),
+    [Environment]::GetEnvironmentVariable('Path', 'User')) -join ';')
+$python = Join-Path $pythonDir 'python.exe'
+if (-not (Test-Path -LiteralPath $python -PathType Leaf)) {
+    throw 'No se encontro el ejecutable de Python 3.13 instalado para este usuario.'
+}
+& $python $launcher @args
+exit $LASTEXITCODE

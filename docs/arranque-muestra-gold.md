@@ -14,9 +14,8 @@ x64, copia el repositorio dentro del Sandbox y ejecuta desde su raíz:
 .\scripts\install_demo_windows.ps1
 ```
 
-El script descarga los instaladores oficiales y verifica su firma. Requiere
-acceso a Internet dentro del Sandbox. Abre una PowerShell nueva después de
-instalar para que se actualice el `PATH`.
+El script descarga los instaladores oficiales, verifica su firma y arranca la
+muestra en la misma PowerShell. Requiere acceso a Internet dentro del Sandbox.
 
 En Debian y Ubuntu (x64 o ARM64):
 
@@ -24,11 +23,13 @@ En Debian y Ubuntu (x64 o ARM64):
 bash scripts/install_demo_linux.sh
 ```
 
-El script instala Python y el soporte para entornos virtuales con `apt` y
-descarga Node.js 22 para el usuario actual. Ejecuta la línea `export PATH=...`
-que imprime antes de arrancar la muestra.
+El script instala Python y el soporte para entornos virtuales con `apt`,
+descarga Node.js 22 para el usuario actual y arranca la muestra.
 
 ## Arrancar la muestra
+
+Si ya tienes Python y Node.js en el `PATH`, puedes arrancar directamente con
+los comandos siguientes. Los instaladores de arriba ya incluyen este paso.
 
 Desde la raíz de un clon limpio, en PowerShell:
 
