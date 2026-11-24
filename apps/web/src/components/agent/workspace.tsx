@@ -85,6 +85,7 @@ export default function AgentWorkspace() {
   const input = useRef<HTMLTextAreaElement>(null);
   const chatHeading = useRef<HTMLHeadingElement>(null);
   const resultsBody = useRef<HTMLDivElement>(null);
+  const resultsHeading = useRef<HTMLHeadingElement>(null);
   const authenticated = Boolean(session?.authenticated);
   const busy = pending !== null || restoring;
   const activeIndex = selectedTurn ?? turns.length - 1;
@@ -147,13 +148,12 @@ export default function AgentWorkspace() {
   }, [turns, pending, view, failure, restoring]);
 
   useLayoutEffect(() => {
-    if (resultsBody.current && (selectedTurn === null || pending)) resultsBody.current.scrollTop = 0;
-  }, [activeTurn, pending, selectedTurn]);
+    if (resultsBody.current && selectedTurn === null) resultsBody.current.scrollTop = 0;
+  }, [activeTurn, selectedTurn]);
 
   function appendTurn(turn: Turn) {
     setModelsOpen(false);
     setTurns((current) => [...current, turn]);
-    setSelectedTurn(null);
     const count = turn.visualizations.length;
     setAnnouncement(`Respuesta recibida con ${count} ${count === 1 ? "resultado" : "resultados"}.`);
   }
@@ -243,6 +243,7 @@ export default function AgentWorkspace() {
   }
 
   function showResults(index: number) {
+    followLatest.current = false;
     setSelectedTurn(index);
     setModelsOpen(false);
     const results = turns[index].visualizations;
@@ -252,9 +253,25 @@ export default function AgentWorkspace() {
     requestAnimationFrame(() => {
       const body = resultsBody.current;
       if (!body) return;
-      if (getComputedStyle(body).overflowY === "visible") body.scrollIntoView({ block: "start", behavior });
-      else body.scrollTo({ top: 0, behavior });
+      resultsHeading.current?.focus({ preventScroll: true });
+      resultsHeading.current?.scrollIntoView({ block: "nearest", behavior });
+      body.scrollTo({ top: 0, behavior });
     });
+  }
+
+  function showLatestResults() {
+    setSelectedTurn(null);
+    setModelsOpen(false);
+    setAnnouncement("Mostrando la respuesta más reciente.");
+    requestAnimationFrame(() => {
+      resultsHeading.current?.focus({ preventScroll: true });
+      resultsHeading.current?.scrollIntoView({ block: "nearest" });
+    });
+  }
+
+  function focusQuestion() {
+    navigate("chat");
+    requestAnimationFrame(() => input.current?.focus());
   }
 
   function reset() {
@@ -425,10 +442,21 @@ export default function AgentWorkspace() {
 
         <section className="results-panel" id="resultados" aria-label="Resultados">
           <p className="sr-only" role="status">{announcement}</p>
+          {activeTurn && !modelsOpen ? (
+            <header className="results-head">
+              <h2 ref={resultsHeading} tabIndex={-1}>Respuesta {activeIndex + 1} de {turns.length}</h2>
+              <div className="results-actions">
+                {selectedTurn !== null ? (
+                  <button type="button" className="chat-action" onClick={showLatestResults}>Volver al último resultado</button>
+                ) : null}
+                <button type="button" className="chat-action" onClick={focusQuestion}>Ir a la pregunta</button>
+              </div>
+            </header>
+          ) : null}
           <div className="results-body" ref={resultsBody}>
             {modelsOpen && !pending ? (
               <ModelViewer initial={modelsInitial} onClose={() => setModelsOpen(false)} />
-            ) : pending ? (
+            ) : pending && selectedTurn === null ? (
               <div className="results-loading" role="status" aria-label="Consultando los datos">
                 <div className="skeleton-line" aria-hidden="true" />
                 <div className="skeleton-line skeleton-short" aria-hidden="true" />
