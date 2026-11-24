@@ -70,6 +70,7 @@ export default function AgentWorkspace() {
   const [conversations, setConversations] = useState<ConversationSummary[]>([]);
   const [conversationId, setConversationId] = useState<string | null>(null);
   const [turns, setTurns] = useState<Turn[]>([]);
+  const [examplePreview, setExamplePreview] = useState<Turn | null>(null);
   const [selectedTurn, setSelectedTurn] = useState<number | null>(null);
   const [view, setView] = useState<WorkspaceView>("chat");
   const [modelsOpen, setModelsOpen] = useState(false);
@@ -94,7 +95,7 @@ export default function AgentWorkspace() {
   // A turn without new results (visualization_action "retain") keeps the latest results on screen.
   const latestWithResults = turns.findLastIndex((turn) => turn.visualizations.length > 0);
   const activeIndex = selectedTurn ?? (latestWithResults >= 0 ? latestWithResults : turns.length - 1);
-  const activeTurn = turns[activeIndex];
+  const activeTurn = view === "certified" ? examplePreview ?? turns[activeIndex] : turns[activeIndex];
   const groups = activeTurn ? groupResults(activeTurn.visualizations) : [];
   const pane = PANES[view];
   const starters = STARTER_QUERIES
@@ -206,14 +207,36 @@ export default function AgentWorkspace() {
   async function runCertified(item: CertifiedSummary) {
     if (busy || !item.valid) return;
     followLatest.current = true;
-    if (view !== "chat") navigate("chat", undefined, true);
     setPending(item.examples[0] ?? item.title);
     setFailure(null);
     try {
       const result = await api<GoldResult>(`agent/certified/${item.id}`);
-      appendTurn(exampleTurn(item, result));
+      setExamplePreview(exampleTurn(item, result));
     } catch (e) {
       setFailure(failureFrom(e, "No se pudo ejecutar la consulta de ejemplo."));
+    } finally {
+      setPending(null);
+    }
+  }
+
+  async function continueExample(item: CertifiedSummary) {
+    if (busy || !authenticated || !item.valid) return;
+    setPending(item.examples[0] ?? item.title);
+    setFailure(null);
+    try {
+      const result = await api<{ conversation_id: string; turns: Turn[] }>(`agent/conversations/examples/${item.id}`, {
+        conversation_id: conversationId,
+      });
+      followLatest.current = true;
+      savedConversation.set(result.conversation_id);
+      setConversationId(result.conversation_id);
+      setTurns(result.turns);
+      setSelectedTurn(null);
+      navigate("chat");
+      requestAnimationFrame(() => input.current?.focus());
+      loadConversations();
+    } catch (e) {
+      setFailure(failureFrom(e, "No se pudo continuar desde el ejemplo."));
     } finally {
       setPending(null);
     }
@@ -463,9 +486,9 @@ export default function AgentWorkspace() {
                         <span>{item.title}{!item.valid ? <em> (no disponible)</em> : null}</span>
                         <span aria-hidden="true">↗</span>
                       </button>
-                      {authenticated && item.examples[0] ? (
-                        <button type="button" className="ask-example" onClick={() => prepare(item.examples[0])} disabled={busy}
-                                aria-label={`Usar la pregunta: ${item.examples[0]}`}>Preparar</button>
+                      {authenticated ? (
+                        <button type="button" className="ask-example" onClick={() => continueExample(item)} disabled={busy || !item.valid}
+                                aria-label={`Continuar desde el ejemplo: ${item.title}`}>Continuar desde el ejemplo</button>
                       ) : null}
                     </li>
                   ))}

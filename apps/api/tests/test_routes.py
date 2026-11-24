@@ -138,6 +138,35 @@ def test_model_must_belong_to_account(client):
     assert client.get("/api/agent/models").json()["selected"] == "model-a"
 
 
+@pytest.mark.parametrize("question", ["¿Y solo en Costa Rica?", "¿Qué fuente tuvo más informes?"])
+def test_continue_example_persists_context_for_follow_up(client, question):
+    endpoint = "/api/agent/conversations/examples/CQ_TEST_SOURCES"
+    preview = client.get("/api/agent/certified/CQ_TEST_SOURCES")
+    assert preview.status_code == 200
+    assert client.post(endpoint, json={}).status_code == 401
+
+    login(client)
+    use_stream([call("run_certified", {"id": "CQ_TEST_SOURCES"})], [message("Primera respuesta.")])
+    previous = client.post("/api/agent/chat", json={"question": "Pregunta previa"}).json()
+    cid = previous["conversation_id"]
+    seeded = client.post(endpoint, json={"conversation_id": cid})
+    assert seeded.status_code == 200
+    example = seeded.json()["turns"][-1]
+    assert example["visualizations"][0] == preview.json()
+
+    stream = use_stream([message("Seguimiento.")])
+    follow_up = client.post("/api/agent/chat", json={"conversation_id": cid, "question": question})
+    assert follow_up.status_code == 200
+    inputs = stream.payloads[0]["input"]
+    assert inputs[-4]["content"] == example["question"]
+    assert '"dataset": "agg_source"' in inputs[-2]["content"]
+    assert '"rows": ' in inputs[-2]["content"]
+    assert inputs[-1]["content"] == question
+    assert client.get(f"/api/agent/conversations/{cid}").json()["turns"] == [
+        previous["turn"], example, follow_up.json()["turn"],
+    ]
+
+
 def test_expired_session_is_rejected(client):
     login(client)
     client.agent_auth.state["sessions"].clear()
