@@ -2,6 +2,7 @@
 local process; authenticated chat and history are scoped to the session owner."""
 from __future__ import annotations
 
+from datetime import datetime, timezone
 from functools import lru_cache
 import json
 import threading
@@ -143,6 +144,38 @@ class Chat(BaseModel):
     question: str = Field(min_length=1, max_length=4000)
     conversation_id: UUID | None = None
     model: str | None = Field(default=None, max_length=120)
+
+
+class ContinueExample(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    conversation_id: UUID | None = None
+
+
+@router.post("/api/agent/conversations/examples/{certified_id}", dependencies=[Depends(safe_origin)])
+def continue_example(certified_id: str, body: ContinueExample, user=Depends(identity),
+                     a: Analytics = Depends(get_analytics), store: ConversationStore = Depends(get_store)):
+    if not _chat_lock.acquire(blocking=False):
+        raise HTTPException(409, "Ya hay una consulta en curso; espera a que termine.")
+    try:
+        cid = str(body.conversation_id or uuid4())
+        previous = store.get(cid, user[0]) if body.conversation_id else []
+        if previous is None:
+            raise HTTPException(404, "Conversación no encontrada")
+        if len(previous) >= MAX_TURNS - 1:
+            raise HTTPException(422, "Inicia una conversación nueva para continuar.")
+        result = certified(certified_id, a)
+        item = next(q for q in a.certified()["queries"] if q["id"] == certified_id)
+        turn = {
+            "question": next(iter(item["examples"]), item["title"]),
+            "answer": f'{item["description"]} {item["limitation"]}',
+            "visualizations": [result], "trace": [{"tool": "run_certified", "ok": True}],
+            "model": "", "load_id": a.load_id, "created_at": datetime.now(timezone.utc).isoformat(),
+        }
+        turns = [*previous, turn]
+        store.save(cid, user[0], turns)
+        return {"conversation_id": cid, "turns": turns}
+    finally:
+        _chat_lock.release()
 
 
 @router.get("/api/agent/models")
