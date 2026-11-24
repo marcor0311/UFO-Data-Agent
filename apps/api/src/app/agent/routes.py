@@ -102,7 +102,9 @@ def catalog(a: Analytics = Depends(get_analytics)):
                   "recommended_views": q.get("recommended_views", []), "limitation": q["limitation"],
                   "valid": a.certification_status(q)["valid"]} for q in a.certified()["queries"]]
     return {"load_id": a.load_id, "datasets": a.describe(), "views": VIEWS,
-            "metrics": {k: {"label": m["label"], "type": m["type"], "unit": m["unit"]} for k, m in a.metrics.items()},
+            "metrics": {k: {"label": m["label"], "type": m["type"], "unit": m["unit"],
+                            **({"denominator": m["denominator"]} if m["type"] == "ratio" else {})}
+                        for k, m in a.metrics.items()},
             "dimensions": {k: {"label": d["label"]} for k, d in a.dimensions.items()},
             "eligibility": {k: v["label"] for k, v in a.eligibility.items()},
             "certified_queries": certified, "limitations": list(a.limitations.values()),

@@ -1,5 +1,8 @@
 """HTTP routes with an isolated app, a scripted model and a local session."""
 import uuid
+from contextlib import closing
+
+import pytest
 
 from conftest import ScriptedStream, call, login, message
 from app.agent import routes
@@ -18,6 +21,37 @@ def test_health_and_catalog(client, gold):
     assert catalog["certified_queries"][0] == {**catalog["certified_queries"][0], "id": "CQ_TEST_SOURCES", "valid": True}
     assert set(catalog["views"]) == {"table", "bars", "timeseries", "points", "density", "choropleth", "hour_weekday"}
     assert catalog["country_m49"]["US"] == "840" and catalog["dimensions"]["country_iso2"]["label"] == "País"
+    for code, metric in gold.metrics.items():
+        if metric["type"] == "ratio":
+            assert catalog["metrics"][code]["denominator"] == metric["denominator"]
+        else:
+            assert "denominator" not in catalog["metrics"][code]
+
+
+@pytest.mark.parametrize("limit, truncated", [(2, True), (10, False)])
+def test_rollup_retains_the_filtered_population_for_ratios_and_distinct_counts(client, gold, limit, truncated):
+    sources = ["UFOCAT", "UPDB", "UFO-search"]
+    response = client.post("/api/agent/query", json={
+        "dataset": "fact_report", "filters": [{"column": "source_code", "op": "in", "value": sources}],
+        "group_by": ["source_code"], "metrics": ["report_count", "external_evidence_pct", "distinct_country_count"],
+        "eligibility": ["country"], "rollup": True, "limit": limit,
+    })
+    assert response.status_code == 200
+    result = response.json()
+    with closing(gold.connect()) as conn:
+        expected = conn.execute("""SELECT COUNT(*), ROUND(100.0 * SUM(uses_external_evidence) / COUNT(*), 4),
+                                          COUNT(DISTINCT country_iso2)
+                                   FROM fact_report
+                                   WHERE usable_for_country = 1 AND source_code IN (?, ?, ?)""", sources).fetchone()
+    assert result["truncated"] is truncated
+    assert result["row_count"] == len(result["rows"]) == (2 if truncated else 3)
+    assert result["matched_source_rows"] == expected[0] == 8
+    assert result["total"] == {"report_count": expected[0], "external_evidence_pct": expected[1],
+                               "distinct_country_count": expected[2]}
+    assert expected[1] == 25 and expected[2] == 5
+    percentages = [row["external_evidence_pct"] for row in result["rows"]]
+    assert result["total"]["external_evidence_pct"] != sum(percentages) / len(percentages)
+    assert result["total"]["distinct_country_count"] != sum(row["distinct_country_count"] for row in result["rows"])
 
 
 def test_deterministic_query_and_certified(client):
