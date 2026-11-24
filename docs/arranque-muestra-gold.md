@@ -69,6 +69,18 @@ después de cambiar las variables.
 
 ## Usar la carga completa
 
+En Windows, detén la demo y ejecuta desde la raíz:
+
+```powershell
+.\run_full_windows.cmd
+```
+
+El comando usa las dependencias de la app ya instaladas. Ejecuta `build_all.py`
+y, si el pipeline termina correctamente, arranca la API y la web con la carga
+Gold aprobada. Las variables de la demo se limpian solo para ese arranque.
+
+Para hacerlo manualmente, sigue los pasos de abajo.
+
 Detén el lanzador. Si definiste `AGENT_GOLD_SERVING` o `AGENT_CERTIFIED_QUERIES`
 manualmente, elimina esas variables de la sesión. Construye o selecciona una carga
 aprobada según la [guía del pipeline local](pipeline-local.md) y vuelve a ejecutar
