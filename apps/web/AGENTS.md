@@ -8,6 +8,6 @@ This block is written and re-added by `next dev` — verify at `node_modules/nex
 
 <!-- END:nextjs-agent-rules -->
 
-## Alcance de la interfaz de chat
+## Alcance de la interfaz web
 
-La interfaz de chat de UFO-Data-Agent está destinada exclusivamente a portátiles. Diseña y verifica la conversación y el panel de resultados en tamaños de pantalla de portátil.
+La interfaz web de UFO-Data-Agent está destinada exclusivamente a portátiles. Diseña y verifica la portada, la conversación y el panel de resultados en tamaños de pantalla de portátil. Omite los ajustes y las pruebas específicos para móviles.

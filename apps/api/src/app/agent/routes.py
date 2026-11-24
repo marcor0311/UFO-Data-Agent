@@ -67,7 +67,15 @@ def auth_start(account_id: str | None = None, auth: Auth = Depends(get_auth)):
 @router.get("/auth/callback")
 def auth_callback(request: Request, state: str = "", code: str | None = None, client_id: str | None = None,
                   error: str | None = None, auth: Auth = Depends(get_auth)):
-    session = auth.callback(state, request.cookies.get(OAUTH_COOKIE), code, client_id, error)
+    try:
+        session = auth.callback(state, request.cookies.get(OAUTH_COOKIE), code, client_id, error)
+    except HTTPException as exc:
+        return JSONResponse(
+            {"detail": exc.detail},
+            status_code=exc.status_code,
+            headers=exc.headers,
+            media_type="application/json; charset=utf-8",
+        )
     response = RedirectResponse(web_origin() + "/agent", status_code=303)
     response.set_cookie(COOKIE, session, httponly=True, samesite="lax", max_age=SESSION_SECONDS)
     response.delete_cookie(OAUTH_COOKIE)

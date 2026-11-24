@@ -223,6 +223,47 @@ def compact(result: dict) -> dict:
     return payload
 
 
+def _is_listing(raw: dict) -> bool:
+    """A request for individual report rows: the agent never answers with that table."""
+    return (raw.get("dataset") == "fact_report" and raw.get("view", "table") == "table"
+            and not raw.get("group_by") and not raw.get("metrics"))
+
+
+def visual_pack(analytics: Analytics, raw: dict, room: int) -> list[dict]:
+    """Deterministic visuals for "show me the reports in X": map, timeline, shapes.
+
+    Same filters as the listing the model asked for, so the evidence is the same
+    selection seen as a map (2D/3D), an evolution by year and a shape comparison.
+    """
+    filters = raw.get("filters") or []
+    base = set(raw.get("eligibility") or [])
+    title = (raw.get("title") or "").strip()
+    plans = [
+        {"view": "points", "eligibility": sorted(base | {"map"}), "limit": analytics.limits["max_limit"],
+         "title": f"{title or 'Informes'} en el mapa"},
+        {"view": "timeseries", "group_by": ["event_year"], "metrics": ["report_count"], "order_by": "event_year",
+         "eligibility": sorted(base | {"calendar"}), "limit": analytics.limits["max_limit"], "title": "Informes por año"},
+        {"view": "bars", "group_by": ["shape_code"], "metrics": ["report_count"], "order_by": "report_count",
+         "descending": True, "eligibility": sorted(base), "limit": 13, "title": "Formas reportadas"},
+    ]
+    results = []
+    for plan in plans[:room]:
+        try:
+            result = analytics.query({"dataset": "fact_report", "filters": filters, **plan})
+        except QueryError:
+            continue
+        if plan.get("group_by") == ["shape_code"]:
+            unknown = sum(r["report_count"] for r in result["rows"] if r.get("shape_code") is None)
+            result["rows"] = [r for r in result["rows"] if r.get("shape_code") is not None][:12]
+            result["row_count"] = len(result["rows"])
+            if unknown:
+                result["limitations"] = [*result["limitations"], {"code": "shape_unknown",
+                                         "text": f"{unknown} informes no registran forma y no aparecen en este gráfico."}]
+        if result["rows"]:
+            results.append(result)
+    return results
+
+
 def execute(analytics: Analytics, name: str, arguments: dict, visuals: list) -> dict:
     """Run one tool call. Data results are appended to ``visuals`` (full envelope)."""
     if not isinstance(arguments, dict):
@@ -230,6 +271,17 @@ def execute(analytics: Analytics, name: str, arguments: dict, visuals: list) -> 
     if name in ("query_gold", "run_certified"):
         if len(visuals) >= MAX_VISUALS:
             raise QueryError("visual_limit", f"Máximo {MAX_VISUALS} visualizaciones por respuesta; responde con las que ya tienes.")
+        if name == "query_gold" and isinstance(arguments.get("metrics"), list):
+            # One figure per question: never a second "excluding pending matches" count.
+            kept = [m for m in arguments["metrics"] if m != "report_count_excl_candidates"]
+            arguments = {**arguments, "metrics": kept or ["report_count"]}
+        if name == "query_gold" and _is_listing(arguments):
+            pack = visual_pack(analytics, arguments, MAX_VISUALS - len(visuals))
+            if pack:
+                visuals.extend(pack)
+                return {"note": "Un listado de informes se muestra como mapa (2D/3D), evolución por año y formas. "
+                                "Describe estas visualizaciones; no menciones tablas.",
+                        "visualizations": [compact(r) for r in pack]}
         if name == "query_gold":
             result = analytics.query(arguments)
         else:
