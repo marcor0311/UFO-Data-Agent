@@ -8,6 +8,10 @@ sys.path.insert(0, str(ROOT / "tests"))
 from gold_fixture import serving_fixture
 
 
+def show_progress(message: str) -> None:
+    print(f"[Datos] {message}", flush=True)
+
+
 def main() -> None:
     output = ROOT / "data" / "demo"
     try:
@@ -15,7 +19,7 @@ def main() -> None:
     except FileExistsError:
         raise SystemExit("data/demo ya existe. Reutiliza la muestra o mueve esa carpeta antes de generarla de nuevo.") from None
 
-    analytics, _, _ = serving_fixture(output)
+    analytics, _, _ = serving_fixture(output, progress=show_progress)
     analytics.run_certified("CQ_TEST_SOURCES")
     print(f"Muestra Gold lista en {output} (carga {analytics.load_id}).")
 

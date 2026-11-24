@@ -56,16 +56,26 @@ def main() -> int:
     server = None
     try:
         if not python.is_file():
+            print("[Demo] Creando el entorno virtual de Python...", flush=True)
             venv.create(ENVIRONMENT, with_pip=True)
+        else:
+            print("[Demo] Reutilizando el entorno virtual de Python.", flush=True)
+        print("[Demo] Instalando dependencias de la API con pip...", flush=True)
         subprocess.run([python, "-m", "pip", "install", "-e", "apps/api"], cwd=ROOT, check=True)
+        print("[Demo] Instalando dependencias de la web con npm...", flush=True)
         subprocess.run([npm, "--prefix", "apps/web", "ci"], cwd=ROOT, check=True)
         if not DEMO.exists():
+            print("[Demo] Generando los datos sintéticos...", flush=True)
             subprocess.run([python, "-X", "utf8", "scripts/build_demo.py"], cwd=ROOT, check=True)
+        else:
+            print("[Demo] Reutilizando la muestra en data/demo.", flush=True)
         if not all(path.is_file() for path in (serving, serving.with_suffix(".manifest.json"), certified)):
             raise RuntimeError("La muestra está incompleta. Mueve data/demo y vuelve a ejecutar el lanzador.")
         env = dict(os.environ, AGENT_GOLD_SERVING=str(serving), AGENT_CERTIFIED_QUERIES=str(certified),
                    AGENT_DEV_STOP_ON_EOF="1")
+        print(f"[Demo] Iniciando API en {api} y web en {web}...", flush=True)
         server = subprocess.Popen([node, "apps/web/scripts/dev.mjs"], cwd=ROOT, env=env, stdin=subprocess.PIPE)
+        print("[Demo] Esperando la respuesta de /api/health y de Informes por fuente...", flush=True)
         verify(server, api, web)
         print(f"API y ejemplo verificados. Abre {web}/agent#consultas-de-ejemplo y elige «Informes por fuente».", flush=True)
         return 0 if args.check else server.wait()
