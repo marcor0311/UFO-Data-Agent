@@ -32,7 +32,7 @@ export type GoldResult = {
   limitations: Limitation[];
 };
 
-export type MetricInfo = { label: string; type: "additive" | "ratio" | "non_additive"; unit: string };
+export type MetricInfo = { label: string; type: "additive" | "ratio" | "non_additive"; unit: string; denominator?: string };
 export type CertifiedSummary = { id: string; title: string; description: string; examples: string[]; recommended_views: ViewCode[]; limitation: string; valid: boolean };
 export type Catalog = {
   load_id: string;

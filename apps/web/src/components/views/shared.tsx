@@ -106,10 +106,34 @@ export function DataTable({ result, catalog, caption }: { result: GoldResult; ca
   const groups = result.query.group_by.length ? result.query.group_by
     : result.rows[0] ? Object.keys(result.rows[0]).filter((k) => !k.endsWith("_label") && !metricsOf(result, catalog).includes(k)) : [];
   const metrics = metricsOf(result, catalog);
+  const percentages = metrics.filter((metric) => percent(metric, catalog));
+  const denominators = result.total ? metrics.flatMap((metric) => {
+    const denominator = catalog?.metrics[metric]?.denominator;
+    if (!denominator) return [];
+    // Gold counts the full filtered report population in matched_source_rows,
+    // including when report_count was not requested as a separate metric.
+    const count = result.total?.[denominator] ?? (denominator === "report_count" ? result.matched_source_rows : null);
+    return typeof count === "number" ? [{ metric, denominator, count }] : [];
+  }) : [];
   return (
     <div className="viz-table-wrap">
       <table className="viz-table">
-        {caption ? <caption>{caption}</caption> : null}
+        {caption || result.total || result.truncated ? (
+          <caption>
+            {caption ? <p>{caption}</p> : null}
+            <p>
+              Se {result.rows.length === 1 ? "muestra" : "muestran"} {num(result.rows.length)} {result.rows.length === 1 ? "fila" : "filas"} de datos;
+              {result.truncated ? " hay más filas no mostradas." : " resultado completo."}
+            </p>
+            {result.total ? (
+              <p>El total abarca todos los grupos que cumplen los filtros y la elegibilidad de la consulta{result.truncated ? ", incluidos los no mostrados" : ""}.</p>
+            ) : null}
+            {result.total && percentages.length ? <p>Los porcentajes del total se recalculan sobre esa población; no se suman ni se promedian los porcentajes de las filas.</p> : null}
+            {denominators.map(({ metric, denominator, count }) => (
+              <p key={metric}>Denominador de «{metricLabel(catalog, metric)}»: {num(count)} {metricLabel(catalog, denominator).toLowerCase()}.</p>
+            ))}
+          </caption>
+        ) : null}
         <thead>
           <tr>
             {groups.map((g) => <th key={g} scope="col">{dimensionLabel(catalog, g)}</th>)}
@@ -125,7 +149,7 @@ export function DataTable({ result, catalog, caption }: { result: GoldResult; ca
           ))}
           {result.total ? (
             <tr className="total">
-              {groups.map((g, i) => <td key={g}>{i === 0 ? "Total (recalculado)" : ""}</td>)}
+              {groups.length ? <th scope="row" colSpan={groups.length}>Total del universo consultado</th> : null}
               {metrics.map((m) => <td key={m} className="num">{formatMetric(value(result.total as Row, m), m, catalog)}</td>)}
             </tr>
           ) : null}
