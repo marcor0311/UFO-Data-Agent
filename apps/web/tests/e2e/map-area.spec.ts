@@ -11,7 +11,8 @@ test("un área seleccionada en el globo acompaña las preguntas siguientes", asy
     if (path === "/api/auth/status") return send({ authenticated: true, email: "prueba@example.com", account_id: "test-owner" });
     if (path === "/api/agent/models") return send({ models: [{ slug: "model-a", display_name: "Modelo A" }], selected: "model-a" });
     if (path === "/api/agent/conversations") return send([]);
-    if (path === "/api/agent/certified/CQ_GLOBE") return send(proposalResults.globe);
+    if (path === "/api/agent/conversations/examples/CQ_GLOBE") return send({ conversation_id: "c-1", turns: [{ question: "Prueba globo",
+      answer: "Ejemplo.", visualizations: [proposalResults.globe], trace: [], model: "", load_id: "test-load", created_at: "2026-11-24T12:00:00Z" }] });
     if (path === "/api/agent/chat") {
       const body = route.request().postDataJSON();
       chats.push(body);
