@@ -8,14 +8,16 @@ datos ni iniciar sesión. Necesitas Python 3.11 o superior con SQLite, Node.js
 ## Instalar Python y Node.js
 
 Si ya tienes ambos, continúa con el arranque. Para probar en Windows Sandbox
-x64, copia el repositorio dentro del Sandbox y ejecuta desde su raíz:
+x64, copia el repositorio dentro del Sandbox y haz doble clic en
+`install_demo_windows.cmd`. También puedes ejecutarlo en PowerShell desde la raíz:
 
 ```powershell
-.\scripts\install_demo_windows.ps1
+.\install_demo_windows.cmd
 ```
 
-El script descarga los instaladores oficiales, verifica su firma y arranca la
-muestra en la misma PowerShell. Requiere acceso a Internet dentro del Sandbox.
+El comando aplica la política de ejecución solo al proceso de PowerShell que
+inicia el instalador. El script descarga los instaladores oficiales, verifica
+su firma y arranca la muestra. Requiere acceso a Internet dentro del Sandbox.
 
 En Debian y Ubuntu (x64 o ARM64):
 
