@@ -1,6 +1,6 @@
 # Comparación de reportes
 
-**Estado: Recuperada**
+**Estado: Descartada.** La vista `compare` se retiró en [#86](https://github.com/marcor0311/UFO-Data-Agent/pull/86) por decisión de producto.
 
 Dos fichas y una tabla de trece campos con controles para cambiar ambos reportes y abrirlos por separado. Destaca coincidencias entre valores presentes.
 
