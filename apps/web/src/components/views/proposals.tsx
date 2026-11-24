@@ -30,7 +30,7 @@ function byFirst(rows: Row[], first: string): [string, Row[]][] {
   return [...map.entries()];
 }
 
-/** Categories of the second dimension, largest overall first; the tail folds into «Otras». */
+/** Categories of the second dimension, largest overall first; the tail folds into “Otras”. */
 function categories(rows: Row[], second: string, metric: string, keep: number): { keys: string[]; other: boolean } {
   const totals = new Map<string, number>();
   for (const row of rows) totals.set(cell(row, second), (totals.get(cell(row, second)) ?? 0) + (value(row, metric) ?? 0));
@@ -94,7 +94,7 @@ export function StackedView({ result, catalog }: Props) {
                   if (w <= 0) return null;
                   const share = pct(p.v, total);
                   const lines = [{ value: share, label: `${num(p.v)} de ${num(total)} ${label.toLowerCase()}`, key: color(p.key) }];
-                  const title = `${group} · ${p.key}`;
+                  const title = `${group}, ${p.key}`;
                   return (
                     <rect key={p.key} x={x0} y={y} width={Math.max(0, w - 1)} height={bar} fill={color(p.key)} className="mark" role="img" tabIndex={0}
                           aria-label={`${title}: ${share} (${num(p.v)} de ${num(total)})`}
@@ -163,7 +163,7 @@ export function MatrixView({ result, catalog }: Props) {
                 const v = row ? value(row, metric) : null;
                 const i = v === null ? -1 : rampIndex(v, max, "log");
                 const text = !row ? "Sin fila en este resultado" : formatMetric(v, metric, catalog);
-                const title = `${rowKey} · ${colKey}`;
+                const title = `${rowKey}, ${colKey}`;
                 const lines = [{ value: text, label }];
                 const index = r * cols.length + c;
                 return (
@@ -233,8 +233,8 @@ export function DumbbellView({ result, catalog }: Props) {
             const delta = `${c.delta >= 0 ? "+" : "−"}${(Math.round(Math.abs(c.delta) * 1000) / 10).toLocaleString("es-ES")} pp`;
             const title = c.c;
             const lines = [
-              { value: pct(a.share, 1), label: `${name(periods[0])} · ${num(a.v)} informes`, key: "var(--series-1)" },
-              { value: pct(b.share, 1), label: `${name(periods[1])} · ${num(b.v)} informes`, key: "var(--series-2)" },
+              { value: pct(a.share, 1), label: `${name(periods[0])}, ${num(a.v)} informes`, key: "var(--series-1)" },
+              { value: pct(b.share, 1), label: `${name(periods[1])}, ${num(b.v)} informes`, key: "var(--series-2)" },
               { value: delta, label: "cambio en puntos porcentuales" },
             ];
             return (
@@ -258,10 +258,9 @@ export function DumbbellView({ result, catalog }: Props) {
           const [p0, p1] = [name(periods[0]), name(periods[1])];
           return (
             <div className="viz-note dumbbell-help">
-              <p><strong>Cómo leerlo.</strong> Cada fila es un valor de {what}. El <strong>círculo azul</strong> indica qué porcentaje de todos los informes de {p0} tenía ese valor; el <strong>cuadrado naranja</strong>, el mismo porcentaje en {p1}. Si el cuadrado queda a la derecha del círculo, ganó peso; si queda a la izquierda, lo perdió.</p>
-              {ex ? <p><strong>Ejemplo.</strong> «{ex.c}» pasó de {pct(ex.shares[0].share, 1)} de los informes en {p0} a {pct(ex.shares[1].share, 1)} en {p1}: un cambio de {ex.delta >= 0 ? "+" : "−"}{(Math.round(Math.abs(ex.delta) * 1000) / 10).toLocaleString("es-ES")} puntos porcentuales (pp), la cifra de la derecha.</p> : null}
-              <p>Se usan porcentajes y no conteos porque {p1} tiene {num(totals[1])} informes y {p0}, {num(totals[0])}: con conteos, casi todo «crecería» solo porque hay más informes. Las filas están ordenadas de mayor a menor cambio y se muestran las 15 primeras; el resto está en los datos exactos.
-                {missingShare.some((m) => m > 0) ? ` Los informes sin ${what} (${pct(missingShare[0], 1)} en ${p0} y ${pct(missingShare[1], 1)} en ${p1}) cuentan en el total pero no se dibujan.` : ""}</p>
+              <p>Cada fila muestra cuántos puntos de peso ganó o perdió ese valor de {what} entre {p0} (círculo azul) y {p1} (cuadrado naranja), sobre el total de informes de cada período.
+                {ex ? ` Por ejemplo, ${ex.c} ${ex.delta >= 0 ? "+" : "−"}${(Math.round(Math.abs(ex.delta) * 1000) / 10).toLocaleString("es-ES")} pp: pasó de ${pct(ex.shares[0].share, 1)} a ${pct(ex.shares[1].share, 1)} de los informes.` : ""}
+                {missingShare.some((m) => m > 0) ? ` No se dibujan los informes sin ${what} (${pct(missingShare[0], 1)} y ${pct(missingShare[1], 1)}).` : ""}</p>
             </div>
           );
         })()}
@@ -304,10 +303,10 @@ export function TimelineView({ result }: Props) {
             <li key={String(row.report_id)} className={(page * PAGE + i) % 2 ? "timeline-item right" : "timeline-item"}>
               <time dateTime={String(row.event_date)}>{dateLabel(row.event_date)}</time>
               <strong>{cell(row, "shape_code") === "sin dato" ? "Forma sin clasificar" : cell(row, "shape_code")}</strong>
-              <span>{cell(row, "country_iso2") === "sin dato" ? "País sin dato" : cell(row, "country_iso2")} · {cell(row, "source_code")}</span>
+              <span>{cell(row, "country_iso2") === "sin dato" ? "País sin dato" : cell(row, "country_iso2")}, {cell(row, "source_code")}</span>
               <span className="timeline-meta">
                 {[durationLabel(row.duration_seconds), typeof row.num_witnesses === "number" ? `${num(row.num_witnesses)} testigos` : null, `ID ${row.report_id}`]
-                  .filter(Boolean).join(" · ")}
+                  .filter(Boolean).join(", ")}
               </span>
             </li>
           ))}
@@ -333,9 +332,9 @@ function DistributionTotals({ result }: { result: GoldResult }) {
     <div className="stat-grid calendar-totals">
       <div className="stat"><div className="stat-label">Informes en la consulta</div><div className="stat-value">{num(all)}</div></div>
       <div className="stat"><div className="stat-label">Con duración declarada</div><div className="stat-value">{num(d.with_duration)}</div>
-        <div className="stat-note">{pct(d.with_duration, all)} · {num(d.over_max)} duran más de {d.max_minutes} min</div></div>
+        <div className="stat-note">{pct(d.with_duration, all)}, {num(d.over_max)} duran más de {d.max_minutes} min</div></div>
       <div className="stat stat-unknown"><div className="stat-label">Sin duración declarada</div><div className="stat-value">{num(d.without_duration)}</div>
-        <div className="stat-note">{pct(d.without_duration, all)} · no se imputa</div></div>
+        <div className="stat-note">{pct(d.without_duration, all)}, no se imputa</div></div>
     </div>
   );
 }
@@ -377,7 +376,7 @@ export function HistogramView({ result }: Props) {
           {all.map((b, i) => {
             const tail = b.to === null;
             const title = tail ? `Más de ${d.max_minutes} min` : `${b.from}–${b.to} min`;
-            const lines = [{ value: num(b.n), label: `informes · ${pct(b.n, d.with_duration)} de los que declaran duración`, key: tail ? "var(--axis)" : "var(--series-1)" }];
+            const lines = [{ value: num(b.n), label: `informes, ${pct(b.n, d.with_duration)} de los que declaran duración`, key: tail ? "var(--axis)" : "var(--series-1)" }];
             return (
               <g key={title} className="mark" role="img" tabIndex={0} aria-label={`${title}: ${num(b.n)} informes`}
                  onPointerMove={(e) => show(e, { title, lines })} onPointerLeave={hide}
@@ -445,7 +444,7 @@ export function EcdfView({ result }: Props) {
           })}
           <circle cx={sx(threshold)} cy={sy(at.share)} r={5} fill="var(--series-2)" className="dot" />
         </svg>
-        <p className="viz-note">La curva llega a {pct(points[points.length - 1].n, d.with_duration)} a los {d.max_minutes} min; el resto ({num(d.over_max)} informes) dura más. Responde «¿qué porcentaje dura hasta X?» sin elegir intervalos de histograma.</p>
+        <p className="viz-note">La curva llega a {pct(points[points.length - 1].n, d.with_duration)} a los {d.max_minutes} min; el resto ({num(d.over_max)} informes) dura más. Responde “¿qué porcentaje dura hasta X?” sin elegir intervalos de histograma.</p>
       </figure>
       {layer}
     </div>

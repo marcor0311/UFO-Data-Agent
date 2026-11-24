@@ -1,6 +1,6 @@
 # Composición por archivo
 
-**Estado · Implementada** en el Data Agent como vista `stacked` ([#80](https://github.com/marcor0311/UFO-Data-Agent/issues/80)). Captura: [fotos/](../../fotos/).
+**Estado, Implementada** en el Data Agent como vista `stacked` ([#80](https://github.com/marcor0311/UFO-Data-Agent/issues/80)). Captura: [fotos/](../../fotos/).
 
 Barras apiladas al 100% por año y fuente. Cada tramo puede abrir los informes y conserva los conteos detrás del porcentaje.
 

@@ -38,7 +38,7 @@ el set de evaluación: registrar una verificación no cambia la carga verificada
 - Los **eventos** existen solo para grupos de duplicados **confirmados**:
   `fact_event` tiene **6.959** eventos y `event_report` enlaza sus **17.920**
   informes.
-- Un conteo de informes nunca se llama «avistamientos» ni «eventos».
+- Un conteo de informes nunca se llama “avistamientos” ni “eventos”.
 
 ## Modelo
 
@@ -103,8 +103,8 @@ los datos.
 | `nuclear_proximity` | `usable_for_nuclear_proximity` | Silver `usable_for_nuclear_proximity=1` | 495.019 | 207.553 |
 
 La hora exige además calendario apto, porque Silver conserva la precisión de
-reloj de 61 informes de Capella con fecha calificada («approximately 1300
-hours», «Summer 67»). Esa hora no se usa. Los motivos de exclusión
+reloj de 61 informes de Capella con fecha calificada (“approximately 1300
+hours”, “Summer 67”). Esa hora no se usa. Los motivos de exclusión
 (`dim_exclusion_reason`, 24 códigos) son excluyentes por análisis. Sumar los
 excluidos de análisis distintos cuenta el mismo informe varias veces.
 
@@ -173,7 +173,7 @@ Combinaciones prohibidas, con su código de error:
 | Sumar o promediar un porcentaje (`sum_*_pct`, `avg_*_pct`) | `ratio_not_summable` |
 | Sumar todas las resoluciones de celdas o todos los agregados de cobertura | `partition_required` |
 | Métrica fuera de su dataset (p. ej., `event_count` sobre informes) | `metric_unavailable` |
-| Métrica inexistente (p. ej., «ovnis reales») | `metric_unknown` |
+| Métrica inexistente (p. ej., “ovnis reales”) | `metric_unknown` |
 | Vista incompatible con el dataset o con la agrupación | `view_incompatible`, `view_contract` |
 | Elegibilidad no disponible en un agregado | `eligibility_unavailable` |
 
@@ -203,7 +203,7 @@ Cada resultado incluye:
   `matched_source_rows`, `empty` y `total` si se pidió `rollup`;
 - `result_type` (`certified` o `composed`) y `certified_query_id`;
 - `readable_query`: filtros, agrupación, métricas, elegibilidad, orden y
-  límite, en español, para la opción «ver la consulta»;
+  límite, en español, para la opción “ver la consulta”;
 - `eligibility_applied`, con las implicadas, y `exclusions`: base, elegibles,
   excluidos y motivo;
 - `external_evidence_reports`;

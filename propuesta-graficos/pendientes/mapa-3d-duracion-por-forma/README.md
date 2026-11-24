@@ -1,6 +1,6 @@
 # Mapa 3D de duración por forma
 
-**Estado · Recuperada** (parcial, piezas originales localizadas)
+**Estado, Recuperada** (parcial, piezas originales localizadas)
 
 Propuesta de combinar cartografía con relieve y una comparación de las duraciones por forma normalizada. Se recuperó el diagrama de cajas D4 como referencia cuantitativa y los componentes originales de terreno, símbolos y selección.
 

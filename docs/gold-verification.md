@@ -10,7 +10,7 @@ desde un archivo local, sin Internet. Las cifras proceden de
 | Ejecución | Resultado |
 |---|---|
 | `build_all.py` (lanzado con Python 3.9, se relanzó solo con 3.14) | 405 s. Bronze 18 s, Silver 146 s, aceptación de Silver 47 s (una sola vez), modelo Gold 56 s, caché 25 s, verificación independiente 76 s, evaluaciones 4 s y `ready_for_agent` 22 s (543 controles). |
-| `--desde gold` tras cambiar `scripts/build_silver.py` | Rechazada antes de leer Silver: «Silver está desactualizada (code_sha256, run_id)». La carga aprobada no cambió. |
+| `--desde gold` tras cambiar `scripts/build_silver.py` | Rechazada antes de leer Silver: “Silver está desactualizada (code_sha256, run_id)”. La carga aprobada no cambió. |
 | `--desde silver` con el código final | 380 s. 22 lecturas completas de hash (2,40 GiB) y ningún archivo leído dos veces. Evaluaciones 60/60 con referencias de la carga y sin deriva. Quedan dos versiones por capa. |
 | API sobre la carga aprobada | `/api/health` devuelve el mismo `load_id` en `gold_load_id`, `serving_load_id` y `readiness_load_id`, también mientras otro build publicaba. |
 
@@ -70,7 +70,7 @@ cifras proceden de la salida real de los scripts.
 | `agg_month` | mes | 677.377 | 25.195 | 6.529 |
 | `agg_weekday_hour` | día + hora | 213.104 | 489.468 | 450 |
 | `agg_country` | país | 626.833 | 75.739 | 661 (231 países) |
-| `agg_shape` | ninguna (incluye «sin forma») | 702.572 | 0 | 58 |
+| `agg_shape` | ninguna (incluye “sin forma”) | 702.572 | 0 | 58 |
 | `agg_source` | ninguna | 702.572 | 0 | 26 |
 | `agg_spatial_cell` | mapa | 495.019 por resolución | 207.553 | 13.739 (6.081 celdas de 1°, 1.023 de 5°) |
 | `agg_nuclear_band` | proximidad | 495.019 | 207.553 | 901 |
@@ -141,12 +141,12 @@ El set tiene 60 preguntas en español:
 - **20 frecuentes:** cubiertas por las 17 consultas certificadas.
 - **25 poco comunes:** requieren componer una consulta.
 - **15 trampas:**
-  - 9 deben rechazarse: «ovnis reales», día sin elegibilidad, eventos sobre
+  - 9 deben rechazarse: “ovnis reales”, día sin elegibilidad, eventos sobre
     informes, sumar porcentajes, sumar resoluciones, mes sin elegibilidad,
     mapa sin coordenadas, SQL y más de 500 filas;
   - 3 deben aclararse: Congo, Corea, Narnia;
   - 3 se responden con advertencias obligatorias: proximidad nuclear como
-    prueba, `hoax_likelihood` como engaño confirmado y «avistamientos» en 1997.
+    prueba, `hoax_likelihood` como engaño confirmado y “avistamientos” en 1997.
 
 Para cada pregunta que se responde, el ejecutor comprueba:
 

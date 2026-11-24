@@ -308,7 +308,7 @@ class GoldQueryTest(unittest.TestCase):
         unknown = [r for r in ok["rows"] if r["event_month"] is None]
         self.assertEqual([r["event_month"] for r in months], sorted(r["event_month"] for r in months))
         self.assertEqual(sum(r["report_count"] for r in months), 3)
-        # One «Mes desconocido» row per year: year-level reports minus those with a reliable month.
+        # One “Mes desconocido” row per year: year-level reports minus those with a reliable month.
         yearly = self.q(dataset="agg_year", filters=[{"column": "event_year", "op": "eq", "value": 1997}], group_by=["event_year"], metrics=["report_count"])
         year_total = yearly["rows"][0]["report_count"]
         self.assertEqual([(r["event_year"], r["event_month_label"], r["report_count"]) for r in unknown], [(1997, "Mes desconocido", year_total - 3)])

@@ -676,7 +676,7 @@ class Analytics:
     def _with_unknown_month(self, result: dict) -> dict:
         """Calendar: add, per year, the reports whose month cannot be known.
 
-        Each year gets one extra row with event_month = null («Mes desconocido»):
+        Each year gets one extra row with event_month = null (“Mes desconocido”):
         reports of that year counted at year level (calendar eligibility) minus
         the ones with a reliable month. Both counts come from Gold with the same
         non-temporal filters, so the chart, the exact data and the totals agree.
@@ -702,7 +702,7 @@ class Analytics:
         result.update(rows=rows, row_count=len(rows), empty=not rows,
                       calendar_totals={"reports": reports, "with_month": with_month, "without_month": max(0, reports - with_month)})
         result["limitations"] = [{"code": "unknown_month",
-                                  "text": "«Mes desconocido» reúne los informes del año cuyo mes no es fiable (solo consignan el año, "
+                                  "text": "“Mes desconocido” reúne los informes del año cuyo mes no es fiable (solo consignan el año, "
                                           "fecha aproximada o marcador de día); no se reparten entre los meses."}] + result["limitations"]
         return result
 
@@ -887,9 +887,9 @@ class Analytics:
             "orden": f"{q.order_by} {'desc' if q.descending else 'asc'}" if q.order_by else "predeterminado",
             "limite": q.limit,
         }
-        parts["texto"] = (f"{parts['dataset']} · filtros: {'; '.join(parts['filtros'])} · agrupado por: {', '.join(parts['agrupado_por'])}"
-                          f" · métricas: {', '.join(parts['metricas'])} · elegibilidad: {', '.join(parts['elegibilidad'])}"
-                          f" · límite {q.limit}")
+        parts["texto"] = (f"{parts['dataset']}, filtros: {'; '.join(parts['filtros'])}, agrupado por: {', '.join(parts['agrupado_por'])}"
+                          f", métricas: {', '.join(parts['metricas'])}, elegibilidad: {', '.join(parts['elegibilidad'])}"
+                          f", límite {q.limit}")
         return parts
 
 

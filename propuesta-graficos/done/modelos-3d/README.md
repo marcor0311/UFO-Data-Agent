@@ -1,6 +1,6 @@
 # Visualización de modelos 3D
 
-**Estado · Implementada** en el Data Agent: visor de las 28 formas y estilo «Modelos» del mapa.
+**Estado, Implementada** en el Data Agent: visor de las 28 formas y estilo “Modelos” del mapa.
 
 Visor WebGL de las 28 categorías de forma normalizada. Permite ver la cuadrícula completa, aislar una forma, girar, acercar y restablecer la vista.
 

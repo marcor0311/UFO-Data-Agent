@@ -1,8 +1,8 @@
 # Formas reportadas
 
-**Estado · Recuperada**
+**Estado, Recuperada**
 
-Barras horizontales de las formas normalizadas, con recuento, proporción, búsqueda, paginación y acceso a los informes de una categoría. Incluye «Sin clasificar».
+Barras horizontales de las formas normalizadas, con recuento, proporción, búsqueda, paginación y acceso a los informes de una categoría. Incluye “Sin clasificar”.
 
 ## Utilidad para el Data Agent
 
@@ -18,7 +18,7 @@ Referencias archivadas: [D2-interactivo.html-fragment](referencias/D2-interactiv
 
 **Tecnologías.** JavaScript/SVG. D2 delega en `categories` con dimensión `shape`.
 
-**Datos.** IDs, `standardized_shape`, fecha y región del corte `ca`. Los faltantes se conservan como «Sin clasificar». Véanse los [recursos compartidos](../../_compartido/README.md#datos-necesarios).
+**Datos.** IDs, `standardized_shape`, fecha y región del corte `ca`. Los faltantes se conservan como “Sin clasificar”. Véanse los [recursos compartidos](../../_compartido/README.md#datos-necesarios).
 
 ## Cómo revisar la referencia
 

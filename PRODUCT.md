@@ -7,7 +7,7 @@ Web, solo portátil y escritorio.
 ## Propósito
 
 Explorar informes sobre fenómenos aéreos no identificados (UAP) con preguntas en
-lenguaje natural. La portada «Archivo UAP» ocupa `/` y lleva a la primera
+lenguaje natural. La portada “Archivo UAP” ocupa `/` y lleva a la primera
 pregunta. La conversación, con visualizaciones y evidencia, vive en `/agent`.
 La interfaz y sus contenidos están en español.
 
@@ -52,7 +52,7 @@ elegibilidad y las limitaciones que lo afectan.
 
 ## Principios de producto
 
-- Una sola cifra por pregunta, con su unidad: «X informes». Sin rangos.
+- Una sola cifra por pregunta, con su unidad: “X informes”. Sin rangos.
 - La visualización es la respuesta principal. El texto aporta el hallazgo, una
   o dos lecturas y la limitación relevante.
 - Las cifras, los gráficos y los totales derivan de la misma consulta. Solo se

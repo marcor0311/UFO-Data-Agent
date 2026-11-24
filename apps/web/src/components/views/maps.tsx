@@ -174,7 +174,7 @@ export function ChoroplethView({ result, catalog }: Props) {
         </p>
         {unmapped.length ? (
           <p className="viz-note">
-            {num(unmapped.length)} {unmapped.length === 1 ? "país o territorio de este resultado no tiene" : "países o territorios de este resultado no tienen"} geometría disponible en este mapa. Sus valores se conservan en «Datos exactos».
+            {num(unmapped.length)} {unmapped.length === 1 ? "país o territorio de este resultado no tiene" : "países o territorios de este resultado no tienen"} geometría disponible en este mapa. Sus valores se conservan en “Datos exactos”.
           </p>
         ) : null}
       </figure>

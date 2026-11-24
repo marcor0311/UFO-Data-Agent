@@ -135,7 +135,7 @@ Solo portátil: 1440×800, 1440×1000 y 1920×1080.
 
 Secciones a ancho completo con margen `archive-gutter`: héroe con fotografía,
 galería del archivo, cifra destacada, briefing con la demostración de
-California 1990 y un cierre fotográfico con «Entrar al Data Agent». Un enlace
+California 1990 y un cierre fotográfico con “Entrar al Data Agent”. Un enlace
 de salto lleva a `#contenido`.
 
 ### Agente
@@ -196,7 +196,7 @@ reglas de cada vista:
 ### Hacer
 
 - Mantener separados los sistemas de cada ruta.
-- Nombrar la unidad («informes») en títulos, tarjetas y ejes.
+- Nombrar la unidad (“informes”) en títulos, tarjetas y ejes.
 - Mostrar la población excluida junto a cada cifra que la tenga.
 - Comprobar el contenido real en las tres resoluciones.
 

@@ -361,7 +361,7 @@ def run(argv=None, *, root: Path = ROOT, bronze_manifest: Path | None = None, ce
     except (PipelineError, releases.ReleaseError) as exc:
         phase = getattr(exc, "phase", "?")
         outcome.update(status="failed", failed_phase=phase, error=str(exc))
-        out(f"\nPIPELINE DETENIDO en «{phase}»: {exc}", file=sys.stderr)
+        out(f"\nPIPELINE DETENIDO en “{phase}”: {exc}", file=sys.stderr)
         for layer in ("silver", "gold"):
             item = releases.approved(data, layer)
             out(f"  {layer} vigente: {item['version'] if item else 'ninguna'}", file=sys.stderr)

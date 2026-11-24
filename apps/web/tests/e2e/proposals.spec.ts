@@ -25,7 +25,7 @@ test("composición al 100 %: porcentaje y conteo por teclado", async ({ page }) 
   await open(page, "stacked");
   const segment = page.getByRole("group", { name: /Barras apiladas/ }).locator(".mark").first();
   await segment.focus();
-  await expect(segment).toHaveAttribute("aria-label", "1990 · A: 75 % (30 de 40)");
+  await expect(segment).toHaveAttribute("aria-label", "1990, A: 75 % (30 de 40)");
   await expect(page.locator(".viz-tip strong")).toHaveText("75 %");
   await noViolations(page);
 });
@@ -34,12 +34,12 @@ test("matriz: ausencia distinta de cero y flechas", async ({ page }) => {
   await open(page, "matrix");
   const grid = page.getByRole("grid");
   await expect(grid.getByRole("gridcell")).toHaveCount(4);
-  await grid.getByRole("gridcell", { name: "Estados Unidos · 1990: 100", exact: true }).focus();
+  await grid.getByRole("gridcell", { name: "Estados Unidos, 1990: 100", exact: true }).focus();
   await page.keyboard.press("ArrowRight");
-  const zero = grid.getByRole("gridcell", { name: "Estados Unidos · 2000: 0", exact: true });
+  const zero = grid.getByRole("gridcell", { name: "Estados Unidos, 2000: 0", exact: true });
   await expect(zero).toBeFocused();
   await page.keyboard.press("ArrowDown");
-  const missing = grid.getByRole("gridcell", { name: "Canadá · 2000: Sin fila en este resultado", exact: true });
+  const missing = grid.getByRole("gridcell", { name: "Canadá, 2000: Sin fila en este resultado", exact: true });
   await expect(missing).toBeFocused();
   expect(await missing.getAttribute("fill")).not.toEqual(await zero.getAttribute("fill"));
   await noViolations(page);
@@ -50,9 +50,9 @@ test("cambio entre períodos: proporciones sobre el total de cada período", asy
   const marks = page.locator(".viz-panel .mark");
   await expect(marks.first()).toHaveAttribute("aria-label", "Luz: 20 % en 1970s, 90 % en 2010s (+70 pp)");   // el mayor cambio primero
   await expect(marks.nth(1)).toHaveAttribute("aria-label", "Disco: 60 % en 1970s, 10 % en 2010s (−50 pp)");
-  await expect(page.locator(".dumbbell-help")).toContainText("«Luz» pasó de 20 % de los informes en 1970s a 90 % en 2010s: un cambio de +70 puntos porcentuales");
-  await expect(page.locator(".dumbbell-help")).toContainText("Los informes sin forma estandarizada (20 % en 1970s y 0 % en 2010s)");
-  await expect(page.locator(".viz-panel .mark")).toHaveCount(2);                     // «sin dato» no se dibuja
+  await expect(page.locator(".dumbbell-help")).toContainText("Por ejemplo, Luz +70 pp: pasó de 20 % a 90 % de los informes.");
+  await expect(page.locator(".dumbbell-help")).toContainText("No se dibujan los informes sin forma estandarizada (20 % y 0 %).");
+  await expect(page.locator(".viz-panel .mark")).toHaveCount(2);                     // “sin dato” no se dibuja
   await noViolations(page);
 });
 
@@ -61,7 +61,7 @@ test("cronología: tarjetas paginadas de ocho", async ({ page }) => {
   const items = page.locator(".timeline-item");
   await expect(items).toHaveCount(8);
   await expect(items.first()).toContainText("10 de marzo de 1997");
-  await expect(items.first()).toContainText("2 min · 3 testigos · ID 100");
+  await expect(items.first()).toContainText("2 min, 3 testigos, ID 100");
   await page.getByRole("button", { name: "Siguientes" }).click();
   await expect(items).toHaveCount(2);
   await expect(page.getByText("Página 2 de 2")).toBeVisible();

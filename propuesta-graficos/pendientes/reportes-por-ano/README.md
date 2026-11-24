@@ -1,6 +1,6 @@
 # Reportes por año
 
-**Estado · Recuperada**
+**Estado, Recuperada**
 
 Barras con eje desde cero y selección de un año para inspeccionar sus reportes. Se recuperó D1 y la variante temporal compartida que admite año, mes y series por fuente.
 
