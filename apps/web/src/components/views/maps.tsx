@@ -12,7 +12,7 @@ import type { GeometryCollection, Topology } from "topojson-specification";
 import world from "world-atlas/countries-110m.json";
 import type { Catalog, GoldResult, Row } from "@/lib/contracts";
 import { cell, metricLabel, num } from "@/lib/format";
-import { Empty, RAMP, formatMetric, metricsOf, rampIndex, useTooltip, value } from "./shared";
+import { DivergingLegend, Empty, RAMP, divergingColor, formatMetric, metricsOf, rampIndex, useTooltip, value } from "./shared";
 import { RampLegend } from "./charts";
 
 type Props = { result: GoldResult; catalog: Catalog | null };
@@ -20,14 +20,16 @@ const WIDTH = 760;
 const HEIGHT = 400;
 
 const topology = world as unknown as Topology<{ countries: GeometryCollection; land: GeometryCollection }>;
-const countries = feature(topology, topology.objects.countries) as FeatureCollection<Geometry, { name: string }>;
-const borders = mesh(topology, topology.objects.countries, (a, b) => a !== b) as MultiLineString;
+export const countries = feature(topology, topology.objects.countries) as FeatureCollection<Geometry, { name: string }>;
+export const borders = mesh(topology, topology.objects.countries, (a, b) => a !== b) as MultiLineString;
 const sphere = { type: "Sphere" } as const;
-const projection = geoNaturalEarth1().fitExtent([[8, 8], [WIDTH - 8, HEIGHT - 8]], sphere);
-const path = geoPath(projection);
+export const projection = geoNaturalEarth1().fitExtent([[8, 8], [WIDTH - 8, HEIGHT - 8]], sphere);
+export const path = geoPath(projection);
+export const MAP_WIDTH = WIDTH;
+export const MAP_HEIGHT = HEIGHT;
 const base = { sphere: path(sphere) ?? "", graticule: path(geoGraticule10()) ?? "", borders: path(borders) ?? "" };
 
-function Basemap({ fill = true }: { fill?: boolean }) {
+export function Basemap({ fill = true }: { fill?: boolean }) {
   return (
     <>
       <path d={base.sphere} className="map-sphere" />
@@ -40,10 +42,10 @@ function Basemap({ fill = true }: { fill?: boolean }) {
 
 /* -- points: MapLibre + deck.gl map (2D/3D, points or 3D models) ------------- */
 // WebGL engine is fetched only when a map visualization exists, never in the initial bundle.
-const GeoMap = dynamic(() => import("./geo-map"), { ssr: false, loading: () => <div className="geo-map-canvas geo-map-loading">Cargando mapa…</div> });
+export const GeoMap = dynamic(() => import("./geo-map"), { ssr: false, loading: () => <div className="geo-map-canvas geo-map-loading">Cargando mapa…</div> });
 
 /** Mount the WebGL map only once it is near the viewport (limits live WebGL contexts). */
-function useNearViewport() {
+export function useNearViewport() {
   const ref = useRef<HTMLDivElement>(null);
   const [near, setNear] = useState(false);
   useEffect(() => {
@@ -56,25 +58,38 @@ function useNearViewport() {
   return { ref, near };
 }
 
-function toReports(rows: Row[]): MapReport[] {
+/** Map points: one per report, or one per coordinate with its report count (large selections and clusters). */
+export function toReports(rows: Row[]): MapReport[] {
   return rows
     .filter((r) => typeof r.lat === "number" && typeof r.lng === "number")
-    .map((r) => ({
-      id: String(r.report_id), lng: r.lng as number, lat: r.lat as number,
-      shape: (r.shape_code as string | null) ?? null, shapeLabel: String(r.shape_code_label ?? ""),
-      source: String(r.source_code_label ?? r.source_code ?? ""), date: r.date_key == null ? null : String(r.date_key),
-      external: r.uses_external_evidence === 1,
-    }));
+    .map((r) => {
+      const grouped = typeof r.report_count === "number";
+      const id = r.report_id ?? r.case_id ?? r.cluster_id;
+      return {
+        id: grouped ? `${r.cluster_id ?? ""}@${r.lat},${r.lng}` : String(id), lng: r.lng as number, lat: r.lat as number,
+        shape: ((r.shape_code ?? r.top_shape) as string | null) ?? null, shapeLabel: String(r.shape_code_label ?? r.top_shape_label ?? ""),
+        source: String(r.source_code_label ?? r.source_code ?? r.title ?? ""), date: r.date_key == null ? (r.start_date == null ? null : String(r.start_date)) : String(r.date_key),
+        external: r.uses_external_evidence === 1,
+        ...(grouped ? { count: r.report_count as number } : {}),
+      };
+    });
 }
 
 export function PointsView({ result }: Props) {
   const { ref, near } = useNearViewport();
   const reports = useMemo<MapReport[]>(() => toReports(result.rows), [result.rows]);
   if (!reports.length) return <Empty>No hay informes con coordenadas aptas para el mapa con esos filtros.</Empty>;
+  const info = result.points;
+  const total = info?.reports ?? reports.length;
+  const what = result.query.dataset === "fact_report" ? "informes" : "casos";
   return (
     <div className="viz" ref={ref}>
       <figure className="viz-panel">
-        <figcaption>{num(reports.length)} informes con coordenadas aptas{result.truncated ? " (truncado)" : ""}</figcaption>
+        <figcaption>
+          {num(total)} {what} con coordenadas aptas
+          {info?.grouped ? ` en ${num(reports.length)} ubicaciones: más de ${num(info.max_reports)} informes se agrupan por coordenada idéntica` : ""}
+          {result.truncated ? " (truncado)" : ""}
+        </figcaption>
         {near ? <GeoMap reports={reports} /> : <div className="geo-map-canvas geo-map-loading">Mapa</div>}
       </figure>
     </div>
@@ -92,7 +107,9 @@ export function DensityView({ result, catalog }: Props) {
   const { ref, show, hide, layer } = useTooltip();
   const metric = metricsOf(result, catalog)[0];
   const [latKey, lngKey] = result.query.group_by;
-  const res = resolutionOf(result);
+  const res = (result.analysis?.resolution as number | undefined) ?? resolutionOf(result);
+  const years = result.analysis?.scale === "years";
+  const [until, setUntil] = useState<number | null>(null);
   const cells = useMemo(() => result.rows.map((row) => {
     const lat = row[latKey] as number;
     const lng = row[lngKey] as number;
@@ -101,25 +118,45 @@ export function DensityView({ result, catalog }: Props) {
     return { row, d: "M" + ring.map((p) => p.join(",")).join("L") + "Z", lat, lng };
   }), [result.rows, latKey, lngKey, res]);
   if (result.empty) return <Empty />;
-  const max = Math.max(0, ...result.rows.map((r) => value(r, metric) ?? 0));
+  const values = result.rows.map((r) => value(r, metric)).filter((v): v is number => v !== null);
+  const max = Math.max(0, ...values);
+  const signed = result.analysis?.scale === "diverging" || values.some((v) => v < 0);
+  const spread = Math.max(1, ...values.map(Math.abs));
+  const minYear = Math.min(...values), maxYear = Math.max(...values);
+  const limit = until ?? maxYear;
+  const linear = catalog?.metrics[metric]?.type !== "additive";
+  const fillOf = (v: number) => signed ? divergingColor(v, spread) : years ? RAMP[Math.min(RAMP.length - 1, Math.floor(((v - minYear) / Math.max(1, maxYear - minYear)) * RAMP.length))]
+    : RAMP[Math.max(0, rampIndex(v, max, linear ? "linear" : "log"))];
   return (
     <div className="viz" ref={ref}>
       <figure className="viz-panel">
         <figcaption>{metricLabel(catalog, metric)} por celda de {res}°{result.truncated ? ` (las ${num(result.row_count)} celdas con más informes)` : ""}</figcaption>
-        <svg viewBox={`0 0 ${WIDTH} ${HEIGHT}`} role="img" aria-label={`Densidad de informes por celdas de ${res} grados`}>
+        {years ? (
+          <label className="year-slider">
+            Celdas con informes hasta {limit}
+            <input type="range" min={minYear} max={maxYear} value={limit} onChange={(e) => setUntil(Number(e.target.value))} />
+          </label>
+        ) : null}
+        <svg viewBox={`0 0 ${WIDTH} ${HEIGHT}`} role="img" aria-label={`${metricLabel(catalog, metric)} por celdas de ${res} grados`}>
           <Basemap />
           {cells.map(({ row, d, lat, lng }, i) => {
             const v = value(row, metric) ?? 0;
+            if (years && v > limit) return null;
+            if (value(row, metric) === null) return null;
             const title = `Celda ${lat}° a ${lat + res}° de latitud, ${lng}° a ${lng + res}° de longitud`;
-            const lines = [{ value: formatMetric(v, metric, catalog), label: metricLabel(catalog, metric) }];
+            const lines = [{ value: formatMetric(v, metric, catalog), label: metricLabel(catalog, metric) },
+              ...["count_from", "count_to", "report_count"].filter((k) => k !== metric && typeof row[k] === "number")
+                .map((k) => ({ value: num(row[k] as number), label: metricLabel(catalog, k) }))];
             return (
-              <path key={i} d={d} fill={RAMP[Math.max(0, rampIndex(v, max))]} className="mark cell" role="img" tabIndex={0} aria-label={`${title}: ${lines[0].value}`}
+              <path key={i} d={d} fill={fillOf(v)} className="mark cell" role="img" tabIndex={0} aria-label={`${title}: ${lines[0].value}`}
                     onPointerMove={(e) => show(e, { title, lines })} onPointerLeave={hide}
                     onFocus={(e) => show(e.currentTarget.getBoundingClientRect(), { title, lines })} onBlur={hide} />
             );
           })}
         </svg>
-        <RampLegend max={max} note="escala logarítmica de todos los informes; cuenta informes, no área ni población" />
+        {signed ? <DivergingLegend spread={spread} unit="" />
+          : years ? <p className="viz-note">Color: del primer año ({minYear}, claro) al último ({maxYear}, oscuro). Mueve el control para ver cómo crece la cobertura.</p>
+          : <RampLegend max={max} scale={linear ? "linear" : "log"} note={linear ? "escala lineal" : "escala logarítmica de todos los informes; cuenta informes, no área ni población"} />}
       </figure>
       {layer}
     </div>

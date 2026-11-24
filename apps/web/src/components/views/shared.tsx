@@ -14,6 +14,12 @@ export function metricsOf(result: GoldResult, catalog: Catalog | null): string[]
   return [...result.query.metrics.filter((m) => present.includes(m)), ...present.filter((m) => !result.query.metrics.includes(m))];
 }
 
+/** Metrics drawn as panels: an analysis draws only the ones it asks for; the rest stay in the exact data. */
+export function chartMetrics(result: GoldResult, catalog: Catalog | null): string[] {
+  const all = metricsOf(result, catalog);
+  return result.query.analysis ? all.filter((m) => result.query.metrics.includes(m)) : all;
+}
+
 export function value(row: Row, metric: string): number | null {
   const v = row[metric];
   return typeof v === "number" ? v : null;
@@ -21,6 +27,7 @@ export function value(row: Row, metric: string): number | null {
 
 export function formatMetric(v: number | null, metric: string, catalog: Catalog | null): string {
   if (v === null) return "—";
+  if (catalog?.metrics[metric]?.unit === "año") return String(v);  // a year reads 1965, never “1.965”
   return num(v) + (percent(metric, catalog) ? " %" : "");
 }
 
@@ -53,6 +60,29 @@ export function rampLegend(max: number, scale: "log" | "linear" = "log"): { colo
     color,
     from: i === 0 ? 1 : scale === "log" ? Math.ceil(Math.exp((i / RAMP.length) * Math.log(Math.max(max, 1)))) : Math.ceil((i / RAMP.length) * max),
   }));
+}
+
+/** Diverging fill: blue below the centre, orange above, stronger with the distance. */
+export function divergingColor(v: number, spread: number): string {
+  // Square root: one extreme cell must not wash out every other one.
+  const share = Math.sqrt(Math.min(1, Math.abs(v) / Math.max(spread, 1e-9)));
+  const strength = Math.round(12 + share * 78);
+  if (Math.abs(v) < 1e-12) return "var(--empty-cell)";
+  return `color-mix(in srgb, ${v < 0 ? "var(--series-1)" : "var(--series-2)"} ${strength}%, var(--surface))`;
+}
+
+export function DivergingLegend({ spread, ratio = false, unit = "" }: { spread: number; ratio?: boolean; unit?: string }) {
+  const fmt = (x: number) => (ratio ? `×${(Math.round(x * 100) / 100).toLocaleString("es-ES")}` : `${x > 0 ? "+" : ""}${(Math.round(x * 100) / 100).toLocaleString("es-ES")}${unit}`);
+  const low = ratio ? 1 / spread : -spread, high = ratio ? spread : spread;
+  return (
+    <div className="viz-legend diverging" aria-label="Escala divergente">
+      <span>{fmt(low)}</span>
+      <span className="diverging-bar" aria-hidden="true"
+            style={{ background: "linear-gradient(90deg, color-mix(in srgb, var(--series-1) 90%, var(--surface)), var(--empty-cell), color-mix(in srgb, var(--series-2) 90%, var(--surface)))" }} />
+      <span>{fmt(high)}</span>
+      <span className="viz-legend-note">{ratio ? "×1 = lo esperado; azul, menos; naranja, más" : "0 = sin cambio; azul, menos; naranja, más"}</span>
+    </div>
+  );
 }
 
 /** Round, evenly spaced year ticks. */
@@ -103,8 +133,11 @@ export function useTooltip(fallbackWidth = 720) {
 }
 
 export function DataTable({ result, catalog, caption }: { result: GoldResult; catalog: Catalog | null; caption?: string }) {
-  const groups = result.query.group_by.length ? result.query.group_by
-    : result.rows[0] ? Object.keys(result.rows[0]).filter((k) => !k.endsWith("_label") && !metricsOf(result, catalog).includes(k)) : [];
+  const first = result.rows[0] as Record<string, unknown> | undefined;
+  // Nested values (a box of quantiles, the counts of each cluster) stay out of the table; lists read as text.
+  const scalar = (k: string) => !first || first[k] === null || typeof first[k] !== "object" || Array.isArray(first[k]);
+  const groups = result.query.group_by.length && !result.query.analysis ? result.query.group_by
+    : first ? Object.keys(first).filter((k) => !k.endsWith("_label") && !metricsOf(result, catalog).includes(k) && scalar(k)) : [];
   const metrics = metricsOf(result, catalog);
   const percentages = metrics.filter((metric) => percent(metric, catalog));
   const denominators = result.total ? metrics.flatMap((metric) => {

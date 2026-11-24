@@ -7,8 +7,9 @@
 import { useId, useState, type KeyboardEvent } from "react";
 import type { Catalog, GoldResult, Row } from "@/lib/contracts";
 import { cell, compact, dimensionLabel, metricLabel, num } from "@/lib/format";
-import { Empty, RAMP, formatMetric, metricsOf, niceMax, rampIndex, useTooltip, value } from "./shared";
+import { DivergingLegend, Empty, RAMP, divergingColor, formatMetric, metricsOf, niceMax, rampIndex, useTooltip, value } from "./shared";
 import { RampLegend } from "./charts";
+import { MeasureEcdf, MeasureHistogram } from "./analysis-views";
 
 type Props = { result: GoldResult; catalog: Catalog | null };
 
@@ -125,8 +126,16 @@ export function MatrixView({ result, catalog }: Props) {
   const rows = [...new Set(result.rows.map((r) => cell(r, first)))];
   const cols = [...new Set(result.rows.map((r) => cell(r, second)))].sort((a, b) => a.localeCompare(b, "es", { numeric: true }));
   const grid = new Map(result.rows.map((r) => [`${cell(r, first)}|${cell(r, second)}`, r]));
-  const max = Math.max(0, ...result.rows.map((r) => value(r, metric) ?? 0));
+  const values = result.rows.map((r) => value(r, metric)).filter((v): v is number => v !== null);
+  const max = Math.max(0, ...values);
   const label = metricLabel(catalog, metric);
+  // Signed values (deviations) and ratios around 1 read on a diverging scale; percentages and averages, linear.
+  const scaleKind = result.analysis?.scale === "ratio" ? "ratio" : values.some((v) => v < 0) || result.analysis?.scale === "diverging" ? "diverging"
+    : catalog?.metrics[metric]?.type === "additive" ? "log" : "linear";
+  const center = scaleKind === "ratio" ? 1 : 0;
+  const spread = Math.max(1e-9, ...values.map((v) => scaleKind === "ratio" ? Math.abs(Math.log(Math.max(v, 1e-6))) : Math.abs(v - center)));
+  const fillOf = (v: number) => scaleKind === "ratio" ? divergingColor(Math.log(Math.max(v, 1e-6)), spread)
+    : scaleKind === "diverging" ? divergingColor(v, spread) : null;
   const left = Math.min(180, 12 + Math.max(...rows.map((r) => r.length)) * 7);
   const size = Math.max(22, Math.min(56, Math.floor((measured - left - 8) / cols.length)));
   const rowH = 26;
@@ -161,14 +170,15 @@ export function MatrixView({ result, catalog }: Props) {
               {cols.map((colKey, c) => {
                 const row = grid.get(`${rowKey}|${colKey}`);
                 const v = row ? value(row, metric) : null;
-                const i = v === null ? -1 : rampIndex(v, max, "log");
+                const i = v === null ? -1 : rampIndex(v, max, scaleKind === "log" ? "log" : "linear");
                 const text = !row ? "Sin fila en este resultado" : formatMetric(v, metric, catalog);
+                const fill = v === null ? `url(#${missingId})` : fillOf(v) ?? (i < 0 ? "var(--empty-cell)" : RAMP[i]);
                 const title = `${rowKey}, ${colKey}`;
                 const lines = [{ value: text, label }];
                 const index = r * cols.length + c;
                 return (
                   <rect key={colKey} x={left + c * size + 1} y={22 + r * rowH + 1} width={size - 2} height={rowH - 2} rx={3}
-                        fill={v === null ? `url(#${missingId})` : i < 0 ? "var(--empty-cell)" : RAMP[i]}
+                        fill={fill}
                         className="mark" role="gridcell" aria-colindex={c + 1} data-r={r} data-c={c}
                         tabIndex={active === index ? 0 : -1} aria-label={`${title}: ${text}`}
                         onPointerMove={(e) => show(e, { title, lines })} onPointerLeave={hide}
@@ -179,12 +189,18 @@ export function MatrixView({ result, catalog }: Props) {
             </g>
           ))}
         </svg>
-        <RampLegend max={max} scale="log" missing note="escala logarítmica de informes" />
-        <p className="viz-note">Las celdas rayadas no tienen fila en este resultado; no equivalen a cero. La escala es logarítmica para que se vean a la vez los países con pocos y con muchos informes.</p>
+        {scaleKind === "diverging" || scaleKind === "ratio"
+          ? <DivergingLegend spread={scaleKind === "ratio" ? Math.exp(spread) : spread} ratio={scaleKind === "ratio"} unit={percentUnit(catalog, metric)} />
+          : <RampLegend max={max} scale={scaleKind === "log" ? "log" : "linear"} missing note={scaleKind === "log" ? "escala logarítmica de informes" : "escala lineal"} />}
+        <p className="viz-note">Las celdas rayadas no tienen fila en este resultado; no equivalen a cero.{scaleKind === "log" ? " La escala es logarítmica para que se vean a la vez las celdas con pocos y con muchos informes." : ""}</p>
       </figure>
       {layer}
     </div>
   );
+}
+
+function percentUnit(catalog: Catalog | null, metric: string): string {
+  return catalog?.metrics[metric]?.unit === "%" ? " %" : "";
 }
 
 /* -- change between two periods (dumbbell) ----------------------------------------- */
@@ -346,6 +362,7 @@ export function HistogramView({ result }: Props) {
   const groupId = useId();
   const d = result.distribution;
   if (!d) return <Empty />;
+  if (!d.bins?.length || d.facet || (d.measure && d.measure !== "duration")) return <MeasureHistogram result={result} />;
   const bins = Array.from({ length: d.max_minutes / step }, (_, i) => ({
     from: i * step, to: (i + 1) * step,
     n: d.bins.slice(i * step, (i + 1) * step).reduce((s, b) => s + b.report_count, 0),
@@ -402,6 +419,7 @@ export function EcdfView({ result }: Props) {
   const groupId = useId();
   const d = result.distribution;
   if (!d) return <Empty />;
+  if (!d.bins?.length || d.facet || (d.measure && d.measure !== "duration")) return <MeasureEcdf result={result} />;
   let running = 0;
   const points = d.bins.map((b, i) => { running += b.report_count; return { minute: i + 1, share: d.with_duration ? running / d.with_duration : 0, n: running }; });
   const left = 56, height = 260, pad = 28;

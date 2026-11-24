@@ -30,7 +30,8 @@ export function rollupResult(truncated = true): GoldResult {
 const view = { label: "Tabla", datasets: "*" as const, description: "Datos de prueba" };
 export const rollupCatalog: Catalog = {
   load_id: "test-load", datasets: { fact_report: { label: "Informes", grain: "informe", eligibility: [], rows: 12 } },
-  views: { table: view, bars: view, timeseries: view, points: view, density: view, choropleth: view, hour_weekday: view, month_calendar: view, stacked: view, matrix: view, dumbbell: view, timeline: view, histogram: view, ecdf: view, globe: view },
+  views: { table: view, bars: view, timeseries: view, points: view, density: view, choropleth: view, hour_weekday: view, month_calendar: view, stacked: view, matrix: view, dumbbell: view, timeline: view, histogram: view, ecdf: view, globe: view,
+    boxplot: view, scatter: view, waterfall: view, bump: view, curve: view, clusters: view, links: view, funnel: view, upset: view, compare: view },
   metrics: {
     report_count: { label: "Informes", type: "additive", unit: "informes" },
     external_evidence_pct: { label: "% de informes con evidencia externa", type: "ratio", unit: "%", denominator: "report_count" },

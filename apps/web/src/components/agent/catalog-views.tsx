@@ -16,6 +16,16 @@ const viewPaths: Record<ViewCode, string> = {
   timeline: "M8 2v12M8 4h4M4 8h4M8 12h4",
   histogram: "M2.5 13.5h11M3.5 13.5V9h2v4.5M6.5 13.5V5h2v8.5M9.5 13.5V7h2v6.5",
   ecdf: "M2.5 13.5h11M2.5 13.5V2.5M3 12h2V8h2V5h3V3.5h3.5",
+  boxplot: "M2.5 8h2M11.5 8h2M4.5 5.5h7v5h-7zM8 5.5v5",
+  scatter: "M2.5 13.5h11M2.5 13.5V2.5M5 11h.01M7 9h.01M8.5 10h.01M10 6.5h.01M12 5h.01M6 7h.01",
+  waterfall: "M2.5 13.5h11M3.5 13.5V6h2v7.5M6.5 6V4h2v2M9.5 4v3h2V4M12 7v6.5",
+  bump: "M2.5 4c3 0 4 6 6 6s3-6 5-6M2.5 10c3 0 4-6 6-6s3 6 5 6",
+  curve: "M2.5 13.5h11M2.5 13.5V2.5M2.5 13.5C4 6 7 4 13.5 3M2.5 13.5 13.5 3",
+  clusters: "M5 6a1.5 1.5 0 1 0 0-.01M11 5a2 2 0 1 0 0-.01M8 11a2.5 2.5 0 1 0 0-.01",
+  links: "M3 12 8 4l5 8M3 12h.01M8 4h.01M13 12h.01",
+  funnel: "M2.5 3h11l-4 5v5l-3 1V8z",
+  upset: "M3.5 7V3M6.5 7V4.5M9.5 7V5.5M3.5 10h.01M6.5 10h.01M6.5 13h.01M9.5 13h.01",
+  compare: "M2.5 3h4.5v10H2.5zM9 3h4.5v10H9z",
 };
 
 export function CatalogViews({ views }: { views: Catalog["views"] }) {

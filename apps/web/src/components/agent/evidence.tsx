@@ -4,6 +4,7 @@ import { useId, useState } from "react";
 import type { Catalog, GoldResult } from "@/lib/contracts";
 import { num } from "@/lib/format";
 import { DataTable } from "../views/shared";
+import { withResultMetrics } from "../views/registry";
 
 const short = (sha: string) => sha.slice(0, 12) + "…";
 
@@ -25,7 +26,7 @@ export function Evidence({ result, catalog }: { result: GoldResult; catalog: Cat
       </div>
       {result.rows.length ? (
         <div id={`${id}-data`} className="evidence-body" hidden={open !== "data"}>
-          {open === "data" ? <DataTable result={result} catalog={catalog} /> : null}
+          {open === "data" ? <DataTable result={result} catalog={withResultMetrics(catalog, result)} /> : null}
         </div>
       ) : null}
       <div id={`${id}-source`} className="evidence-body" hidden={open !== "source"}>
