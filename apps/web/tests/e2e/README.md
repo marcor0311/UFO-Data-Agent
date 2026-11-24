@@ -22,3 +22,10 @@ Los recorridos cubren una ventana de portátil de 1280×720 y su equivalente al
 tanto el desplazamiento interno del panel como la posición de lectura en la
 página cuando el diseño se reacomoda para el zoom. Las capturas se guardan en
 `test-results/`.
+
+`accessibility.spec.ts` ejecuta axe (WCAG 2.1 A/AA) sobre la portada en las tres
+resoluciones de portátil (1440×800, 1440×1000 y 1920×1080), sobre el agente sin
+sesión y sobre un resultado. También comprueba que el modelo elegido en el
+compositor viaja con cada pregunta y que Shift+Enter añade una línea sin enviar.
+Estas comprobaciones automáticas no equivalen a una certificación de
+accesibilidad.
