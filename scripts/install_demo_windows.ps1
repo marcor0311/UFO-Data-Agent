@@ -21,10 +21,19 @@ function Get-SignedInstaller($url, $name) {
 }
 
 function Invoke-Installer($file, $arguments) {
-    $process = Start-Process -FilePath $file -ArgumentList $arguments -WindowStyle Hidden -Wait -PassThru
-    if ($process.ExitCode -ne 0) {
-        throw "El instalador $file termino con codigo $($process.ExitCode)."
+    $maxAttempts = 13
+    for ($attempt = 1; $attempt -le $maxAttempts; $attempt++) {
+        $process = Start-Process -FilePath $file -ArgumentList $arguments -WindowStyle Hidden -Wait -PassThru
+        if ($process.ExitCode -eq 0) { return }
+        if ($process.ExitCode -ne 1618) {
+            throw "El instalador $file termino con codigo $($process.ExitCode)."
+        }
+        if ($attempt -lt $maxAttempts) {
+            Write-Host "[Requisitos] Windows Installer ocupado (1618). Reintentando en 15 s ($attempt/$($maxAttempts - 1))..."
+            Start-Sleep -Seconds 15
+        }
     }
+    throw 'Windows Installer sigue ocupado (1618). Espera a que termine la otra instalacion y vuelve a ejecutar install_demo_windows.cmd.'
 }
 
 try {
