@@ -39,9 +39,10 @@ export function dimensionLabel(catalog: Catalog | null, code: string): string {
 export function cell(row: Row, column: string): string {
   const label = row[column + "_label"];
   if (typeof label === "string") return label;
-  const value = row[column];
+  const value = row[column] as unknown;
+  if (Array.isArray(value)) return value.join(", ");
   // Dimensions are codes, not quantities: a year reads 1996, never “1.996”.
-  return value === null || value === undefined ? "sin dato" : String(value);
+  return value === null || value === undefined ? "sin dato" : value === "__other__" ? "Otras" : String(value);
 }
 
 export function isMetric(catalog: Catalog | null, column: string): boolean {

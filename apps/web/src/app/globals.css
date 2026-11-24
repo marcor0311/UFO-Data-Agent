@@ -342,3 +342,14 @@ button.explore-link { background: none; border: 0; padding: 0; font: inherit; co
   border: 1px solid var(--critical); border-radius: 8px; background: #fbece7; color: #8a3324; font-size: 13px; line-height: 1.4; }
 .area-chip button { border: 1px solid currentColor; background: transparent; color: inherit; border-radius: 6px; padding: 0.15rem 0.5rem; font: inherit; cursor: pointer; white-space: nowrap; }
 .turn-area { display: inline-block; margin-top: 4px; font-size: 12px; color: #8a3324; }
+
+/* Analysis views: diverging scales, year slider, clusters, comparison and highlights. */
+.viz-legend.diverging { align-items: center; gap: 8px; }
+.diverging-bar { display: inline-block; width: 160px; height: 10px; border-radius: 3px; }
+.viz-legend-note { color: var(--ink-2); }
+.year-slider { display: flex; align-items: center; gap: 0.6rem; margin: 0.2rem 0 0.5rem; color: var(--ink-2); font-size: 0.85rem; }
+.year-slider input { flex: 1; max-width: 320px; }
+.cluster-list, .highlights ol { margin: 0.5rem 0 0; padding-left: 1.2rem; color: var(--ink-2); font-size: 0.85rem; }
+ul.ecdf-answer { list-style: none; padding: 0; }
+.compare-table tr.differs td { color: var(--ink); background: color-mix(in srgb, var(--series-2) 10%, transparent); }
+.compare-table tr.same td { color: var(--ink-2); }

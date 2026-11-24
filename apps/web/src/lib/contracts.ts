@@ -2,7 +2,8 @@
    and of the agent API (apps/api/src/app/agent/routes.py). */
 
 export type ViewCode = "table" | "bars" | "timeseries" | "points" | "density" | "choropleth" | "hour_weekday" | "month_calendar"
-  | "stacked" | "matrix" | "dumbbell" | "timeline" | "histogram" | "ecdf" | "globe";
+  | "stacked" | "matrix" | "dumbbell" | "timeline" | "histogram" | "ecdf" | "globe" | "boxplot" | "scatter"
+  | "waterfall" | "bump" | "curve" | "clusters" | "links" | "funnel" | "upset" | "compare";
 export type Scalar = string | number | boolean | null;
 export type Row = Record<string, Scalar>;
 
@@ -10,7 +11,13 @@ export type Filter = { column: string; op?: "eq" | "ne" | "in" | "gte" | "lte" |
 export type GoldQuery = {
   dataset: string; filters: Filter[]; group_by: string[]; metrics: string[]; columns: string[]; eligibility: string[];
   view: ViewCode; title: string | null; order_by: string | null; descending: boolean; limit: number; rollup: boolean;
+  /* histogram, ecdf, scatter: the binned measure. */
+  measure?: string;
+  /* Results of the analyze tool: the analysis and its typed parameters. */
+  analysis?: string; params?: Record<string, unknown>;
 };
+export type Series = { key: Scalar; label: string | null; counts: number[]; over_max: number; below_min: number; without_value: number; with_value: number };
+export type Axis = { measure: string; label: string; unit: string; edges: number[] };
 export type Limitation = { code: string; text: string };
 export type ExclusionReason = { reason: string; label: string; reports: number };
 export type Exclusions = { scope: string; base_reports: number; eligible_reports: number; excluded_reports: number; excluded_by_reason: ExclusionReason[] };
@@ -26,7 +33,16 @@ export type GoldResult = {
   calendar_totals?: { reports: number; with_month: number; without_month: number };
   /* histogram / ecdf only: one-minute bins up to max_minutes, the upper tail and reports without duration. */
   distribution?: { bins: { from_s: number; to_s: number; report_count: number }[]; over_max: number; without_duration: number;
-    with_duration: number; max_minutes: number };
+    with_duration: number; max_minutes: number;
+    /* Every measure (and facets): bin edges and one series per facet value. */
+    measure?: string; label?: string; unit?: string; edges?: number[]; series?: Series[]; facet?: string | null;
+    /* scatter */
+    x?: Axis; y?: Axis; with_value?: number };
+  /* points: reports of the selection and whether they come grouped by coordinate. */
+  points?: { reports: number; grouped: boolean; max_reports: number };
+  /* analyze: labels of the derived metrics and the analysis details (highlights, profiles, totals…). */
+  metric_labels?: Record<string, string>;
+  analysis?: { kind: string; [key: string]: unknown };
   eligibility_applied: { code: string; label: string; flag: string; implied: boolean }[];
   exclusions: Exclusions | null;
   external_evidence_reports: number | null;

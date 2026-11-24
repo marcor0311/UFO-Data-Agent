@@ -40,8 +40,10 @@ Gold integra UFOCAT, UPDB, UFO-search y Capella / PhenomAInon. La unidad es el
 **informe**, no el avistamiento ni el evento. Solo los grupos de duplicados
 confirmados forman eventos. Las puntuaciones de modelo (engaño, calidad,
 sentimiento) se presentan como salidas de modelos heredados, nunca como hechos.
-Gold no contiene estados ni ciudades: la geografía llega a país, celda o
-coordenadas, según la elegibilidad de cada informe.
+La geografía llega a país, celda o coordenadas según la elegibilidad de cada
+informe. Para EE. UU., Canadá y Australia, Gold incluye además estado o
+provincia; en el resto de países las fuentes no traen una subdivisión
+utilizable. La ciudad es el texto de la fuente, sin geocodificar.
 
 ## Evidencia disponible
 

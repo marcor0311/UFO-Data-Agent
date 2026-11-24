@@ -344,7 +344,8 @@ class GoldQueryTest(unittest.TestCase):
         self.assertEqual(set(globe["rows"][0]), {"lat", "lng", "report_count"})
 
     def test_duration_distribution(self):
-        self.assertEqual(self.code(dataset="fact_report", view="histogram", metrics=["report_count"], group_by=["source_code"]), "view_contract")
+        # One facet is allowed (a panel per value); two dimensions are not.
+        self.assertEqual(self.code(dataset="fact_report", view="histogram", metrics=["report_count"], group_by=["source_code", "shape_code"]), "view_contract")
         self.assertEqual(self.code(dataset="fact_report", view="ecdf", metrics=["pending_candidate_reports"]), "view_contract")
         result = self.q(dataset="fact_report", view="histogram", metrics=["report_count"])
         d = result["distribution"]

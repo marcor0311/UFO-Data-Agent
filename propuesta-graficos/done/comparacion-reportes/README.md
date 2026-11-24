@@ -1,6 +1,6 @@
 # Comparación de reportes
 
-**Estado: Descartada.** La vista `compare` se retiró en [#86](https://github.com/marcor0311/UFO-Data-Agent/pull/86) por decisión de producto.
+**Estado: Implementada** en el Data Agent como análisis `compare_reports` (vista `compare`): dos fichas alineadas campo a campo, con el par candidato de Silver si existe. Se recupera la función retirada en [#86](https://github.com/marcor0311/UFO-Data-Agent/pull/86).
 
 Dos fichas y una tabla de trece campos con controles para cambiar ambos reportes y abrirlos por separado. Destaca coincidencias entre valores presentes.
 

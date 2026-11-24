@@ -47,3 +47,19 @@ def test_clarify_and_errors(gold):
     broken = ScriptedStream()
     report = run_agent_evals.run(DataAgent(gold, stream=broken), {}, "m", [item(gold)], gold.limits, gold.load_id)
     assert not report["passed"] and "error" in report["results"][0]["checks"]
+
+
+def test_figures_match_accepts_other_shapes_but_not_other_numbers():
+    ref = [{"source_code": "A", "report_count": 3}, {"source_code": "B", "report_count": 2}]
+    assert run_agent_evals.figures_match(ref, list(reversed(ref)))
+    assert run_agent_evals.figures_match(ref, [{**ref[0], "source_code_label": "A"}])
+    assert run_agent_evals.figures_match(ref, [{"report_count": 5}])
+    assert not run_agent_evals.figures_match(ref, [{"source_code": "A", "report_count": 4}])
+    assert not run_agent_evals.figures_match(ref, [{"report_count": 6}])
+
+
+def test_report_keeps_the_trace_and_counts_correct_figures(gold):
+    stream = ScriptedStream([call("search_certified", {"question": "fuentes"})], [call("run_certified", {"id": "CQ_TEST_SOURCES"})],
+                            [message("Hay 9 informes por fuente.")])
+    report = run_agent_evals.run(DataAgent(gold, stream=stream), {}, "m", [item(gold)], gold.limits, gold.load_id)
+    assert report["summary"]["figures_correct"] == 1 and report["results"][0]["trace"][0]["tool"] == "search_certified"

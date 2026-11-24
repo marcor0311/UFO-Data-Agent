@@ -231,7 +231,7 @@ export default function GeoMap({ reports, initialSelection = null }: { reports: 
       </div>
       <div className="map-stage" hidden={catalogOpen}>
         <div className="geo-map-canvas" ref={host} role="region"
-             aria-label={`Mapa ${mode === "3d" ? "3D con relieve" : "2D"} de ${reports.length} informes, representados como ${style === "models" ? "modelos 3D por forma" : "puntos"}`} />
+             aria-label={`Mapa ${mode === "3d" ? "3D con relieve" : "2D"} de ${reports.reduce((s, r) => s + (r.count ?? 1), 0)} informes, representados como ${style === "models" ? "modelos 3D por forma" : "puntos"}`} />
         <SelectionLayer tool={tool} onSelect={select} onCancel={cancel} />
       </div>
       {selected ? (

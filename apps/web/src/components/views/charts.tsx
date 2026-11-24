@@ -5,7 +5,7 @@ import type React from "react";
 import type { Catalog, GoldResult, Row } from "@/lib/contracts";
 import { cell, compact, metricLabel, num } from "@/lib/format";
 import {
-  DataTable, Empty, RAMP, formatMetric, groupLabel, metricsOf, niceMax, rampIndex, rampLegend, ticks, useTooltip, value, yearTicks,
+  DataTable, Empty, RAMP, chartMetrics, formatMetric, groupLabel, metricsOf, niceMax, rampIndex, rampLegend, ticks, useTooltip, value, yearTicks,
 } from "./shared";
 
 type Props = { result: GoldResult; catalog: Catalog | null };
@@ -40,18 +40,19 @@ export function BarsView({ result, catalog }: Props) {
   const groups = result.query.group_by;
   return (
     <div className="viz" ref={ref}>
-      {metricsOf(result, catalog).map((metric) => {
-        const max = niceMax(Math.max(0, ...result.rows.map((r) => value(r, metric) ?? 0)));
+      {chartMetrics(result, catalog).map((metric) => {
+        const [lo, hi] = signedDomain(result.rows.map((r) => value(r, metric) ?? 0));
         const labelWidth = Math.min(240, Math.round(width * 0.3));
         const plot = width - labelWidth - 140;
+        const sx = (v: number) => labelWidth + ((v - lo) / (hi - lo)) * plot;
         const chars = Math.floor(labelWidth / 7);
         const height = result.rows.length * (BAR + GAP) + 26;
         return (
           <figure className="viz-panel" key={metric}>
             <figcaption>{metricLabel(catalog, metric)}</figcaption>
             <svg viewBox={`0 0 ${width} ${height}`} role="img" aria-label={`${metricLabel(catalog, metric)} por ${groups.join(", ")}`}>
-              {ticks(max).map((t) => {
-                const x = labelWidth + (t / max) * plot;
+              {signedTicks(lo, hi).map((t) => {
+                const x = sx(t);
                 return (
                   <g key={t}>
                     <line x1={x} x2={x} y1={0} y2={height - 20} className="grid" />
@@ -62,7 +63,8 @@ export function BarsView({ result, catalog }: Props) {
               {result.rows.map((row, i) => {
                 const y = i * (BAR + GAP) + 4;
                 const v = value(row, metric) ?? 0;
-                const w = Math.max(0, (v / max) * plot);
+                const w = Math.abs(sx(v) - sx(0));
+                const x0 = Math.min(sx(v), sx(0));
                 const label = groupLabel(row, groups);
                 const text = formatMetric(value(row, metric), metric, catalog);
                 const lines = [{ value: text, label: metricLabel(catalog, metric), key: "var(--series-1)" }];
@@ -74,8 +76,9 @@ export function BarsView({ result, catalog }: Props) {
                     <text x={labelWidth - 10} y={y + BAR / 2} className="cat" textAnchor="end" dominantBaseline="middle">
                       {label.length > chars ? label.slice(0, chars - 1) + "…" : label}
                     </text>
-                    <path d={barPath(labelWidth, y, w, BAR)} fill="var(--series-1)" />
-                    <text x={labelWidth + w + 6} y={y + BAR / 2} className="val" dominantBaseline="middle">{text}</text>
+                    {v >= 0 ? <path d={barPath(x0, y, w, BAR)} fill="var(--series-1)" />
+                      : <rect x={x0} y={y} width={w} height={BAR} rx={3} fill="var(--series-2)" />}
+                    <text x={Math.max(sx(v), sx(0)) + 6} y={y + BAR / 2} className="val" dominantBaseline="middle">{text}</text>
                   </g>
                 );
               })}
@@ -86,6 +89,26 @@ export function BarsView({ result, catalog }: Props) {
       {layer}
     </div>
   );
+}
+
+/** Axis domain that always contains zero, with round ends on both sides. */
+export function signedDomain(values: number[]): [number, number] {
+  const min = Math.min(0, ...values);
+  const max = Math.max(0, ...values);
+  const lo = min < 0 ? -niceMax(-min) : 0;
+  const hi = max > 0 ? niceMax(max) : lo === 0 ? 1 : 0;
+  return [lo, hi];
+}
+
+export function signedTicks(lo: number, hi: number, count = 4): number[] {
+  if (lo >= 0) return ticks(hi, count);
+  // Round steps that always include zero.
+  const raw = (hi - lo) / count;
+  const exp = Math.pow(10, Math.floor(Math.log10(raw)));
+  const step = ([1, 2, 2.5, 5, 10].find((s) => s * exp >= raw) ?? 10) * exp;
+  const out = [];
+  for (let t = Math.ceil(lo / step) * step; t <= hi + 1e-9; t += step) out.push(Math.round(t * 1e6) / 1e6 || 0);
+  return out;
 }
 
 /** Bar with a 4px rounded data end and a square baseline. */
@@ -111,6 +134,9 @@ export function TimeseriesView({ result, catalog }: Props) {
   const [hover, setHover] = useState<number | null>(null);
   const time = result.query.group_by[0];
   const facet = result.query.group_by[1];
+  // An analysis may ask to draw a reference line inside another metric's panel (daily level vs local median).
+  const overlayOf = (result.analysis?.overlay ?? {}) as Record<string, string>;
+  const overlays = Object.values(overlayOf);
   const facets = useMemo(() => {
     if (!facet) return [{ key: "", label: "", rows: result.rows }];
     const map = new Map<string, Row[]>();
@@ -131,9 +157,10 @@ export function TimeseriesView({ result, catalog }: Props) {
   const xticks = yearTicks(x0, x1, Math.max(3, Math.floor(width / 110)));
   return (
     <div className="viz" ref={ref}>
-      {metricsOf(result, catalog).map((metric) => {
-        const max = niceMax(Math.max(0, ...result.rows.map((r) => value(r, metric) ?? 0)));
-        const sy = (v: number) => height - pad.b - (v / max) * (height - pad.t - pad.b);
+      {chartMetrics(result, catalog).filter((m) => !overlays.includes(m)).map((metric) => {
+        const over = overlayOf[metric];
+        const [lo, max] = signedDomain(result.rows.flatMap((r) => [value(r, metric) ?? 0, over ? value(r, over) ?? 0 : 0]));
+        const sy = (v: number) => height - pad.b - ((v - lo) / (max - lo)) * (height - pad.t - pad.b);
         return (
           <figure className="viz-panel" key={metric}>
             <figcaption>{metricLabel(catalog, metric)}</figcaption>
@@ -141,7 +168,13 @@ export function TimeseriesView({ result, catalog }: Props) {
               {facets.map((f) => {
                 const points = f.rows.map((row) => ({ row, x: timeValue(row[time]) })).filter((p): p is { row: Row; x: number } => p.x !== null)
                   .sort((a, b) => a.x - b.x);
-                const path = (m: string) => points.map((p, i) => `${i ? "L" : "M"}${sx(p.x).toFixed(1)},${sy(value(p.row, m) ?? 0).toFixed(1)}`).join("");
+                // A missing value breaks the line instead of dropping to zero.
+                const path = (m: string) => points.map((p, i) => {
+                  const v = value(p.row, m);
+                  if (v === null) return "";
+                  const gap = i === 0 || value(points[i - 1].row, m) === null;
+                  return `${gap ? "M" : "L"}${sx(p.x).toFixed(1)},${sy(v).toFixed(1)}`;
+                }).join("");
                 const nearest = (clientX: number, svg: SVGSVGElement) => {
                   const box = svg.getBoundingClientRect();
                   const vx = ((clientX - box.left) / box.width) * width;
@@ -155,11 +188,12 @@ export function TimeseriesView({ result, catalog }: Props) {
                            const i = nearest(e.clientX, e.currentTarget);
                            setHover(i);
                            const p = points[i];
-                           const lines = [{ value: formatMetric(value(p.row, metric), metric, catalog), label: metricLabel(catalog, metric), key: "var(--series-1)" }];
+                           const lines = [{ value: formatMetric(value(p.row, metric), metric, catalog), label: metricLabel(catalog, metric), key: "var(--series-1)" },
+                             ...(over ? [{ value: formatMetric(value(p.row, over), over, catalog), label: metricLabel(catalog, over), key: "var(--series-2)" }] : [])];
                            show(e, { title: cell(p.row, time) + (f.label ? ", " + f.label : ""), lines });
                          }}
                          onPointerLeave={() => { setHover(null); hide(); }}>
-                      {ticks(max).map((t) => (
+                      {signedTicks(lo, max).map((t) => (
                         <g key={t}>
                           <line x1={pad.l} x2={width - pad.r} y1={sy(t)} y2={sy(t)} className="grid" />
                           <text x={pad.l - 8} y={sy(t)} className="tick" textAnchor="end" dominantBaseline="middle">{compact(t)}</text>
@@ -170,6 +204,7 @@ export function TimeseriesView({ result, catalog }: Props) {
                       ))}
                       <line x1={pad.l} x2={width - pad.r} y1={sy(0)} y2={sy(0)} className="axis" />
                       <path d={path(metric)} className="series" stroke="var(--series-1)" />
+                      {over ? <path d={path(over)} className="series" stroke="var(--series-2)" strokeDasharray="4 3" /> : null}
                       {hover !== null && points[hover] ? (
                         <g>
                           <line x1={sx(points[hover].x)} x2={sx(points[hover].x)} y1={pad.t} y2={height - pad.b} className="crosshair" />
@@ -185,7 +220,26 @@ export function TimeseriesView({ result, catalog }: Props) {
         );
       })}
       {facet && new Set(result.rows.map((r) => cell(r, facet))).size > 6 ? <p className="viz-note">Se muestran las 6 primeras categorías; el resto está en los datos exactos.</p> : null}
+      {overlays.length ? <p className="viz-note">Línea punteada: {overlays.map((m) => metricLabel(catalog, m).toLowerCase()).join(", ")}.</p> : null}
+      <Highlights result={result} catalog={catalog} />
       {layer}
+    </div>
+  );
+}
+
+/** Dates an analysis singles out (daily anomalies), listed under the chart. */
+function Highlights({ result, catalog }: Props) {
+  const items = result.analysis?.highlights as Row[] | undefined;
+  if (!items?.length) return null;
+  const time = result.query.group_by[0];
+  return (
+    <div className="viz-note highlights">
+      <p><strong>Fechas más por encima de su nivel local</strong></p>
+      <ol>
+        {items.slice(0, 10).map((row) => (
+          <li key={String(row[time])}>{cell(row, time)}: {num(value(row, "report_count"))} informes frente a una mediana de {num(value(row, "local_median"))} ({metricLabel(catalog, "excess").toLowerCase()}: {num(value(row, "excess"))})</li>
+        ))}
+      </ol>
     </div>
   );
 }

@@ -111,7 +111,27 @@ def write_silver(path: Path, rows=None):
             CREATE TABLE source_collection (id INTEGER PRIMARY KEY, name TEXT, display_name TEXT, description TEXT, url TEXT);
             CREATE TABLE source_database (id INTEGER PRIMARY KEY, name TEXT, collection_id INTEGER, description TEXT, url TEXT, copyright TEXT);
             CREATE TABLE source_origin (id INTEGER PRIMARY KEY, name TEXT);
-            CREATE TABLE sighting (id INTEGER PRIMARY KEY, source_db_id INTEGER);
+            CREATE TABLE sighting (id INTEGER PRIMARY KEY, source_db_id INTEGER, location_id INTEGER, sound TEXT, direction TEXT,
+                weather TEXT, terrain TEXT, vallee TEXT, event_type TEXT, date_event_raw TEXT, time_raw TEXT,
+                nrc_joy REAL, nrc_fear REAL, nrc_anger REAL, nrc_sadness REAL, nrc_surprise REAL, nrc_disgust REAL, nrc_trust REAL,
+                nrc_anticipation REAL, emotion_7_surprise REAL, emotion_7_fear REAL, emotion_7_neutral REAL, emotion_7_anger REAL,
+                emotion_7_disgust REAL, emotion_7_sadness REAL, emotion_7_joy REAL);
+            CREATE TABLE location (id INTEGER PRIMARY KEY, raw_text TEXT, city TEXT, state TEXT, country TEXT, latitude REAL,
+                longitude REAL, geocode_src TEXT, country_iso2 TEXT, coordinate_status TEXT, country_status TEXT);
+            CREATE TABLE sighting_analysis (id INTEGER PRIMARY KEY, sighting_id INTEGER, behavior_tags TEXT, color_list TEXT,
+                emotion_scores TEXT, hoax_flags TEXT, raw_shape_matched_via TEXT, created_at TEXT);
+            CREATE TABLE quality_rule (rule_id TEXT PRIMARY KEY, severity TEXT, description TEXT);
+            CREATE TABLE quality_issue (table_name TEXT, record_id TEXT, column_name TEXT, rule_id TEXT, action TEXT, raw_value TEXT, message TEXT);
+            CREATE TABLE silver_change (table_name TEXT, record_id TEXT, column_name TEXT, old_value TEXT, new_value TEXT, rule_id TEXT);
+            CREATE TABLE crash_retrieval (id TEXT PRIMARY KEY, page_name TEXT, year INTEGER, date_event TEXT, city TEXT, region TEXT,
+                country TEXT, latitude REAL, longitude REAL, precision TEXT, craft_type TEXT, craft_size_m REAL, recovery_status TEXT,
+                has_biologics INTEGER, crew_count TEXT, short_summary TEXT, raw_json TEXT, date_precision TEXT, date_status TEXT,
+                event_year INTEGER, coordinate_status TEXT, country_status TEXT, country_iso2 TEXT, craft_size_status TEXT);
+            CREATE TABLE nuclear_encounter (id INTEGER PRIMARY KEY, page_name TEXT, year INTEGER, date_event TEXT, base TEXT, city TEXT,
+                region TEXT, country TEXT, latitude REAL, longitude REAL, weapon_system TEXT, incident_type TEXT, missiles_affected INTEGER,
+                sensor_confirmation TEXT, witness_credibility TEXT, evidence_quality TEXT, source_confidence TEXT, summary TEXT,
+                raw_json TEXT, date_precision TEXT, date_status TEXT, event_year INTEGER, coordinate_status TEXT, country_status TEXT,
+                country_iso2 TEXT);
             CREATE TABLE event_membership (sighting_id INTEGER PRIMARY KEY, canonical_event_id INTEGER, match_status TEXT);
             CREATE TABLE duplicate_group (canonical_event_id INTEGER PRIMARY KEY, fingerprint TEXT, member_count INTEGER, rule_id TEXT);
             CREATE TABLE duplicate_candidate (id INTEGER PRIMARY KEY, sighting_id_a INTEGER, sighting_id_b INTEGER, similarity_score REAL, match_method TEXT, status TEXT);
@@ -125,7 +145,30 @@ def write_silver(path: Path, rows=None):
         conn.executemany("INSERT INTO source_origin VALUES (?,?)", ORIGINS)
         conn.executemany("INSERT INTO facility (id, name, facility_type, latitude, longitude) VALUES (?,?,?,?,?)", FACILITIES)
         conn.executemany(f"INSERT INTO sighting_analytical VALUES ({','.join('?' for _ in COLUMNS)})", [[r[c] for c in COLUMNS] for r in rows])
-        conn.executemany("INSERT INTO sighting VALUES (?,?)", [(r["id"], r["source_db_id"]) for r in rows])
+        extras = {1: ("silent", "NE", "clear", "rural", "CE1", "2", "Albuquerque", "NM"),
+                  2: ("humming", "north", "cloudy", "residential backyard", "FB1", "3H", "Albuquerque", "New Mexico"),
+                  6: ("unk", "up", None, None, None, None, "Buenos Aires", None)}
+        for r in rows:
+            sound, direction, weather, terrain, vallee, event_type, city, state = extras.get(r["id"], (None,) * 8)
+            conn.execute("INSERT INTO location (id, city, state, country_iso2) VALUES (?,?,?,?)",
+                         (r["id"], city, state, r["canonical_country_iso2"]))
+            conn.execute("""INSERT INTO sighting (id, source_db_id, location_id, sound, direction, weather, terrain, vallee, event_type,
+                date_event_raw, time_raw, nrc_fear, emotion_7_fear) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?)""",
+                         (r["id"], r["source_db_id"], r["id"], sound, direction, weather, terrain, vallee, event_type,
+                          r["date_event"], None, 0.1 * (r["id"] % 3), 0.2))
+            tags = ["bright", "hovering"] if r["id"] in (1, 2, 4) else ["silent"] if r["id"] == 6 else []
+            conn.execute("INSERT INTO sighting_analysis (sighting_id, behavior_tags, hoax_flags) VALUES (?,?,?)",
+                         (r["id"], json.dumps(tags), json.dumps(["very_short_text"] if r["id"] == 7 else [])))
+        conn.execute("INSERT INTO quality_rule VALUES ('date_missing', 'warning', 'Fecha faltante')")
+        conn.executemany("INSERT INTO quality_issue (table_name, record_id, column_name, rule_id, action) VALUES (?,?,?,?,?)",
+                         [("sighting", "7", "date_event", "date_missing", "flagged"), ("location", "3", "country", "country_conflict", "review")])
+        conn.execute("INSERT INTO silver_change (table_name, record_id, column_name, rule_id) VALUES ('sighting', '9', 'lat', 'source_coordinates_recovered')")
+        conn.execute("""INSERT INTO crash_retrieval (id, page_name, date_event, latitude, longitude, craft_type, recovery_status, has_biologics,
+            crew_count, date_precision, date_status, event_year, coordinate_status, country_status, country_iso2)
+            VALUES ('1947-roswell', '1947 Roswell', '1947-07-08', 33.39, -104.52, 'disc', 'alleged_recovered', 1, '3-4', 'day', 'valid', 1947, 'valid', 'valid', 'US')""")
+        conn.execute("""INSERT INTO nuclear_encounter (id, page_name, date_event, base, latitude, longitude, incident_type, missiles_affected,
+            date_precision, date_status, event_year, coordinate_status, country_status, country_iso2)
+            VALUES (1, '1967 Malmstrom', '1967-03-16', 'Malmstrom AFB', 47.5, -111.18, 'shutdown', 10, 'day', 'valid', 1967, 'valid', 'valid', 'US')""")
         confirmed = {r["canonical_event_id"] for r in rows if not r["is_canonical"]}
         conn.executemany("INSERT INTO event_membership VALUES (?,?,?)",
                          [(r["id"], r["canonical_event_id"], "confirmed_exact" if r["canonical_event_id"] in confirmed else "unique") for r in rows])
@@ -133,7 +176,7 @@ def write_silver(path: Path, rows=None):
             members = sum(1 for r in rows if r["canonical_event_id"] == cid)
             conn.execute("INSERT INTO duplicate_group VALUES (?,?,?,?)", (cid, f"fp{cid}", members, "duplicate_exact_match"))
         pairs = [(1, 2, 6), (2, 6, 10), (3, 1, 6)]
-        conn.executemany("INSERT INTO duplicate_candidate (id, sighting_id_a, sighting_id_b) VALUES (?,?,?)", [p for p in pairs if {p[1], p[2]} <= {r["id"] for r in rows}])
+        conn.executemany("INSERT INTO duplicate_candidate (id, sighting_id_a, sighting_id_b, similarity_score, match_method) VALUES (?,?,?,0.9,'tier3_desc_fuzzy')", [p for p in pairs if {p[1], p[2]} <= {r["id"] for r in rows}])
         conn.executemany("INSERT INTO duplicate_resolution (candidate_id, decision, rule_id, reason) VALUES (?,?,?,?)",
                          [(p[0], "needs_review", "duplicate_pending", "x") for p in pairs if {p[1], p[2]} <= {r["id"] for r in rows}])
         conn.execute("INSERT INTO silver_run VALUES ('run', ?)", (json.dumps({"reference_date": "2026-11-21"}),))

@@ -1,6 +1,6 @@
 # Mapa 3D de duración por forma
 
-**Estado: Parcial.** Los modelos 3D por forma y el mapa con relieve ya funcionan en la vista `points`; faltan las cajas de duración por forma.
+**Estado: Implementada** en el Data Agent: cajas de duración por forma con `boxplot` y `median_duration_min`, mapa de la mediana por celda con `density` filtrando una forma, y modelos 3D por forma en `points`.
 
 Propuesta de combinar cartografía con relieve y una comparación de las duraciones por forma normalizada. Se recuperó el diagrama de cajas D4 como referencia cuantitativa y los componentes originales de terreno, símbolos y selección.
 

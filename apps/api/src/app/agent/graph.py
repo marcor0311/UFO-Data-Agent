@@ -15,7 +15,9 @@
   visualizations. Tool errors go back to the model with their code for repair.
 - verificar: deterministic checks on the final text (PRODUCT.md and the agent rules):
   readable, one figure without ranges, no forbidden phrases, no Markdown and no column
-  names or codes. One chance to rewrite, then the answer is accepted.
+  names or codes. One chance to rewrite, then the answer is accepted. An answer given
+  without any tool, previous evidence or question back gets one nudge to consult Gold
+  (tools allowed): a model answering from memory is never evidence.
 - componer: the turn stored and returned by the API, with ``visualization_action``.
 
 State lists use reducers (``operator.add``): each node returns only what it adds.
@@ -81,6 +83,7 @@ class Work(TypedDict, total=False):
     rounds: Annotated[int, operator.add]
     charts: Annotated[int, operator.add]
     rewrites: Annotated[int, operator.add]
+    nudges: Annotated[int, operator.add]
     turn: dict
 
 
@@ -91,6 +94,16 @@ def budget(charts: int) -> int:
 def closing(work: Work) -> bool:
     """The model may no longer ask for tools: the budget is spent or the answer is being rewritten."""
     return work.get("rewrites", 0) > 0 or work.get("rounds", 0) + 1 >= budget(work.get("charts", 0))
+
+
+UNGROUNDED = ("Revisión automática: respondiste sin consultar Gold. Si la pregunta pide datos o cómo son los datos "
+              "(cifras, fuentes, coordenadas, fechas, cobertura), consulta Gold con las herramientas y responde con esos "
+              "resultados. Si no pide datos (un saludo, una petición fuera del alcance), repite tu respuesta tal cual.")
+
+
+def ungrounded(work: Work) -> bool:
+    """An answer without any tool call, any previous evidence or a question back to the person."""
+    return not work.get("trace") and not work.get("history") and "?" not in work["text"]
 
 
 CLOSE = ("Límite de pasos: no puedes llamar más herramientas. Responde ya con los resultados verificados que tienes "
@@ -122,14 +135,15 @@ def rewrite_request(found: list[tuple[str, str]]) -> str:
 
 def codes_of(analytics: Analytics) -> frozenset[str]:
     """Identifiers of Gold that must never reach the answer text."""
-    names = {*analytics.datasets, *analytics.metrics, *analytics.dimensions}
+    from app.gold import MEASURES, SCATTER_PAIRS, gold_analysis
+    names = {*analytics.datasets, *analytics.metrics, *analytics.dimensions, *gold_analysis.ANALYSES, *MEASURES, *SCATTER_PAIRS}
     for spec in analytics.datasets.values():
         names |= set(spec["columns"])
     return frozenset(n for n in names if "_" in n)
 
 
 AREA_NOTE = ("Contexto de la interfaz: la persona tiene un área seleccionada en el mapa. Mientras esté activa, el servidor "
-             "limita automáticamente cada query_gold a los informes dentro de esa área; no hace falta filtrar por país ni por "
+             "limita automáticamente cada query_gold y cada analyze a los informes dentro de esa área; no hace falta filtrar por país ni por "
              "coordenadas. Usa fact_report (el área exige coordenadas aptas: eligibility map) y aplica solo los filtros "
              "que pida la pregunta, como el año o la forma. No uses run_certified ni la vista globe. Menciona que el "
              "resultado se limita al área seleccionada.")
@@ -208,6 +222,10 @@ def build_graph(analytics: Analytics):
     def verificar(work: Work) -> Work:
         if not work["text"]:
             raise HTTPException(502, "El modelo no devolvió una respuesta legible.")
+        if ungrounded(work) and not work.get("nudges") and not closing(work):
+            # The only check that may call tools again: an answer from memory is never evidence.
+            return {"inputs": [{"role": "user", "content": UNGROUNDED}], "nudges": 1, "text": "",
+                    "trace": [{"tool": "verificar", "ok": False, "code": "no_data_used"}]}
         found = problems(work["text"], codes)
         if found and work.get("rewrites", 0) < MAX_REWRITES:
             return {"inputs": [{"role": "user", "content": rewrite_request(found)}], "rewrites": 1, "text": "",
@@ -254,7 +272,8 @@ def run(analytics: Analytics, stream: Callable[[dict, dict], dict], account: dic
         history: list[dict], area: list | None = None) -> dict:
     work = compiled(analytics).invoke(
         {"model": model, "question": question, "history": history, "area": area,
-         "inputs": [], "visuals": [], "trace": [], "calls": [], "text": "", "rounds": 0, "charts": 0, "rewrites": 0},
+         "inputs": [], "visuals": [], "trace": [], "calls": [], "text": "", "rounds": 0, "charts": 0, "rewrites": 0,
+         "nudges": 0},
         {"recursion_limit": RECURSION_LIMIT, "configurable": {"account": account, "stream": stream}})
     return work["turn"]
 

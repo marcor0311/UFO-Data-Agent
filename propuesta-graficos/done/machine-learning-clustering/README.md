@@ -1,6 +1,6 @@
 # Machine Learning – Clustering
 
-**Estado: Solo idea**
+**Estado: Implementada** en el Data Agent con los análisis `clusters` (por radio y días, o por semana y celda) y `kmeans_profiles`.
 
 ## Concepto
 

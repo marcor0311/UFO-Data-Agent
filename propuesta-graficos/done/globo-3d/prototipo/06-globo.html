@@ -3,7 +3,7 @@
 <div class="contador"><strong id="n"></strong><span>informes con coordenadas aptas</span></div><button data-play>Pausa</button>
 <p class="nota">La concentración en Norteamérica refleja la cobertura de las fuentes, en su mayoría estadounidenses.</p>
 <div id="deck"></div>
-<script src="../_compartido/vendor/deck.gl-9.4.0.min.js"></script><script src="comun.js"></script><script>
+<script src="../../../_compartido/vendor/deck.gl-9.4.0.min.js"></script><script src="comun.js"></script><script>
 (async () => {
   const [mundo, filas] = await Promise.all([datos("world.geojson"), datos("globo.json")]);
   document.getElementById("n").textContent = fmt(filas.reduce((s, r) => s + r[2], 0));

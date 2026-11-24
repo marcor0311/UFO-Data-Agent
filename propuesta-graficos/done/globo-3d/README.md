@@ -12,7 +12,7 @@ Dar una vista del planeta completo, que el mapa plano deforma cerca de los polos
 
 ## Origen
 
-Prototipo animado [06-globo.html](../../prototipos-animados/06-globo.html), con su [captura](../../fotos/06-globo.png).
+Prototipo animado [06-globo.html](prototipo/06-globo.html), con su [captura](prototipo/06-globo.png) y su [grabación](prototipo/06-globo.webm). El resto de prototipos animados se descartó porque no encajaba en el proyecto. Para verlo en vivo, sirve la carpeta `propuesta-graficos/` (`python3 -m http.server 8765`) y abre `http://127.0.0.1:8765/done/globo-3d/prototipo/06-globo.html`.
 
 Capturas con datos reales de Gold: [globo-app.png](referencias/globo-app.png), con zoom [globo-app-zoom.png](referencias/globo-app-zoom.png), lazo [lazo.png](referencias/lazo.png) y área abierta en el mapa 2D con selección [area-sel.png](referencias/area-sel.png).
 

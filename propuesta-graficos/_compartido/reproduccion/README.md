@@ -6,4 +6,4 @@ Archivo de trabajo con el código preparado durante la recuperación. Incluye lo
 - [Exportación de láminas](exportar-estatico.py)
 - [Cotejo de renderizadores](verificar.cjs)
 
-Las herramientas comunes están en esta carpeta. Los archivos de cada propuesta (`propuesta.json`, `visualizacion.js`, `fuente-estatica.py`) están en `done/<propuesta>/reproduccion/` o `pendientes/<propuesta>/reproduccion/`. Por defecto leen `DB Test` en la raíz del repositorio; se puede indicar otra ruta. Volver a la [biblioteca](../../README.md).
+Las herramientas comunes están en esta carpeta. Los archivos de cada propuesta (`propuesta.json`, `visualizacion.js`, `fuente-estatica.py`) están en `done/<propuesta>/reproduccion/` (o en `pendientes/` mientras una propuesta no esté implementada). Por defecto leen `DB Test` en la raíz del repositorio; se puede indicar otra ruta. Volver a la [biblioteca](../../README.md).
