@@ -50,7 +50,7 @@ test("cambio entre períodos: proporciones sobre el total de cada período", asy
   const marks = page.locator(".viz-panel .mark");
   await expect(marks.first()).toHaveAttribute("aria-label", "Luz: 20 % en 1970s, 90 % en 2010s (+70 pp)");   // el mayor cambio primero
   await expect(marks.nth(1)).toHaveAttribute("aria-label", "Disco: 60 % en 1970s, 10 % en 2010s (−50 pp)");
-  await expect(page.locator(".dumbbell-help")).toContainText("Por ejemplo, Luz +70 pp: pasó de 20 % a 90 % de los informes. En conclusión, en 2010s Luz aparece bastante más que en 1970s.");
+  await expect(page.locator(".dumbbell-help")).toContainText("Por ejemplo, Luz +70 pp: pasó de 20 % a 90 % de los informes. En conclusión, Luz aumenta su aparición en 2010s comparado con 1970s.");
   await expect(page.locator(".dumbbell-help p")).toHaveCount(2);
   await expect(page.locator(".dumbbell-help")).toContainText("No se dibujan los informes sin forma estandarizada (20 % en 1970s y 0 % en 2010s).");
   await expect(page.locator(".viz-panel .mark")).toHaveCount(2);                     // “sin dato” no se dibuja

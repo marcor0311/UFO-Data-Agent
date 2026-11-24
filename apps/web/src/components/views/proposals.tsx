@@ -260,7 +260,7 @@ export function DumbbellView({ result, catalog }: Props) {
             <div className="viz-note dumbbell-help">
               <p>Cada fila muestra cuántos puntos de peso ganó o perdió ese valor de {what} entre {p0} (círculo azul) y {p1} (cuadrado naranja), sobre el total de informes de cada período.
                 {ex ? ` Por ejemplo, ${ex.c} ${ex.delta >= 0 ? "+" : "−"}${(Math.round(Math.abs(ex.delta) * 1000) / 10).toLocaleString("es-ES")} pp: pasó de ${pct(ex.shares[0].share, 1)} a ${pct(ex.shares[1].share, 1)} de los informes.` : ""}
-                {ex ? ` En conclusión, en ${p1} ${ex.c} aparece ${Math.abs(ex.delta) >= 0.05 ? "bastante " : Math.abs(ex.delta) < 0.01 ? "un poco " : ""}${ex.delta >= 0 ? "más" : "menos"} que en ${p0}.` : ""}</p>
+                {ex ? ` En conclusión, ${ex.c} ${ex.delta >= 0 ? "aumenta" : "disminuye"} su aparición en ${p1} comparado con ${p0}.` : ""}</p>
               {missingShare.some((m) => m > 0) ? <p>No se dibujan los informes sin {what} ({pct(missingShare[0], 1)} en {p0} y {pct(missingShare[1], 1)} en {p1}).</p> : null}
             </div>
           );
