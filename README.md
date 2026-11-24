@@ -6,7 +6,7 @@
 
 Un agente conversacional que responde preguntas en lenguaje natural sobre más de 702.000 informes de UAP. Consulta solo datos preparados y verificados, y devuelve cada respuesta con su gráfico, su evidencia y sus límites.
 
-[Galería](docs/images/README.md) · [Certificación](docs/certificacion.md) · [Iniciar localmente](#inicio-rápido) · [Documentación](#documentación)
+[Galería](docs/images/README.md) — [Certificación](docs/certificacion.md) — [Iniciar localmente](#inicio-rápido) — [Documentación](#documentación)
 
 </div>
 
@@ -19,16 +19,16 @@ Un agente conversacional que responde preguntas en lenguaje natural sobre más d
 El agente interpreta la pregunta, elige la consulta tipada sobre la carga Gold aprobada y muestra la visualización que la responde. Cada resultado indica cuántos informes entran, cuáles quedan fuera y por qué.
 
 <p align="center">
-  <img src="docs/images/062-g02-muestrame-en-el-mapa-los-informes-de-roswell-nuevo-mexico-en.png" alt="Informes de Roswell en julio de 1947 en el mapa" width="49%" />
-  <img src="docs/images/003-e003-como-cambio-el-numero-de-informes-ano-a-ano-desde-1900.png" alt="Serie anual de informes desde 1900" width="49%" />
+  <img src="docs/images/destacada-1-globo-1952.png" alt="Globo 3D con los 9.878 informes de 1952" width="49%" />
+  <img src="docs/images/destacada-2-mapa-3d-italia.png" alt="Mapa 3D de los informes de Italia" width="49%" />
 </p>
 <p align="center">
-  <img src="docs/images/061-g01-cuantos-informes-hay-por-estado-en-estados-unidos.png" alt="Informes por estado de Estados Unidos" width="49%" />
-  <img src="docs/images/069-g09-en-que-celdas-de-estados-unidos-subieron-o-bajaron-mas-los-i.png" alt="Cambio por celda en Estados Unidos entre 2000 y 2010" width="49%" />
+  <img src="docs/images/destacada-3-mapa-2d-agrupaciones.png" alt="Mapa 2D de agrupaciones de informes en la misma semana y celda" width="49%" />
+  <img src="docs/images/destacada-6-perfiles-kmeans.png" alt="Perfiles K-means de duración y testigos" width="49%" />
 </p>
 <p align="center">
-  <img src="docs/images/075-g15-compara-los-informes-8137-y-8138.png" alt="Comparación de dos informes" width="49%" />
-  <img src="docs/images/076-g16-agrupa-los-informes-en-4-perfiles-con-k-means.png" alt="Perfiles K-means" width="49%" />
+  <img src="docs/images/destacada-4-formas-por-decada.png" alt="Composición de formas por década desde 1940" width="49%" />
+  <img src="docs/images/destacada-5-hora-y-dia.png" alt="Informes por día de la semana y hora" width="49%" />
 </p>
 
 ## Qué puedes explorar
@@ -57,8 +57,8 @@ Carga Gold `caca588120ee…` (890 controles). Detalle por pregunta y criterios e
 La [galería completa](docs/images/README.md) reúne 87 capturas tomadas durante la certificación: las 60 preguntas del banco de evaluación y 24 preguntas que recorren todas las vistas y análisis, cada una con la respuesta real del modelo.
 
 <p align="center">
-  <img src="docs/images/082-g22-que-dia-de-la-semana-y-a-que-hora-se-reportan-mas-informes.png" alt="Matriz de hora y día de la semana" width="49%" />
-  <img src="docs/images/084-g24-muestra-los-informes-de-1952-en-un-globo.png" alt="Globo 3D con los informes de 1952" width="49%" />
+  <img src="docs/images/galeria-datos-faltantes.png" alt="Combinaciones de datos que faltan juntos" width="49%" />
+  <img src="docs/images/galeria-ranking-paises.png" alt="Ranking de los diez países con más informes entre 1990 y 2022" width="49%" />
 </p>
 
 ## Inicio rápido
