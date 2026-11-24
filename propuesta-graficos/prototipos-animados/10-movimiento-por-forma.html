@@ -1,0 +1,38 @@
+<!doctype html><html lang="es"><meta charset="utf-8"><title>Cómo se movían</title><link rel="stylesheet" href="estilo.css">
+<style>#grid{position:absolute;left:3vw;right:3vw;top:17vh;bottom:9vh;display:grid;grid-template-columns:repeat(4,1fr);gap:14px}
+.panel{position:relative;border:1px solid #2a3a4b;border-radius:10px;overflow:hidden;background:#111923}.panel h2{position:absolute;margin:0;left:12px;top:8px;font-size:15px}
+.panel p{position:absolute;margin:0;left:12px;bottom:8px;font-size:12px;color:#b6c2cf}.panel canvas{position:absolute;inset:0;width:100%;height:100%}</style>
+<header><h1>¿Cómo se movían?</h1><p>Cada partícula es una muestra proporcional de los informes de esa forma, animada según el movimiento que declara el testigo.</p></header>
+<div class="leyenda" id="ley"></div><p class="nota">Movimiento declarado y normalizado; se omiten los informes sin movimiento o con movimiento desconocido.</p>
+<div id="grid"></div>
+<script src="comun.js"></script><script>
+const MOV = { linear: ["Lineal", "#7fb3ff"], hover: ["Suspendido", "#ffd166"], fast: ["Rápido", "#ff7b7b"], stationary: ["Inmóvil", "#9be37a"], erratic: ["Errático", "#f28bd4"] };
+(async () => {
+  const { labels, rows } = await datos("movimiento.json"), formas = [...new Set(rows.map((r) => r[0]))];
+  formas.sort((a, b) => rows.filter((r) => r[0] === b).reduce((s, r) => s + r[2], 0) - rows.filter((r) => r[0] === a).reduce((s, r) => s + r[2], 0));
+  document.getElementById("ley").innerHTML = Object.values(MOV).map(([n, c]) => `<span><i style="background:${c}"></i>${n}</span>`).join("");
+  const paneles = formas.map((f) => {
+    const r = rows.filter((x) => x[0] === f), tot = r.reduce((s, x) => s + x[2], 0), div = document.createElement("div"); div.className = "panel";
+    const top = r.sort((a, b) => b[2] - a[2])[0];
+    div.innerHTML = `<canvas></canvas><h2>${labels[f]}</h2><p>${fmt(tot)} informes, ${Math.round(100 * top[2] / tot)} % ${MOV[top[1]][0].toLowerCase()}</p>`;
+    document.getElementById("grid").appendChild(div);
+    const c = div.querySelector("canvas"), parts = [];
+    r.forEach(([, m, n]) => { for (let i = 0; i < Math.round(90 * n / tot); i++) parts.push({ m, x: Math.random(), y: 0.2 + Math.random() * 0.6, a: Math.random() * 7, v: 0.4 + Math.random() }); });
+    return { c, parts };
+  });
+  reproducir((t) => {
+    for (const { c, parts } of paneles) {
+      const W = c.width = c.clientWidth * devicePixelRatio, H = c.height = c.clientHeight * devicePixelRatio, ctx = c.getContext("2d"), T = t * 60;
+      for (const p of parts) {
+        let x = p.x, y = p.y;
+        if (p.m === "linear") x = (p.x + T * 0.012 * p.v) % 1;
+        if (p.m === "fast") x = (p.x + T * 0.05 * p.v) % 1;
+        if (p.m === "hover") y = p.y + 0.03 * Math.sin(T * 0.6 * p.v + p.a);
+        if (p.m === "erratic") { x = p.x + 0.04 * Math.sin(T * 2.3 * p.v + p.a) * Math.cos(T * 1.7 + p.a); y = p.y + 0.05 * Math.sin(T * 3.1 + p.a * 2); }
+        ctx.fillStyle = MOV[p.m][1]; ctx.beginPath(); ctx.arc(x * W, y * H, 2.6 * devicePixelRatio, 0, 7); ctx.fill();
+        if (p.m === "fast") { ctx.globalAlpha = 0.35; ctx.fillRect(x * W - 18 * devicePixelRatio, y * H - 1, 18 * devicePixelRatio, 2); ctx.globalAlpha = 1; }
+      }
+    }
+  }, 60000);
+})();
+</script></html>

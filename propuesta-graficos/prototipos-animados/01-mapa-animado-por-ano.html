@@ -1,0 +1,37 @@
+<!doctype html><html lang="es"><meta charset="utf-8"><title>Informes año a año</title><link rel="stylesheet" href="estilo.css">
+<header><h1>Informes año a año, 1940–2023</h1><p>Cada destello es una celda de 1° con informes de ese año. El rastro tenue conserva lo acumulado.</p></header>
+<div class="contador"><strong id="ano">1940</strong><span id="cuenta"></span></div><button data-play>Pausa</button>
+<p class="nota">Solo informes con coordenadas y año fiables. El crecimiento refleja también la cobertura de las fuentes, no solo más avistamientos.</p>
+<canvas id="c"></canvas><canvas id="rastro" style="display:none"></canvas>
+<script src="comun.js"></script><script>
+(async () => {
+  const [mundo, filas] = await Promise.all([datos("world.geojson"), datos("celdas_por_ano.json")]);
+  const c = document.getElementById("c"), ctx = c.getContext("2d");
+  const W = c.width = innerWidth * devicePixelRatio, H = c.height = innerHeight * devicePixelRatio;
+  const proy = proyeccion(W, H); const base = document.createElement("canvas"); base.width = W; base.height = H;
+  dibujarMundo(base.getContext("2d"), mundo, proy);
+  const rastro = document.getElementById("rastro"); rastro.width = W; rastro.height = H; const rctx = rastro.getContext("2d");
+  const porAno = new Map(); for (const [y, la, ln, n] of filas) (porAno.get(y) ?? porAno.set(y, []).get(y)).push([la + 0.5, ln + 0.5, n]);
+  const anos = [...porAno.keys()].sort((a, b) => a - b); let ultimo = -1, acumulado = 0;
+  reproducir((t) => {
+    const i = Math.min(anos.length - 1, Math.floor(t * anos.length)), y = anos[i], celdas = porAno.get(y);
+    if (i !== ultimo) {
+      if (i < ultimo) { rctx.clearRect(0, 0, W, H); acumulado = 0; }
+      rctx.fillStyle = "rgba(198,217,233,0.35)";
+      for (const [la, ln, n] of celdas) { const [x, yy] = proy([ln, la]); rctx.fillRect(x - 1, yy - 1, 2.2, 2.2); }
+      acumulado += celdas.reduce((s, r) => s + r[2], 0); ultimo = i;
+      document.getElementById("ano").textContent = y;
+      document.getElementById("cuenta").textContent = `${fmt(celdas.reduce((s, r) => s + r[2], 0))} informes este año, ${fmt(acumulado)} acumulados`;
+    }
+    const f = (t * anos.length) % 1;
+    ctx.clearRect(0, 0, W, H); ctx.drawImage(base, 0, 0); ctx.drawImage(rastro, 0, 0);
+    ctx.globalCompositeOperation = "lighter";
+    for (const [la, ln, n] of celdas) {
+      const [x, yy] = proy([ln, la]), r = (2 + Math.sqrt(n) * 1.6) * devicePixelRatio * (1.2 - 0.5 * f);
+      const g = ctx.createRadialGradient(x, yy, 0, x, yy, r); g.addColorStop(0, "rgba(255,214,120,0.95)"); g.addColorStop(1, "rgba(255,120,40,0)");
+      ctx.fillStyle = g; ctx.beginPath(); ctx.arc(x, yy, r, 0, 7); ctx.fill();
+    }
+    ctx.globalCompositeOperation = "source-over";
+  }, 42000);
+})();
+</script></html>

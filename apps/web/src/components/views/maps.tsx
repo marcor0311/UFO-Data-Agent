@@ -1,6 +1,8 @@
 "use client";
 
 import { useEffect, useId, useMemo, useRef, useState } from "react";
+import type { GlobeArea } from "./globe-map";
+import { useMapArea } from "@/lib/map-area";
 import dynamic from "next/dynamic";
 import { geoGraticule10, geoNaturalEarth1, geoPath } from "d3-geo";
 import type { MapReport } from "./geo-map";
@@ -54,16 +56,20 @@ function useNearViewport() {
   return { ref, near };
 }
 
-export function PointsView({ result }: Props) {
-  const { ref, near } = useNearViewport();
-  const reports = useMemo<MapReport[]>(() => result.rows
+function toReports(rows: Row[]): MapReport[] {
+  return rows
     .filter((r) => typeof r.lat === "number" && typeof r.lng === "number")
     .map((r) => ({
       id: String(r.report_id), lng: r.lng as number, lat: r.lat as number,
       shape: (r.shape_code as string | null) ?? null, shapeLabel: String(r.shape_code_label ?? ""),
       source: String(r.source_code_label ?? r.source_code ?? ""), date: r.date_key == null ? null : String(r.date_key),
       external: r.uses_external_evidence === 1,
-    })), [result.rows]);
+    }));
+}
+
+export function PointsView({ result }: Props) {
+  const { ref, near } = useNearViewport();
+  const reports = useMemo<MapReport[]>(() => toReports(result.rows), [result.rows]);
   if (!reports.length) return <Empty>No hay informes con coordenadas aptas para el mapa con esos filtros.</Empty>;
   return (
     <div className="viz" ref={ref}>
@@ -116,6 +122,53 @@ export function DensityView({ result, catalog }: Props) {
         <RampLegend max={max} note="escala logarítmica de todos los informes; cuenta informes, no área ni población" />
       </figure>
       {layer}
+    </div>
+  );
+}
+
+/* -- globe: the same cells on a rotating globe with zoom -------------------- */
+const GlobeMap = dynamic(() => import("./globe-map"), { ssr: false, loading: () => <div className="geo-map-canvas geo-map-loading">Cargando globo…</div> });
+
+export function GlobeView({ result, catalog }: Props) {
+  const { ref, near } = useNearViewport();
+  const [area, setLocalArea] = useState<GlobeArea | null>(null);
+  const { setArea: setActiveArea } = useMapArea();
+  const setArea = (a: GlobeArea | null) => {
+    setLocalArea(a);
+    const n = a ? a.points.reduce((s, p) => s + p.value, 0) : 0;
+    setActiveArea(a ? { polygon: a.polygon, label: `${num(n)} ${n === 1 ? "informe" : "informes"} del globo` } : null);
+  };
+  const points = useMemo(() => result.rows.flatMap((row) => {
+    const lat = row.lat, lng = row.lng, v = value(row, "report_count");
+    if (typeof lat !== "number" || typeof lng !== "number" || v === null) return [];
+    return [{ lat, lng, value: v, label: `${lat.toFixed(3)}, ${lng.toFixed(3)}`,
+              text: `${formatMetric(v, "report_count", catalog)} ${v === 1 ? "informe" : "informes"} en esta ubicación` }];
+  }), [result.rows, catalog]);
+  // The globe is only the global view. A drawn area opens in the 2D/3D map with exactly
+  // the locations inside the shape: every one of them, nothing outside, no row limit.
+  const areaReports = useMemo<MapReport[]>(() => (area ? area.points.map((p) => ({
+    id: `${p.lat},${p.lng}`, lat: p.lat, lng: p.lng, count: p.value, shape: null, shapeLabel: "", source: "", date: null, external: false,
+  })) : []), [area]);
+
+  if (result.empty || !points.length) return <Empty />;
+  const total = points.reduce((s, c) => s + c.value, 0);
+  const label = `Globo con ${num(total)} informes en ${num(points.length)} ubicaciones`;
+  const selectedReports = area ? area.points.reduce((s, p) => s + p.value, 0) : 0;
+  return (
+    <div className="viz" ref={ref}>
+      <figure className="viz-panel">
+        <figcaption>{num(total)} informes con coordenadas aptas en {num(points.length)} ubicaciones</figcaption>
+        {near ? <GlobeMap points={points} label={label} onArea={setArea} /> : <div className="geo-map-canvas geo-map-loading">Globo</div>}
+      </figure>
+      {area ? (
+        <figure className="viz-panel globe-area">
+          <figcaption>
+            Área seleccionada: {num(selectedReports)} {selectedReports === 1 ? "informe" : "informes"} en {num(area.points.length)} {area.points.length === 1 ? "ubicación" : "ubicaciones"}
+            <button type="button" className="geo-map-reset" onClick={() => setArea(null)}>Cerrar área</button>
+          </figcaption>
+          <GeoMap key={area.polygon.join(";")} reports={areaReports} />
+        </figure>
+      ) : null}
     </div>
   );
 }

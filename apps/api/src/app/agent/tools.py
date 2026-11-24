@@ -249,7 +249,8 @@ def visual_pack(analytics: Analytics, raw: dict, room: int) -> list[dict]:
     results = []
     for plan in plans[:room]:
         try:
-            result = analytics.query({"dataset": "fact_report", "filters": filters, **plan})
+            area = {"area": raw["area"]} if raw.get("area") else {}
+            result = analytics.query({"dataset": "fact_report", "filters": filters, **area, **plan})
         except QueryError:
             continue
         if plan.get("group_by") == ["shape_code"]:
@@ -264,10 +265,17 @@ def visual_pack(analytics: Analytics, raw: dict, room: int) -> list[dict]:
     return results
 
 
-def execute(analytics: Analytics, name: str, arguments: dict, visuals: list) -> dict:
-    """Run one tool call. Data results are appended to ``visuals`` (full envelope)."""
+def execute(analytics: Analytics, name: str, arguments: dict, visuals: list, area: list | None = None) -> dict:
+    """Run one tool call. Data results are appended to ``visuals`` (full envelope).
+
+    ``area`` is the selection drawn on a map in the web app. While it is active every
+    query is limited to it by the server, whatever the model sends."""
     if not isinstance(arguments, dict):
         raise QueryError("contract", "Los argumentos deben ser un objeto JSON")
+    if area and name == "run_certified":
+        raise QueryError("area_active", "Hay un área seleccionada: las consultas certificadas no la aplican. Usa query_gold sobre fact_report.")
+    if area and name == "query_gold":
+        arguments = {**arguments, "area": area}
     if name in ("query_gold", "run_certified"):
         if len(visuals) >= MAX_VISUALS:
             raise QueryError("visual_limit", f"Máximo {MAX_VISUALS} visualizaciones por respuesta; responde con las que ya tienes.")

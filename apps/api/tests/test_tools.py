@@ -9,7 +9,8 @@ from app.gold import QueryError
 def test_query_schema_is_generated_from_the_contract(gold):
     schema = tools.query_schema(gold)
     assert schema["additionalProperties"] is False
-    assert set(schema["properties"]) == set(__import__("gold_query").Query.FIELDS)
+    # area comes from the map selection in the web app; the server injects it, the model never sends it.
+    assert set(schema["properties"]) == set(__import__("gold_query").Query.FIELDS) - {"area"}
     assert schema["properties"]["dataset"]["enum"] == sorted(gold.datasets)
     assert schema["properties"]["limit"]["maximum"] == gold.limits["max_limit"]
     assert set(schema["properties"]["eligibility"]["items"]["enum"]) == set(gold.eligibility)
@@ -242,3 +243,22 @@ def test_report_listing_becomes_map_timeline_and_shapes():
     assert [v["view"] for v in visuals] == ["points", "timeseries", "bars"]
     assert "visualizations" in out
     assert all(r["shape_code"] is not None for r in visuals[2]["rows"])
+
+
+def test_selected_area_limits_every_query(gold):
+    world = [[-200, -80], [200, -80], [200, 80], [-200, 80]]
+    phoenix = [[-113, 33], [-111, 33], [-111, 34], [-113, 34]]      # 4 informes en 33.4, -112.1
+    nowhere = [[0, 0], [0.001, 0], [0.001, 0.001]]
+    base = {"dataset": "fact_report", "metrics": ["report_count"], "eligibility": ["map"]}
+    visuals = []
+    out = tools.execute(gold, "query_gold", base, visuals, area=phoenix)
+    assert out["rows"][0]["report_count"] == 4
+    assert "Dentro del área seleccionada en el mapa" in visuals[0]["readable_query"]["filtros"]
+    assert visuals[0]["query"]["area"] == phoenix
+    assert tools.execute(gold, "query_gold", base, [], area=nowhere)["rows"][0]["report_count"] == 0
+    with pytest.raises(QueryError) as certified:
+        tools.execute(gold, "run_certified", {"id": "CQ_TEST_SOURCES"}, [], area=world)
+    assert certified.value.code == "area_active"
+    with pytest.raises(QueryError) as aggregate:
+        tools.execute(gold, "query_gold", {"dataset": "agg_source", "group_by": ["source_code"], "metrics": ["report_count"]}, [], area=world)
+    assert aggregate.value.code == "area_unavailable"

@@ -1,0 +1,32 @@
+<!doctype html><html lang="es"><meta charset="utf-8"><title>Encuentros según Hynek</title><link rel="stylesheet" href="estilo.css">
+<header><h1>Encuentros según la clasificación de Hynek</h1><p>Década a década, cada color es una clase que asigna la fuente. Los encuentros cercanos de tercer tipo brillan en magenta.</p></header>
+<div class="contador"><strong id="dec">1940s</strong><span id="cuenta"></span></div><button data-play>Pausa</button>
+<div class="leyenda" id="ley"></div>
+<p class="nota">La clase es la que consigna la fuente (sobre todo UFOCAT), no una verificación. Solo informes con coordenadas y año fiables.</p>
+<canvas id="c"></canvas>
+<script src="comun.js"></script><script>
+const CLASES = { NL: ["Luces nocturnas", "#7fb3ff"], DD: ["Discos diurnos", "#ffd166"], NO: ["NO (objeto nocturno)", "#5ad1c4"], DO: ["DO (objeto diurno)", "#c9b6ff"],
+  CE1: ["Encuentro cercano 1.er tipo", "#ff9f5a"], CE2: ["Encuentro cercano 2.º tipo", "#ff5a7a"], CE3: ["Encuentro cercano 3.er tipo", "#ff3df2"] };
+(async () => {
+  const [mundo, filas] = await Promise.all([datos("world.geojson"), datos("hynek.json")]);
+  const c = document.getElementById("c"), ctx = c.getContext("2d");
+  const W = c.width = innerWidth * devicePixelRatio, H = c.height = innerHeight * devicePixelRatio, proy = proyeccion(W, H);
+  const base = document.createElement("canvas"); base.width = W; base.height = H; dibujarMundo(base.getContext("2d"), mundo, proy);
+  const decadas = [...new Set(filas.map((r) => r[1]))].sort((a, b) => a - b);
+  const ley = document.getElementById("ley");
+  reproducir((t) => {
+    const i = Math.min(decadas.length - 1, Math.floor(t * decadas.length)), d = decadas[i], f = (t * decadas.length) % 1;
+    ctx.clearRect(0, 0, W, H); ctx.drawImage(base, 0, 0); ctx.globalCompositeOperation = "lighter";
+    const tot = {};
+    for (const [h, dec, la, ln, n] of filas) {
+      if (dec !== d || !CLASES[h]) continue; tot[h] = (tot[h] ?? 0) + n;
+      const [x, y] = proy([ln + 0.5, la + 0.5]); ctx.fillStyle = CLASES[h][1]; ctx.globalAlpha = h === "CE3" ? 0.95 : 0.45 * Math.min(1, 0.3 + f * 3);
+      const r = (1.2 + Math.sqrt(n) * (h === "CE3" ? 1.1 : 0.55)) * devicePixelRatio; ctx.beginPath(); ctx.arc(x, y, r, 0, 7); ctx.fill();
+    }
+    ctx.globalAlpha = 1; ctx.globalCompositeOperation = "source-over";
+    document.getElementById("dec").textContent = `${d}s`;
+    document.getElementById("cuenta").textContent = `${fmt(Object.values(tot).reduce((a, b) => a + b, 0))} informes clasificados`;
+    ley.innerHTML = Object.entries(CLASES).map(([k, [nom, col]]) => `<span><i style="background:${col}"></i>${nom}: ${fmt(tot[k] ?? 0)}</span>`).join("");
+  }, 30000);
+})();
+</script></html>

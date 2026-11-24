@@ -88,3 +88,28 @@ test("duración acumulada: responde el porcentaje hasta cada umbral", async ({ p
   await expect(page.locator(".ecdf-answer")).toContainText("91,7 %");
   await noViolations(page);
 });
+
+test("globo: total por ubicaciones, zoom y pausa del giro", async ({ page }) => {
+  await open(page, "globe");
+  await expect(page.locator("figcaption").first()).toContainText("1.050 informes con coordenadas aptas en 3 ubicaciones");
+  await expect(page.getByRole("img", { name: "Globo con 1.050 informes en 3 ubicaciones" })).toBeVisible();
+  await expect(page.locator(".globe-canvas canvas")).toBeVisible();
+  await page.getByRole("button", { name: "Acercar" }).click();
+  await noViolations(page);
+});
+
+test("globo: un rectángulo abre en el mapa 2D y 3D solo lo que queda dentro", async ({ page }) => {
+  await open(page, "globe");
+  await page.getByRole("button", { name: "Rectángulo" }).click();
+  await expect(page.getByRole("button", { name: "Reanudar giro" })).toBeVisible();
+  const box = (await page.locator(".globe-canvas").boundingBox())!;
+  const cx = box.x + box.width / 2, cy = box.y + box.height / 2;
+  await page.mouse.move(cx - 60, cy - 60);
+  await page.mouse.down();
+  await page.mouse.move(cx + 60, cy + 60, { steps: 6 });
+  await page.mouse.up();
+  await expect(page.locator(".globe-area figcaption")).toContainText("Área seleccionada: 900 informes en 1 ubicación");
+  await expect(page.locator(".globe-area").getByRole("button", { name: "Lazo" })).toBeVisible();
+  await page.getByRole("button", { name: "Cerrar área" }).click();
+  await expect(page.locator(".globe-area")).toHaveCount(0);
+});

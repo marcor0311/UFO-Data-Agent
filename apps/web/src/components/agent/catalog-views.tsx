@@ -6,6 +6,7 @@ const viewPaths: Record<ViewCode, string> = {
   timeseries: "m2 12.5 3.5-4.5 3 2.5L14 4",
   points: "M8 14s4-3.6 4-7.5a4 4 0 0 0-8 0C4 10.4 8 14 8 14Zm.75-7.5a.75.75 0 1 1-1.5 0 .75.75 0 0 1 1.5 0Z",
   density: "M2.5 2.5h11v11h-11zM6.2 2.5v11M9.8 2.5v11M2.5 6.2h11M2.5 9.8h11",
+  globe: "M8 14A6 6 0 1 0 8 2a6 6 0 0 0 0 12ZM2 8h12M8 2c-2.2 2.4-2.2 9.6 0 12M8 2c2.2 2.4 2.2 9.6 0 12",
   choropleth: "m2 4.5 4-2 4 2 4-2v9l-4 2-4-2-4 2zM6 2.5v9M10 4.5v9",
   hour_weekday: "M2.5 4.5h11v9h-11zM5 2.5v4M11 2.5v4M2.5 7.5h11M6.2 7.5v6M9.8 7.5v6M2.5 10.5h11",
   month_calendar: "M2.5 2.5h11v11h-11zM2.5 5.5h11M2.5 8.5h11M2.5 11.5h11M6.2 5.5v8M9.8 5.5v8",

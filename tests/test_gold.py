@@ -332,6 +332,17 @@ class GoldQueryTest(unittest.TestCase):
         dates = [r["event_date"] for r in self.q(dataset="fact_report", view="timeline", eligibility=["day"], limit=50)["rows"]]
         self.assertEqual(dates, sorted(dates))
 
+    def test_globe_contract(self):
+        self.assertEqual(self.code(dataset="fact_report", view="globe", group_by=["cell1_lat", "cell1_lng"], metrics=["report_count"], eligibility=["map"]), "view_contract")
+        self.assertEqual(self.code(dataset="fact_report", view="globe", metrics=["report_count"]), "eligibility_missing")
+        self.assertEqual(self.code(dataset="fact_report", view="globe", metrics=["report_count"], eligibility=["map"],
+                                   filters=[{"column": "source_code", "op": "eq", "value": "UFOCAT"}]), "view_contract")  # solo vista global
+        globe = self.q(dataset="fact_report", view="globe", metrics=["report_count"], eligibility=["map"], limit=1)   # el límite no recorta el globo
+        total = self.q(dataset="fact_report", metrics=["report_count"], eligibility=["map"])["rows"][0]["report_count"]
+        self.assertFalse(globe["truncated"])
+        self.assertEqual(sum(r["report_count"] for r in globe["rows"]), total)
+        self.assertEqual(set(globe["rows"][0]), {"lat", "lng", "report_count"})
+
     def test_duration_distribution(self):
         self.assertEqual(self.code(dataset="fact_report", view="histogram", metrics=["report_count"], group_by=["source_code"]), "view_contract")
         self.assertEqual(self.code(dataset="fact_report", view="ecdf", metrics=["pending_candidate_reports"]), "view_contract")

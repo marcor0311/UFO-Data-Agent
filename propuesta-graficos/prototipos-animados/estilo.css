@@ -1,0 +1,14 @@
+:root { color-scheme: dark; }
+* { box-sizing: border-box; }
+body { margin: 0; background: #0b1016; color: #f0f3f6; font: 15px/1.45 system-ui, -apple-system, "Segoe UI", sans-serif; }
+header { position: absolute; z-index: 2; top: 22px; left: 28px; max-width: 520px; pointer-events: none; }
+header h1 { margin: 0 0 4px; font-size: 22px; letter-spacing: -0.01em; }
+header p { margin: 0; color: #b6c2cf; font-size: 14px; }
+.contador { position: absolute; z-index: 2; right: 28px; top: 20px; text-align: right; }
+.contador strong { display: block; font-size: 54px; line-height: 1; font-variant-numeric: tabular-nums; letter-spacing: -0.02em; }
+.contador span { color: #b6c2cf; font-size: 13px; }
+.leyenda { position: absolute; z-index: 2; left: 28px; bottom: 22px; display: flex; flex-wrap: wrap; gap: 6px 16px; color: #b6c2cf; font-size: 13px; max-width: 70%; }
+.leyenda i { display: inline-block; width: 11px; height: 11px; border-radius: 50%; margin-right: 6px; vertical-align: -1px; }
+.nota { position: absolute; z-index: 2; right: 28px; bottom: 22px; max-width: 420px; text-align: right; color: #b6c2cf; font-size: 12px; }
+button[data-play] { position: absolute; z-index: 3; right: 28px; top: 100px; background: rgb(197 225 255 / 12%); color: #f0f3f6; border: 1px solid rgb(213 235 255 / 25%); border-radius: 8px; padding: 6px 14px; font: inherit; cursor: pointer; }
+canvas, #deck { position: absolute; inset: 0; width: 100vw; height: 100vh; }

@@ -314,6 +314,14 @@ button.turn-question[aria-pressed="true"] { box-shadow: inset 0 0 0 1.5px var(--
    .maplibregl-map (position:relative) collapsed the map to 0 px. */
 .geo-map-canvas { position: relative; width: 100%; height: clamp(340px, 52vh, 560px); border-radius: 8px; overflow: hidden; background: #e9eef2; }
 .geo-map-canvas.maplibregl-map { position: relative; }
+.globe-canvas { background: #0b1016; }
+.map-stage { position: relative; }
+.map-selection-layer { position: absolute; inset: 0; cursor: crosshair; touch-action: none; z-index: 2; }
+.map-selection-layer svg { width: 100%; height: 100%; display: block; }
+.map-selection-layer polygon { fill: rgb(208 59 59 / 0.12); stroke: var(--critical); stroke-width: 1.5; stroke-dasharray: 5 3; }
+.map-selection-summary { display: flex; align-items: center; justify-content: space-between; gap: 0.8rem; font-size: 0.85rem; color: var(--ink-2); }
+.globe-area figcaption { display: flex; align-items: center; justify-content: space-between; gap: 0.8rem; }
+.geo-map-reset.globe-reset { margin-left: 0; }
 .geo-map-loading { display: grid; place-items: center; color: var(--ink-2); font-size: 0.9rem; }
 
 /* 3D model catalog (ported from DB Test visor) */
@@ -329,3 +337,8 @@ button.turn-question[aria-pressed="true"] { box-shadow: inset 0 0 0 1.5px var(--
 .model-viewer-labels { position: absolute; inset: 0; display: grid; pointer-events: none; }
 .model-viewer-labels span { align-self: end; justify-self: center; font-size: 0.78rem; color: var(--ink-2); padding-bottom: 0.2rem; }
 button.explore-link { background: none; border: 0; padding: 0; font: inherit; color: inherit; text-decoration: underline; cursor: pointer; }
+
+.area-chip { display: flex; align-items: center; justify-content: space-between; gap: 0.6rem; margin: 0 0 0.5rem; padding: 0.45rem 0.7rem;
+  border: 1px solid var(--critical); border-radius: 8px; background: #fbece7; color: #8a3324; font-size: 13px; line-height: 1.4; }
+.area-chip button { border: 1px solid currentColor; background: transparent; color: inherit; border-radius: 6px; padding: 0.15rem 0.5rem; font: inherit; cursor: pointer; white-space: nowrap; }
+.turn-area { display: inline-block; margin-top: 4px; font-size: 12px; color: #8a3324; }

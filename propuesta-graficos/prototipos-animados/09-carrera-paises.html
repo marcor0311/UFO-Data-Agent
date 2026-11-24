@@ -1,0 +1,26 @@
+<!doctype html><html lang="es"><meta charset="utf-8"><title>Carrera de países</title><link rel="stylesheet" href="estilo.css">
+<style>#barras{position:absolute;left:16vw;right:12vw;top:20vh;bottom:10vh}.b{position:absolute;left:0;height:6.4vh;display:flex;align-items:center;transition:top .35s linear}
+.b .r{height:100%;border-radius:0 6px 6px 0}.b .t{position:absolute;right:calc(100% + 12px);font-weight:600;color:#f0f3f6;white-space:nowrap}.b .v{margin-left:10px;color:#f0f3f6;font-variant-numeric:tabular-nums}</style>
+<header><h1>Carrera de países, 1940–2023</h1><p>Informes acumulados por país con país y año fiables. Los diez primeros de cada año.</p></header>
+<div class="contador"><strong id="ano">1940</strong><span>año</span></div><button data-play>Pausa</button>
+<p class="nota">Refleja la cobertura de las fuentes: predominan las compilaciones estadounidenses.</p>
+<div id="barras"></div>
+<script src="comun.js"></script><script>
+const COL = ["#7fb3ff","#ffd166","#ff7b7b","#5ad1c4","#c9b6ff","#ff9f5a","#9be37a","#f28bd4","#8fa3b8","#e3c27a"];
+(async () => {
+  const [filas, nombres] = await Promise.all([datos("carrera_paises.json"), datos("paises.json")]);
+  const anos = [...new Set(filas.map((r) => r[0]))].sort((a, b) => a - b), paises = [...new Set(filas.map((r) => r[1]))];
+  const acum = {}; paises.forEach((p) => acum[p] = anos.map(() => 0));
+  anos.forEach((y, i) => { paises.forEach((p) => acum[p][i] = (i ? acum[p][i - 1] : 0)); filas.filter((r) => r[0] === y).forEach(([, p, n]) => acum[p][i] += n); });
+  const color = Object.fromEntries(paises.map((p, i) => [p, COL[i % COL.length]])), cont = document.getElementById("barras"), nodos = {};
+  for (const p of paises) { const b = document.createElement("div"); b.className = "b"; b.innerHTML = `<div class="r" style="background:${color[p]}"></div><span class="t">${nombres[p] ?? p}</span><span class="v"></span>`; b.style.display = "none"; cont.appendChild(b); nodos[p] = b; }
+  reproducir((t) => {
+    const f = Math.min(anos.length - 1, t * 1.08 * (anos.length - 1)), i = Math.floor(f), k = f - i, j = Math.min(anos.length - 1, i + 1);
+    const val = (p) => acum[p][i] + (acum[p][j] - acum[p][i]) * k, orden = paises.map((p) => [p, val(p)]).sort((a, b) => b[1] - a[1]), max = orden[0][1] || 1;
+    paises.forEach((p) => nodos[p].style.display = "none");
+    orden.slice(0, 10).forEach(([p, v], r) => { const b = nodos[p]; b.style.display = "flex"; b.style.width = "100%"; b.style.top = `${r * 7.2}vh`;
+      b.querySelector(".r").style.width = `${(v / max) * 62}vw`; b.querySelector(".v").textContent = fmt(v); });
+    document.getElementById("ano").textContent = anos[i];
+  }, 36000);
+})();
+</script></html>
