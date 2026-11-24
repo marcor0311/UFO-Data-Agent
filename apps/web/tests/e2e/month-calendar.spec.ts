@@ -22,7 +22,7 @@ for (const viewport of [{ width: 1440, height: 800 }, { width: 1920, height: 108
     await page.setViewportSize(viewport);
     const grid = await showCalendar(page);
     await expect(grid.getByRole("row")).toHaveCount(3);               // 1996, 1997 (sin filas) y 1998
-    await expect(grid.getByRole("gridcell")).toHaveCount(42);              // 12 meses + «Sin mes» + «Total»
+    await expect(grid.getByRole("gridcell")).toHaveCount(42);              // 12 meses + “Sin mes” + “Total”
     const totals = page.locator(".calendar-totals");
     await expect(totals.locator(".stat").nth(0)).toContainText("Informes en el período19");
     await expect(totals.locator(".stat").nth(1)).toContainText("Con mes conocido17");

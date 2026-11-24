@@ -1,6 +1,6 @@
 # Duración de testigos
 
-**Estado · Experimental**
+**Estado, Experimental**
 
 Dispersión de duración reportada y número de testigos. Los pares de valores idénticos se dibujan juntos y permiten abrir las filas mediante un punto o un rectángulo.
 

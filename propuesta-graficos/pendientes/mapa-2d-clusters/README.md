@@ -1,6 +1,6 @@
 # Mapa 2D de clusters
 
-**Estado · Recuperada**
+**Estado, Recuperada**
 
 Mapa plano de concentraciones espacio-temporales, con controles de radio y ventana, lista de grupos, registros fuera de grupo e inspector por selección.
 
@@ -24,7 +24,7 @@ El [fragmento de exportación](fuente-estatica.original.txt) y los [estilos orig
 
 ## Cómo revisar la referencia
 
-Consulta la lámina M1 en `referencias/`. Para revisar las interacciones existentes, abre el [observatorio original](../../../DB%20Test/observatorio.html) y busca **Mapa 2D · Clusters** en **Explorar herramientas**. El recorte y la pregunta del prototipo están en la ficha v2.
+Consulta la lámina M1 en `referencias/`. Para revisar las interacciones existentes, abre el [observatorio original](../../../DB%20Test/observatorio.html) y busca **Mapa 2D, Clusters** en **Explorar herramientas**. El recorte y la pregunta del prototipo están en la ficha v2.
 
 ## Prompt de ejemplo
 

@@ -10,21 +10,21 @@ Recuperación del prototipo **DB Test** y de su Sketchbook v2 para evaluación v
 | [Mapa 3D de duración por forma](pendientes/mapa-3d-duracion-por-forma/) | Cartografía | Recuperada (parcial) |
 | [Reportes por año](pendientes/reportes-por-ano/) | Tiempo | Recuperada |
 | [Formas reportadas](pendientes/formas-reportadas/) | Composición | Recuperada |
-| [Histograma de duración](pendientes/histograma-duracion/) | Distribución | Recuperada |
-| [Región por año](pendientes/region-por-ano/) | Tiempo y región | Recuperada |
+| [Histograma de duración](done/histograma-duracion/) | Distribución | Implementada (`histogram`) |
+| [Región por año](done/region-por-ano/) | Tiempo y región | Implementada (`matrix`) |
 | [Calendario por meses del año](done/calendario-meses/) | Tiempo | Implementada (`month_calendar`) |
 | [Día de la semana por hora consignada](done/dia-semana-hora/) | Tiempo | Implementada (`hour_weekday`) |
-| [Composición por archivo](pendientes/composicion-por-archivo/) | Procedencia | Recuperada |
+| [Composición por archivo](done/composicion-por-archivo/) | Procedencia | Implementada (`stacked`) |
 | [Mapa 2D de clusters](pendientes/mapa-2d-clusters/) | Cartografía | Recuperada |
 | [Mapa 3D de clusters](pendientes/mapa-3d-clusters/) | Cartografía | Recuperada |
-| [Cronología](pendientes/cronologia/) | Tiempo | Experimental |
-| [Cambios de composición entre períodos](pendientes/cambios-composicion-periodos/) | Composición | Experimental |
-| [Duración acumulada](pendientes/duracion-acumulada/) | Distribución | Experimental |
+| [Cronología](done/cronologia/) | Tiempo | Implementada (`timeline`) |
+| [Cambios de composición entre períodos](done/cambios-composicion-periodos/) | Composición | Implementada (`dumbbell`) |
+| [Duración acumulada](done/duracion-acumulada/) | Distribución | Implementada (`ecdf`) |
 | [Duración de testigos](pendientes/duracion-testigos/) | Relación entre variables | Experimental |
 | [Machine Learning – Clustering](pendientes/machine-learning-clustering/) | Método analítico | Solo idea |
 | [Perfiles de duración y K-means](pendientes/perfiles-duracion-k-means/) | Método analítico | Solo idea |
 
-Las propuestas están separadas en [pendientes/](pendientes/) y [done/](done/), que reúne las ya implementadas en el Data Agent. Al implementar una, se mueve de `pendientes/` a `done/` y se actualiza su estado.
+Las capturas de las vistas implementadas están en [fotos/](fotos/). Las propuestas están separadas en [pendientes/](pendientes/) y [done/](done/), que reúne las ya implementadas en el Data Agent. Al implementar una, se mueve de `pendientes/` a `done/` y se actualiza su estado.
 
 ## Consultar las propuestas
 

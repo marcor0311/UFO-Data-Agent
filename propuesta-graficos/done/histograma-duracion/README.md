@@ -1,6 +1,6 @@
 # Histograma de duración
 
-**Estado · Recuperada**
+**Estado, Implementada** en el Data Agent como vista `histogram` ([#53](https://github.com/marcor0311/UFO-Data-Agent/issues/53)). Captura: [fotos/](../../fotos/).
 
 Histograma de intervalos iguales de 5, 10 o 15 minutos hasta 60. La cola superior y los registros sin duración tienen acceso separado. El núcleo compartido conserva también la alternativa con intervalos en escala logarítmica.
 
@@ -24,7 +24,7 @@ El [fragmento de exportación](fuente-estatica.original.txt) y los [estilos orig
 
 ## Cómo revisar la referencia
 
-Consulta la lámina D3 en `referencias/`. Para revisar las interacciones existentes, abre el [observatorio original](../../../DB%20Test/observatorio.html) y busca **Duración · histograma** en **Explorar herramientas**. El recorte y la pregunta del prototipo están en la ficha v2.
+Consulta la lámina D3 en `referencias/`. Para revisar las interacciones existentes, abre el [observatorio original](../../../DB%20Test/observatorio.html) y busca **Duración, histograma** en **Explorar herramientas**. El recorte y la pregunta del prototipo están en la ficha v2.
 
 ## Prompt de ejemplo
 

@@ -38,7 +38,7 @@ el set de evaluación: registrar una verificación no cambia la carga verificada
 - Los **eventos** existen solo para grupos de duplicados **confirmados**:
   `fact_event` tiene **6.959** eventos y `event_report` enlaza sus **17.920**
   informes.
-- Un conteo de informes nunca se llama «avistamientos» ni «eventos».
+- Un conteo de informes nunca se llama “avistamientos” ni “eventos”.
 
 ## Modelo
 
@@ -103,8 +103,8 @@ los datos.
 | `nuclear_proximity` | `usable_for_nuclear_proximity` | Silver `usable_for_nuclear_proximity=1` | 495.019 | 207.553 |
 
 La hora exige además calendario apto, porque Silver conserva la precisión de
-reloj de 61 informes de Capella con fecha calificada («approximately 1300
-hours», «Summer 67»). Esa hora no se usa. Los motivos de exclusión
+reloj de 61 informes de Capella con fecha calificada (“approximately 1300
+hours”, “Summer 67”). Esa hora no se usa. Los motivos de exclusión
 (`dim_exclusion_reason`, 24 códigos) son excluyentes por análisis. Sumar los
 excluidos de análisis distintos cuenta el mismo informe varias veces.
 
@@ -173,7 +173,7 @@ Combinaciones prohibidas, con su código de error:
 | Sumar o promediar un porcentaje (`sum_*_pct`, `avg_*_pct`) | `ratio_not_summable` |
 | Sumar todas las resoluciones de celdas o todos los agregados de cobertura | `partition_required` |
 | Métrica fuera de su dataset (p. ej., `event_count` sobre informes) | `metric_unavailable` |
-| Métrica inexistente (p. ej., «ovnis reales») | `metric_unknown` |
+| Métrica inexistente (p. ej., “ovnis reales”) | `metric_unknown` |
 | Vista incompatible con el dataset o con la agrupación | `view_incompatible`, `view_contract` |
 | Elegibilidad no disponible en un agregado | `eligibility_unavailable` |
 
@@ -188,6 +188,11 @@ Combinaciones prohibidas, con su código de error:
 | `density` | `agg_spatial_cell`, `fact_report` | Agrupa por celda de 1° o 5°. |
 | `choropleth` | `agg_country`, `fact_report`, `report_model_output` | Agrupa solo por `country_iso2`. |
 | `hour_weekday` | `agg_weekday_hour`, `fact_report` | Agrupa exactamente por `weekday` y `event_hour`. |
+| `stacked` | Los mismos que `bars` | Una métrica y exactamente dos dimensiones; 100 % por valor de la primera. |
+| `matrix` | Los mismos que `bars` | Una métrica y exactamente dos dimensiones (filas, columnas). |
+| `dumbbell` | `fact_report`, `agg_year`, `agg_shape` | Agrupa por `[decade` o `event_year`, categoría`]` y filtra el período con `in` y exactamente dos valores. |
+| `timeline` | `fact_report` | Listado sin métricas con eligibility `day`, ordenado por `event_date`. |
+| `histogram`, `ecdf` | `fact_report` | Solo `report_count` y sin `group_by`; el servidor agrupa `duration_seconds` en tramos de un minuto hasta 60 y cuenta aparte la cola y los informes sin duración. |
 | `month_calendar` | `agg_month`, `fact_report` | Agrupa exactamente por `event_year` y `event_month`. Exige filtrar `event_year` a un rango de hasta 40 años y un `limit` de al menos 12 × años. |
 
 ### Resultado
@@ -198,7 +203,7 @@ Cada resultado incluye:
   `matched_source_rows`, `empty` y `total` si se pidió `rollup`;
 - `result_type` (`certified` o `composed`) y `certified_query_id`;
 - `readable_query`: filtros, agrupación, métricas, elegibilidad, orden y
-  límite, en español, para la opción «ver la consulta»;
+  límite, en español, para la opción “ver la consulta”;
 - `eligibility_applied`, con las implicadas, y `exclusions`: base, elegibles,
   excluidos y motivo;
 - `external_evidence_reports`;

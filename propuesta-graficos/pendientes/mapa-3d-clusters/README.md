@@ -1,6 +1,6 @@
 # Mapa 3D de clusters
 
-**Estado · Recuperada**
+**Estado, Recuperada**
 
 La misma capa de grupos de M1 sobre mapa inclinado a 60°, con terreno y ajuste de posición al cargar teselas. Conserva ruido, IDs, radio y ventana.
 
@@ -24,7 +24,7 @@ El [fragmento de exportación](fuente-estatica.original.txt) y los [estilos orig
 
 ## Cómo revisar la referencia
 
-Consulta la lámina M1b en `referencias/`. Para revisar las interacciones existentes, abre el [observatorio original](../../../DB%20Test/observatorio.html) y busca **Mapa 3D · Clusters** en **Explorar herramientas**. El recorte y la pregunta del prototipo están en la ficha v2.
+Consulta la lámina M1b en `referencias/`. Para revisar las interacciones existentes, abre el [observatorio original](../../../DB%20Test/observatorio.html) y busca **Mapa 3D, Clusters** en **Explorar herramientas**. El recorte y la pregunta del prototipo están en la ficha v2.
 
 ## Prompt de ejemplo
 

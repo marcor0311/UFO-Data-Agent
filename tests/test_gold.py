@@ -308,13 +308,42 @@ class GoldQueryTest(unittest.TestCase):
         unknown = [r for r in ok["rows"] if r["event_month"] is None]
         self.assertEqual([r["event_month"] for r in months], sorted(r["event_month"] for r in months))
         self.assertEqual(sum(r["report_count"] for r in months), 3)
-        # One «Mes desconocido» row per year: year-level reports minus those with a reliable month.
+        # One “Mes desconocido” row per year: year-level reports minus those with a reliable month.
         yearly = self.q(dataset="agg_year", filters=[{"column": "event_year", "op": "eq", "value": 1997}], group_by=["event_year"], metrics=["report_count"])
         year_total = yearly["rows"][0]["report_count"]
         self.assertEqual([(r["event_year"], r["event_month_label"], r["report_count"]) for r in unknown], [(1997, "Mes desconocido", year_total - 3)])
         self.assertEqual(ok["calendar_totals"], {"reports": year_total, "with_month": 3, "without_month": year_total - 3})
         self.assertEqual(ok["rows"][-1]["event_month"], None)                                   # después de diciembre
         self.assertEqual(ok["limitations"][0]["code"], "unknown_month")
+
+    def test_proposal_view_contracts(self):
+        two = dict(group_by=["decade", "source_code"], metrics=["report_count"])
+        self.assertEqual(self.code(dataset="agg_year", view="stacked", group_by=["decade"], metrics=["report_count"]), "view_contract")
+        self.assertEqual(self.code(dataset="agg_year", view="matrix", group_by=["decade", "source_code"], metrics=["report_count", "pending_candidate_reports"]), "view_contract")
+        self.assertTrue(self.q(dataset="agg_year", view="stacked", **two)["rows"])
+        self.assertTrue(self.q(dataset="agg_year", view="matrix", **two)["rows"])
+        self.assertEqual(self.code(dataset="agg_year", view="dumbbell", **two), "view_contract")              # sin filtro de dos períodos
+        self.assertEqual(self.code(dataset="agg_year", view="dumbbell", filters=[{"column": "decade", "op": "in", "value": [1990, 2000, 2010]}], **two), "view_contract")
+        self.assertEqual(self.code(dataset="agg_year", view="dumbbell", group_by=["source_code", "decade"], metrics=["report_count"],
+                                   filters=[{"column": "source_code", "op": "in", "value": ["UFOCAT", "UPDB"]}]), "view_contract")
+        self.q(dataset="agg_year", view="dumbbell", filters=[{"column": "decade", "op": "in", "value": [1990, 2000]}], **two)
+        self.assertEqual(self.code(dataset="fact_report", view="timeline", limit=5), "eligibility_missing")
+        self.assertEqual(self.code(dataset="fact_report", view="timeline", eligibility=["day"], metrics=["report_count"]), "view_contract")
+        dates = [r["event_date"] for r in self.q(dataset="fact_report", view="timeline", eligibility=["day"], limit=50)["rows"]]
+        self.assertEqual(dates, sorted(dates))
+
+    def test_duration_distribution(self):
+        self.assertEqual(self.code(dataset="fact_report", view="histogram", metrics=["report_count"], group_by=["source_code"]), "view_contract")
+        self.assertEqual(self.code(dataset="fact_report", view="ecdf", metrics=["pending_candidate_reports"]), "view_contract")
+        result = self.q(dataset="fact_report", view="histogram", metrics=["report_count"])
+        d = result["distribution"]
+        total = self.q(dataset="fact_report", metrics=["report_count"])["rows"][0]["report_count"]
+        self.assertEqual(len(d["bins"]), d["max_minutes"])
+        self.assertEqual(sum(b["report_count"] for b in d["bins"]) + d["over_max"], d["with_duration"])
+        self.assertEqual(d["with_duration"] + d["without_duration"], total)                          # nada se pierde ni se imputa
+        self.assertEqual(sum(r["report_count"] for r in result["rows"]), total)
+        self.assertEqual(result["rows"][-1]["duration_bin"], "Sin duración declarada")
+        self.assertEqual(self.q(dataset="fact_report", view="ecdf", metrics=["report_count"])["distribution"], d)
 
     def test_implied_eligibility(self):
         result = self.q(dataset="agg_month", filters=[{"column": "event_year", "op": "eq", "value": 1997}], group_by=["year_month"], metrics=["report_count"])

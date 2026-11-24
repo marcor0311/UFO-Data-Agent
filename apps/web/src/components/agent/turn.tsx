@@ -36,7 +36,7 @@ export function TurnView({ turn, index, active, onShowResults }: { turn: Turn; i
                   {label ?? step.tool}
                   {label && step.tool !== "search_certified" && step.tool !== "run_certified"
                     ? <> <code>{step.tool}</code></> : null}
-                  {" · "}{step.ok ? "Completada" : "Con error"}
+                  {", "}{step.ok ? "Completada" : "Con error"}
                 </li>
               );
             })}

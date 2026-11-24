@@ -13,7 +13,7 @@ test("una tabla truncada distingue filas visibles, universo del total y denomina
   const html = render();
   expect(html).toContain("Se muestran 2 filas de datos; hay más filas no mostradas.");
   expect(html).toContain("todos los grupos que cumplen los filtros y la elegibilidad de la consulta, incluidos los no mostrados");
-  expect(html).toContain("Denominador de «% de informes con evidencia externa»: 8 informes.");
+  expect(html).toContain("Denominador de “% de informes con evidencia externa”: 8 informes.");
   expect(totalRow(html)).toContain("Total del universo consultado");
 });
 
@@ -43,13 +43,13 @@ test("una consulta solo de porcentaje usa la población completa como denominado
   result.query.metrics = ["external_evidence_pct"];
   result.rows = result.rows.map((row) => ({ source_code: row.source_code, external_evidence_pct: row.external_evidence_pct }));
   result.total = { external_evidence_pct: 25 };
-  expect(render(result)).toContain("Denominador de «% de informes con evidencia externa»: 8 informes.");
+  expect(render(result)).toContain("Denominador de “% de informes con evidencia externa”: 8 informes.");
 });
 
 test("prefiere el denominador explícito del total de Gold", () => {
   const result = rollupResult();
   result.matched_source_rows = 999;
-  expect(render(result)).toContain("Denominador de «% de informes con evidencia externa»: 8 informes.");
+  expect(render(result)).toContain("Denominador de “% de informes con evidencia externa”: 8 informes.");
 });
 
 test("no inventa un denominador si el catálogo no lo declara", () => {
@@ -66,7 +66,7 @@ test("un denominador desconocido solo se muestra si Gold devuelve su valor", () 
   const result = rollupResult();
   expect(render(result, catalog)).not.toContain("Denominador de");
   result.total!.scored_reports = 7;
-  expect(render(result, catalog)).toContain("Denominador de «% de informes con evidencia externa»: 7 informes con puntuación.");
+  expect(render(result, catalog)).toContain("Denominador de “% de informes con evidencia externa”: 7 informes con puntuación.");
 });
 
 test("preserva un denominador cero y un porcentaje nulo", () => {
@@ -74,7 +74,7 @@ test("preserva un denominador cero y un porcentaje nulo", () => {
   result.total = { report_count: 0, external_evidence_pct: null, distinct_country_count: 0 };
   result.matched_source_rows = 0;
   const html = render(result);
-  expect(html).toContain("Denominador de «% de informes con evidencia externa»: 0 informes.");
+  expect(html).toContain("Denominador de “% de informes con evidencia externa”: 0 informes.");
   expect(totalRow(html)).toContain('class="num">—</td>');
   expect(totalRow(html)).not.toContain("0 %");
 });

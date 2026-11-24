@@ -61,7 +61,28 @@ VIEWS = {
     "month_calendar": {"label": "Calendario año × mes", "datasets": ["agg_month", "fact_report"],
                        "description": "Informes por año y mes, un año por fila. Exige filtrar event_year a un rango "
                                       f"de hasta {MAX_CALENDAR_YEARS} años y un limit de 12 filas por año."},
+    "stacked": {"label": "Composición al 100 %", "datasets": ["fact_report", "report_model_output", "fact_event", "agg_year", "agg_month", "agg_weekday_hour", "agg_country", "agg_shape", "agg_source", "agg_nuclear_band", "agg_coverage"],
+                "description": "Barras apiladas al 100 %: cómo se reparte la segunda dimensión (fuente, forma…) dentro de cada "
+                               "valor de la primera (año, década…). Conserva los conteos detrás de cada porcentaje."},
+    "matrix": {"label": "Matriz de dos dimensiones", "datasets": ["fact_report", "report_model_output", "fact_event", "agg_year", "agg_month", "agg_weekday_hour", "agg_country", "agg_shape", "agg_source", "agg_nuclear_band", "agg_coverage"],
+               "description": "Matriz de conteos: filas por la primera dimensión (país, fuente…) y columnas por la segunda "
+                              "(década, año…). Una métrica."},
+    "dumbbell": {"label": "Cambio entre dos períodos", "datasets": ["fact_report", "agg_year", "agg_shape"],
+                 "description": "Puntos unidos con la proporción de cada categoría en dos períodos. Agrupa por "
+                                "[decade o event_year, categoría] y filtra el período con op in y exactamente dos valores."},
+    "timeline": {"label": "Cronología de informes", "datasets": ["fact_report"],
+                 "description": "Tarjetas de informes ordenadas por fecha con precisión diaria. Sin métricas; exige eligibility 'day'."},
+    "histogram": {"label": "Histograma de duración", "datasets": ["fact_report"],
+                  "description": "Informes por tramos iguales de duración declarada hasta 60 minutos; la cola superior y los "
+                                 "informes sin duración se cuentan aparte. Pide solo report_count, sin group_by."},
+    "ecdf": {"label": "Duración acumulada", "datasets": ["fact_report"],
+             "description": "Porcentaje acumulado de informes con duración declarada hasta cada minuto (0–60). "
+                            "Pide solo report_count, sin group_by."},
 }
+PERIOD_DIMENSIONS = ("decade", "event_year")
+TIMELINE_COLUMNS = ["report_id", "event_date", "source_code", "shape_code", "country_iso2", "num_witnesses",
+                    "duration_seconds", "uses_external_evidence"]
+DURATION_MAX_MINUTES = 60
 POINT_COLUMNS = ["report_id", "lat", "lng", "source_code", "date_key", "shape_code", "coordinate_basis",
                  "uses_external_evidence", "duplicate_status"]
 DENSITY_GROUPS = {"agg_spatial_cell": [["cell_lat", "cell_lng"]],
@@ -549,6 +570,20 @@ class Analytics:
             raise QueryError("view_contract", "La matriz agrupa exactamente por weekday y event_hour")
         if q.view == "month_calendar":
             self._check_calendar(q)
+        if q.view in ("stacked", "matrix") and (len(metrics) != 1 or len(q.group_by) != 2):
+            raise QueryError("view_contract", f"La vista {q.view} requiere una métrica y exactamente dos dimensiones")
+        if q.view == "dumbbell":
+            periods = [f for f in q.filters if f.column == (q.group_by[0] if q.group_by else None) and f.op == "in"]
+            if (len(metrics) != 1 or len(q.group_by) != 2 or q.group_by[0] not in PERIOD_DIMENSIONS
+                    or len(periods) != 1 or not isinstance(periods[0].value, list) or len(set(periods[0].value)) != 2):
+                raise QueryError("view_contract", "El cambio entre períodos agrupa por [decade o event_year, categoría], "
+                                                  "con una métrica, y filtra ese período con op in y exactamente dos valores")
+        if q.view == "timeline" and metrics:
+            raise QueryError("view_contract", f"La vista {q.view} lista informes: no admite métricas")
+        if q.view == "timeline" and "day" not in closure(applied):
+            raise QueryError("eligibility_missing", "La cronología solo admite fechas con precisión diaria: declara eligibility 'day'")
+        if q.view in ("histogram", "ecdf") and (list(metrics) != ["report_count"] or q.group_by):
+            raise QueryError("view_contract", f"La vista {q.view} pide solo report_count y sin group_by: el servidor agrupa la duración")
         if q.view == "density" and list(q.group_by) not in DENSITY_GROUPS.get(q.dataset, []):
             raise QueryError("view_contract", f"La densidad agrupa por {DENSITY_GROUPS.get(q.dataset)}")
         if q.view == "bars" and (not metrics or not 1 <= len(q.group_by) <= 2):
@@ -560,6 +595,26 @@ class Analytics:
         return {"spec": spec, "metrics": metrics, "applied": sorted(applied), "inherent": bool(inherent),
                 "closure": sorted(closure(applied)),
                 "where": where, "params": params, "base_where": base_where, "base_params": base_params}
+
+    def _duration_distribution(self, con, table: str, plan: dict) -> dict:
+        """Reports per one-minute duration bin (0–60), plus the upper tail and reports without duration.
+
+        Bins use the same WHERE and eligibility as the query; the client may merge them into
+        wider equal bins (5, 10, 15 min) or accumulate them (ECDF) without another query.
+        """
+        where = " WHERE " + " AND ".join(plan["where"]) if plan["where"] else ""
+        top = DURATION_MAX_MINUTES * 60
+        sql = (f"SELECT CASE WHEN duration_seconds IS NULL THEN -1 WHEN duration_seconds >= {top} THEN {DURATION_MAX_MINUTES} "
+               f"ELSE CAST(duration_seconds / 60 AS INTEGER) END AS b, COUNT(*) AS n FROM {table}{where} GROUP BY b")
+        counts = {r["b"]: r["n"] for r in self._execute(con, sql, plan["params"])}
+        bins = [{"from_s": m * 60, "to_s": (m + 1) * 60, "report_count": counts.get(m, 0)} for m in range(DURATION_MAX_MINUTES)]
+        over, missing = counts.get(DURATION_MAX_MINUTES, 0), counts.get(-1, 0)
+        rows = [{"duration_bin": f"{m}–{m + 1} min", "report_count": b["report_count"]} for m, b in enumerate(bins)]
+        rows += [{"duration_bin": f"Más de {DURATION_MAX_MINUTES} min", "report_count": over},
+                 {"duration_bin": "Sin duración declarada", "report_count": missing}]
+        with_duration = sum(b["report_count"] for b in bins) + over
+        return {"rows": rows, "bins": bins, "over_max": over, "without_duration": missing,
+                "with_duration": with_duration, "max_minutes": DURATION_MAX_MINUTES}
 
     def _check_calendar(self, q: Query) -> None:
         """A year × month matrix must fit in one result: bounded years, every cell within limit."""
@@ -621,7 +676,7 @@ class Analytics:
     def _with_unknown_month(self, result: dict) -> dict:
         """Calendar: add, per year, the reports whose month cannot be known.
 
-        Each year gets one extra row with event_month = null («Mes desconocido»):
+        Each year gets one extra row with event_month = null (“Mes desconocido”):
         reports of that year counted at year level (calendar eligibility) minus
         the ones with a reliable month. Both counts come from Gold with the same
         non-temporal filters, so the chart, the exact data and the totals agree.
@@ -647,7 +702,7 @@ class Analytics:
         result.update(rows=rows, row_count=len(rows), empty=not rows,
                       calendar_totals={"reports": reports, "with_month": with_month, "without_month": max(0, reports - with_month)})
         result["limitations"] = [{"code": "unknown_month",
-                                  "text": "«Mes desconocido» reúne los informes del año cuyo mes no es fiable (solo consignan el año, "
+                                  "text": "“Mes desconocido” reúne los informes del año cuyo mes no es fiable (solo consignan el año, "
                                           "fecha aproximada o marcador de día); no se reparten entre los meses."}] + result["limitations"]
         return result
 
@@ -663,7 +718,7 @@ class Analytics:
             group = " GROUP BY " + ", ".join(groups) if groups else ""
             if q.order_by:
                 order = f' ORDER BY "{q.order_by}" {"DESC" if q.descending else "ASC"}'
-            elif q.view in ("timeseries", "hour_weekday", "month_calendar", "density") or not groups:
+            elif q.view in ("timeseries", "hour_weekday", "month_calendar", "density", "stacked", "matrix", "dumbbell") or not groups:
                 order = " ORDER BY " + ", ".join(groups) if groups else ""
             else:
                 order = f' ORDER BY "{metrics[0]}" DESC, ' + ", ".join(groups)
@@ -674,7 +729,8 @@ class Analytics:
                 columns = list(q.columns)
             else:
                 # Defaults never widen the eligibility the caller declared.
-                defaults = POINT_COLUMNS if q.view == "points" else spec.get("default_columns", list(spec["columns"]))
+                defaults = (POINT_COLUMNS if q.view == "points" else TIMELINE_COLUMNS if q.view == "timeline"
+                            else spec.get("default_columns", list(spec["columns"])))
                 columns = [c for c in defaults if self._requirements(q.dataset, [c]) <= set(plan["closure"])]
             if q.view == "points":
                 columns = list(dict.fromkeys(["report_id", "lat", "lng", *columns]))
@@ -687,7 +743,8 @@ class Analytics:
             select = [f'"{c}"' for c in columns]
             group = ""
             key = next((c for c, r in spec["columns"].items() if r == "key"), columns[0])
-            order = (f' ORDER BY "{q.order_by}" {"DESC" if q.descending else "ASC"}, "{key}"' if q.order_by else f' ORDER BY "{key}"')
+            order = (f' ORDER BY "{q.order_by}" {"DESC" if q.descending else "ASC"}, "{key}"' if q.order_by
+                     else f' ORDER BY "event_date", "{key}"' if q.view == "timeline" else f' ORDER BY "{key}"')
         sql = "SELECT " + ", ".join(select) + f" FROM {table}{where}{group}{order} LIMIT ?"
         matched_expr = "COALESCE(SUM(report_count),0)" if "report_count" in spec["columns"] else "COUNT(*)"
         external_expr = ("COALESCE(SUM(external_evidence_reports),0)" if "external_evidence_reports" in spec["columns"]
@@ -695,6 +752,7 @@ class Analytics:
         with closing(self.connect()) as con:
             rows = [dict(r) for r in self._execute(con, sql, [*plan["params"], q.limit + 1])]
             matched = self._execute(con, f"SELECT {matched_expr} FROM {table}{where}", plan["params"])[0][0]
+            distribution = self._duration_distribution(con, table, plan) if q.view in ("histogram", "ecdf") else None
             external = self._execute(con, f"SELECT {external_expr} FROM {table}{where}", plan["params"])[0][0] if external_expr else None
             total_row = None
             if q.rollup:
@@ -704,6 +762,8 @@ class Analytics:
             exclusions = self._exclusions(con, q, plan)
         truncated = len(rows) > q.limit
         rows = rows[:q.limit]
+        if distribution:
+            rows, truncated = distribution.pop("rows"), False
         self._add_labels(rows, q.group_by if metrics else [c for c in rows[0]] if rows else [])
         query_sha = text_digest(q.canonical())
         certified, status = self._certified_match(query_sha)
@@ -734,6 +794,7 @@ class Analytics:
                          "silver_reference_date": self.meta["manifest"]["silver"].get("reference_date"),
                          "label": f"Datos de la carga Gold {self.load_id[:12]} construida el {self.meta['manifest']['built_at'][:10]}"},
             "limitations": limitations,
+            **({"distribution": distribution} if distribution else {}),
         }
 
     def _exclusions(self, con, q: Query, plan: dict):
@@ -826,9 +887,9 @@ class Analytics:
             "orden": f"{q.order_by} {'desc' if q.descending else 'asc'}" if q.order_by else "predeterminado",
             "limite": q.limit,
         }
-        parts["texto"] = (f"{parts['dataset']} · filtros: {'; '.join(parts['filtros'])} · agrupado por: {', '.join(parts['agrupado_por'])}"
-                          f" · métricas: {', '.join(parts['metricas'])} · elegibilidad: {', '.join(parts['elegibilidad'])}"
-                          f" · límite {q.limit}")
+        parts["texto"] = (f"{parts['dataset']}, filtros: {'; '.join(parts['filtros'])}, agrupado por: {', '.join(parts['agrupado_por'])}"
+                          f", métricas: {', '.join(parts['metricas'])}, elegibilidad: {', '.join(parts['elegibilidad'])}"
+                          f", límite {q.limit}")
         return parts
 
 

@@ -67,7 +67,7 @@ export function BarsView({ result, catalog }: Props) {
                 const text = formatMetric(value(row, metric), metric, catalog);
                 const lines = [{ value: text, label: metricLabel(catalog, metric), key: "var(--series-1)" }];
                 return (
-                  <g key={i} className="mark" tabIndex={0} aria-label={`${label}: ${text}`}
+                  <g key={i} className="mark" role="img" tabIndex={0} aria-label={`${label}: ${text}`}
                      onPointerMove={(e) => show(e, { title: label, lines })} onPointerLeave={hide}
                      onFocus={(e) => show(e.currentTarget.getBoundingClientRect(), { title: label, lines })} onBlur={hide}>
                     <rect x={0} y={y - GAP / 2} width={width} height={BAR + GAP} fill="transparent" />
@@ -156,7 +156,7 @@ export function TimeseriesView({ result, catalog }: Props) {
                            setHover(i);
                            const p = points[i];
                            const lines = [{ value: formatMetric(value(p.row, metric), metric, catalog), label: metricLabel(catalog, metric), key: "var(--series-1)" }];
-                           show(e, { title: cell(p.row, time) + (f.label ? " · " + f.label : ""), lines });
+                           show(e, { title: cell(p.row, time) + (f.label ? ", " + f.label : ""), lines });
                          }}
                          onPointerLeave={() => { setHover(null); hide(); }}>
                       {ticks(max).map((t) => (
@@ -321,7 +321,7 @@ export function MonthCalendarView({ result, catalog }: Props) {
   const label = metricLabel(catalog, metric);
   const totals = result.calendar_totals;
   const left = 52;
-  const extra = hasUnknown ? 2 : 0;                  // «Sin mes» and «Total» columns
+  const extra = hasUnknown ? 2 : 0;                  // “Sin mes” and “Total” columns
   const gap = hasUnknown ? 14 : 0;
   const size = Math.max(18, Math.min(40, Math.floor((measured - left - gap - 8) / (12 + extra * 1.6))));
   const wide = Math.round(size * 1.6);
@@ -372,12 +372,12 @@ export function MonthCalendarView({ result, catalog }: Props) {
           <div className="stat">
             <div className="stat-label">Con mes conocido</div>
             <div className="stat-value">{num(totals.with_month)}</div>
-            <div className="stat-note">{share(totals.with_month, totals.reports)} del período · en el calendario</div>
+            <div className="stat-note">{share(totals.with_month, totals.reports)} del período, en el calendario</div>
           </div>
           <div className="stat stat-unknown">
             <div className="stat-label">Mes desconocido</div>
             <div className="stat-value">{num(totals.without_month)}</div>
-            <div className="stat-note">{share(totals.without_month, totals.reports)} del período · no se puede calcular su mes</div>
+            <div className="stat-note">{share(totals.without_month, totals.reports)} del período, no se puede calcular su mes</div>
           </div>
         </div>
       ) : null}
@@ -434,7 +434,7 @@ export function MonthCalendarView({ result, catalog }: Props) {
         <RampLegend max={max} scale="linear" missing note="escala lineal de informes por mes" />
         <p className="viz-note" id={`${missingId}-help`}>
           Las celdas rayadas no tienen fila o valor en este resultado; no equivalen a cero.
-          {hasUnknown ? " «Sin mes» cuenta los informes del año cuyo mes no se puede calcular (solo consignan el año, fecha aproximada o marcador de día); no se reparten entre los meses. «Total» suma ambos." : ""}
+          {hasUnknown ? " “Sin mes” cuenta los informes del año cuyo mes no se puede calcular (solo consignan el año, fecha aproximada o marcador de día); no se reparten entre los meses. “Total” suma ambos." : ""}
           {" "}Usa las flechas para recorrer los años y los meses.
         </p>
       </figure>

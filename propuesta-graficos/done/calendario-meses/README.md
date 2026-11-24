@@ -1,6 +1,6 @@
 # Calendario por meses del año
 
-**Estado · Implementada** en el Data Agent como vista `month_calendar` ([#77](https://github.com/marcor0311/UFO-Data-Agent/issues/77)). Además de la matriz, muestra por año los informes cuyo mes no se puede calcular, el total anual y los totales del período.
+**Estado, Implementada** en el Data Agent como vista `month_calendar` ([#77](https://github.com/marcor0311/UFO-Data-Agent/issues/77)). Además de la matriz, muestra por año los informes cuyo mes no se puede calcular, el total anual y los totales del período.
 
 Matriz año × mes con recuento e IDs seleccionables. Excluye del eje mensual las fechas que solo consignan un año.
 

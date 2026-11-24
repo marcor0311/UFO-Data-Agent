@@ -1,6 +1,6 @@
 # Duración acumulada
 
-**Estado · Experimental**
+**Estado, Implementada** en el Data Agent como vista `ecdf` ([#85](https://github.com/marcor0311/UFO-Data-Agent/issues/85)). Captura: [fotos/](../../fotos/).
 
 Función de distribución empírica acumulada (ECDF) por duración válida. La vista viva ofrece umbrales seleccionables de 1, 5, 15 y 60 minutos cuando aplican.
 
@@ -24,7 +24,7 @@ El [fragmento de exportación](fuente-estatica.original.txt) y los [estilos orig
 
 ## Cómo revisar la referencia
 
-Consulta la lámina D13 en `referencias/`. Para revisar las interacciones existentes, abre el [observatorio original](../../../DB%20Test/observatorio.html) y busca **Duración acumulada · ECDF** en **Explorar herramientas**. El recorte y la pregunta del prototipo están en la ficha v2.
+Consulta la lámina D13 en `referencias/`. Para revisar las interacciones existentes, abre el [observatorio original](../../../DB%20Test/observatorio.html) y busca **Duración acumulada, ECDF** en **Explorar herramientas**. El recorte y la pregunta del prototipo están en la ficha v2.
 
 ## Prompt de ejemplo
 

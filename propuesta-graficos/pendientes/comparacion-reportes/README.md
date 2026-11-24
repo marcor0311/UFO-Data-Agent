@@ -1,6 +1,6 @@
 # Comparación de reportes
 
-**Estado · Recuperada**
+**Estado, Recuperada**
 
 Dos fichas y una tabla de trece campos con controles para cambiar ambos reportes y abrirlos por separado. Destaca coincidencias entre valores presentes.
 
@@ -20,7 +20,7 @@ Contrastar cómo se describen dos informes, qué campos coinciden y qué datos f
 
 ## Cómo revisar la referencia
 
-En el [observatorio original](../../../DB%20Test/observatorio.html), solicita «Compará las características de dos eventos UAP» o busca **Comparar eventos**. Los selectores originales cambian las dos fichas.
+En el [observatorio original](../../../DB%20Test/observatorio.html), solicita “Compará las características de dos eventos UAP” o busca **Comparar eventos**. Los selectores originales cambian las dos fichas.
 
 ## Prompt de ejemplo
 

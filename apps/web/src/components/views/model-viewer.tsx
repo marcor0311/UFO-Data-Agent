@@ -108,7 +108,7 @@ function Stage({ kind, zoom, camera }: { kind: ModelKind | "all"; zoom: number; 
                 e.preventDefault(); rotate(...step[e.key]);
               }} />
       <div className="model-viewer-labels" aria-hidden="true" style={{ gridTemplateColumns: `repeat(${columns}, 1fr)`, gridTemplateRows: `repeat(${rows}, 1fr)` }}>
-        {visible.map((f) => <span key={f.kind}>{f.label}{f.symbolic ? " ·" : ""}</span>)}
+        {visible.map((f) => <span key={f.kind}>{f.label}{f.symbolic ? " *" : ""}</span>)}
       </div>
     </div>
   );
@@ -132,12 +132,12 @@ export function ModelViewer({ onClose, initial = "all" }: { onClose: () => void;
       </div>
       <p>
         {MODEL_FORMS.length} formas estandarizadas, cada una con su representación propia. Changing, Formation, Cloud, Light, Fireball,
-        Flash, Star, Other y Unknown (marcadas con ·) son símbolos interpretativos: no reconstruyen objetos verificados.
+        Flash, Star, Other y Unknown (marcadas con *) son símbolos interpretativos: no reconstruyen objetos verificados.
       </p>
       <div className="model-viewer-toolbar">
         <label>Forma{" "}
           <select value={kind} onChange={(e) => setKind(e.target.value as ModelKind | "all")}>
-            <option value="all">Todas · {MODEL_FORMS.length} formas</option>
+            <option value="all">Todas, {MODEL_FORMS.length} formas</option>
             {MODEL_FORMS.map((f) => <option key={f.kind} value={f.kind}>{f.label}</option>)}
           </select>
         </label>
@@ -150,7 +150,7 @@ export function ModelViewer({ onClose, initial = "all" }: { onClose: () => void;
       </div>
       {/* Mounted only while shown: the WebGL context exists only then. */}
       <Stage kind={kind} zoom={zoom} camera={camera} />
-      <p className="viz-note">Arrastra para rotar · flechas para girar · elige una forma para verla en detalle.</p>
+      <p className="viz-note">Arrastra para rotar, flechas para girar, elige una forma para verla en detalle.</p>
     </section>
   );
 }
