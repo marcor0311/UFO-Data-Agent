@@ -1,6 +1,6 @@
 # Región por año
 
-**Estado · Recuperada**
+**Estado · Implementada** en el Data Agent como vista `matrix` ([#81](https://github.com/marcor0311/UFO-Data-Agent/issues/81), adaptada a país × década). Captura: [fotos/](../../fotos/).
 
 Matriz de conteos de California y Nevada por año, con celdas que seleccionan los IDs de cada par. Continúa la matriz estática v1.
 

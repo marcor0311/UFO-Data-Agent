@@ -107,7 +107,7 @@ export function DensityView({ result, catalog }: Props) {
             const title = `Celda ${lat}° a ${lat + res}° de latitud, ${lng}° a ${lng + res}° de longitud`;
             const lines = [{ value: formatMetric(v, metric, catalog), label: metricLabel(catalog, metric) }];
             return (
-              <path key={i} d={d} fill={RAMP[Math.max(0, rampIndex(v, max))]} className="mark cell" tabIndex={0} aria-label={`${title}: ${lines[0].value}`}
+              <path key={i} d={d} fill={RAMP[Math.max(0, rampIndex(v, max))]} className="mark cell" role="img" tabIndex={0} aria-label={`${title}: ${lines[0].value}`}
                     onPointerMove={(e) => show(e, { title, lines })} onPointerLeave={hide}
                     onFocus={(e) => show(e.currentTarget.getBoundingClientRect(), { title, lines })} onBlur={hide} />
             );

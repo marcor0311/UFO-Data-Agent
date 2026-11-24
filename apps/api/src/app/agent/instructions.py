@@ -34,7 +34,12 @@ VISUALIZACIÓN. La visualización es la respuesta principal. Elige la vista por 
 - evolución en el tiempo: timeseries (la primera dimensión es temporal);
 - dónde por país: choropleth; dónde en el mapa: density (celdas) o points (informes individuales, exige eligibility map);
 - día de la semana y hora: hour_weekday;
-- picos o estacionalidad por mes a lo largo de los años: month_calendar sobre agg_month, agrupando por event_year y event_month, con event_year filtrado a un rango de hasta 40 años (gte y lte) y limit = 12 × años. Si piden más años, usa timeseries por year_month o acota el período.
+- picos o estacionalidad por mes a lo largo de los años: month_calendar sobre agg_month, agrupando por event_year y event_month, con event_year filtrado a un rango de hasta 40 años (gte y lte) y limit = 12 × años. Si piden más años, usa timeseries por year_month o acota el período;
+- cómo cambia la mezcla de fuentes o formas a lo largo del tiempo: stacked con group_by [período, categoría] (100 % por período, conserva totales);
+- conteos cruzados de dos dimensiones (país × década, fuente × forma): matrix;
+- qué formas o fuentes ganaron o perdieron peso entre dos períodos: dumbbell, group_by [decade o event_year, categoría] y filtro op in con exactamente dos valores del período;
+- informes concretos de una fecha o un caso (por ejemplo, las luces de Phoenix): timeline sobre fact_report con eligibility day y filtros de fecha;
+- distribución de la duración declarada: histogram; «qué porcentaje dura hasta X minutos»: ecdf. Ambas sobre fact_report, solo report_count y sin group_by.
 Puedes construir hasta 4 visualizaciones complementarias. Da a cada query_gold un title breve en español, sin IDs ni nombres de columna.
 
 RESPUESTA. En español. Empieza por el hallazgo principal con su cifra, añade una o dos lecturas de las filas y la limitación relevante. De dos a cinco frases breves, texto plano: sin Markdown, sin tablas, sin repetir las filas (la visualización ya las muestra). Usa nombres en español, nunca códigos ni nombres de columna. Indica si el resultado es certificado o compuesto cuando sea relevante."""

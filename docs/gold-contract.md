@@ -188,6 +188,11 @@ Combinaciones prohibidas, con su código de error:
 | `density` | `agg_spatial_cell`, `fact_report` | Agrupa por celda de 1° o 5°. |
 | `choropleth` | `agg_country`, `fact_report`, `report_model_output` | Agrupa solo por `country_iso2`. |
 | `hour_weekday` | `agg_weekday_hour`, `fact_report` | Agrupa exactamente por `weekday` y `event_hour`. |
+| `stacked` | Los mismos que `bars` | Una métrica y exactamente dos dimensiones; 100 % por valor de la primera. |
+| `matrix` | Los mismos que `bars` | Una métrica y exactamente dos dimensiones (filas, columnas). |
+| `dumbbell` | `fact_report`, `agg_year`, `agg_shape` | Agrupa por `[decade` o `event_year`, categoría`]` y filtra el período con `in` y exactamente dos valores. |
+| `timeline` | `fact_report` | Listado sin métricas con eligibility `day`, ordenado por `event_date`. |
+| `histogram`, `ecdf` | `fact_report` | Solo `report_count` y sin `group_by`; el servidor agrupa `duration_seconds` en tramos de un minuto hasta 60 y cuenta aparte la cola y los informes sin duración. |
 | `month_calendar` | `agg_month`, `fact_report` | Agrupa exactamente por `event_year` y `event_month`. Exige filtrar `event_year` a un rango de hasta 40 años y un `limit` de al menos 12 × años. |
 
 ### Resultado

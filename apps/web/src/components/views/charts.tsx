@@ -67,7 +67,7 @@ export function BarsView({ result, catalog }: Props) {
                 const text = formatMetric(value(row, metric), metric, catalog);
                 const lines = [{ value: text, label: metricLabel(catalog, metric), key: "var(--series-1)" }];
                 return (
-                  <g key={i} className="mark" tabIndex={0} aria-label={`${label}: ${text}`}
+                  <g key={i} className="mark" role="img" tabIndex={0} aria-label={`${label}: ${text}`}
                      onPointerMove={(e) => show(e, { title: label, lines })} onPointerLeave={hide}
                      onFocus={(e) => show(e.currentTarget.getBoundingClientRect(), { title: label, lines })} onBlur={hide}>
                     <rect x={0} y={y - GAP / 2} width={width} height={BAR + GAP} fill="transparent" />

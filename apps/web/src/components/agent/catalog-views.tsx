@@ -9,6 +9,12 @@ const viewPaths: Record<ViewCode, string> = {
   choropleth: "m2 4.5 4-2 4 2 4-2v9l-4 2-4-2-4 2zM6 2.5v9M10 4.5v9",
   hour_weekday: "M2.5 4.5h11v9h-11zM5 2.5v4M11 2.5v4M2.5 7.5h11M6.2 7.5v6M9.8 7.5v6M2.5 10.5h11",
   month_calendar: "M2.5 2.5h11v11h-11zM2.5 5.5h11M2.5 8.5h11M2.5 11.5h11M6.2 5.5v8M9.8 5.5v8",
+  stacked: "M3 13.5V3M3 13.5h10.5M5.5 11.5v-3h2v3zM9 11.5V6h2v5.5zM5.5 8.5v-2h2v2zM9 6V4h2v2z",
+  matrix: "M2.5 2.5h11v11h-11zM2.5 6.2h11M2.5 9.8h11M6.2 2.5v11M9.8 2.5v11",
+  dumbbell: "M4 4.5h8M4 8h5M6 11.5h6M4 4.5h.01M12 4.5h.01M4 8h.01M9 8h.01M6 11.5h.01M12 11.5h.01",
+  timeline: "M8 2v12M8 4h4M4 8h4M8 12h4",
+  histogram: "M2.5 13.5h11M3.5 13.5V9h2v4.5M6.5 13.5V5h2v8.5M9.5 13.5V7h2v6.5",
+  ecdf: "M2.5 13.5h11M2.5 13.5V2.5M3 12h2V8h2V5h3V3.5h3.5",
 };
 
 export function CatalogViews({ views }: { views: Catalog["views"] }) {
