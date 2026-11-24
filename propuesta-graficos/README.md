@@ -1,6 +1,6 @@
 # Biblioteca de propuestas gráficas
 
-Recuperación del prototipo **DB Test** y de su Sketchbook v2 para evaluación visual y técnica. La biblioteca agrupa 13 recuperaciones, cuatro propuestas experimentales y dos ideas. El mapa 3D de duración por forma conserva sus componentes reutilizables con el ensamblaje pendiente.
+Recuperación del prototipo **DB Test** y de su Sketchbook v2 para evaluación visual y técnica. La biblioteca agrupa 13 recuperaciones, cuatro propuestas experimentales dos ideas, el globo 3D y nueve prototipos animados sugeridos. El mapa 3D de duración por forma conserva sus componentes reutilizables con el ensamblaje pendiente.
 
 | Propuesta | Categoría | Estado |
 | --- | --- | --- |
@@ -20,6 +20,8 @@ Recuperación del prototipo **DB Test** y de su Sketchbook v2 para evaluación v
 | [Cronología](done/cronologia/) | Tiempo | Implementada (`timeline`) |
 | [Cambios de composición entre períodos](done/cambios-composicion-periodos/) | Composición | Implementada (`dumbbell`) |
 | [Duración acumulada](done/duracion-acumulada/) | Distribución | Implementada (`ecdf`) |
+| [Globo 3D](done/globo-3d/) | Cartografía | Implementada (`globe`) |
+| [Gráficos animados sugeridos](pendientes/animados-sugeridos/) | Varias | Sugerencia (nueve prototipos) |
 | [Duración de testigos](pendientes/duracion-testigos/) | Relación entre variables | Experimental |
 | [Machine Learning – Clustering](pendientes/machine-learning-clustering/) | Método analítico | Solo idea |
 | [Perfiles de duración y K-means](pendientes/perfiles-duracion-k-means/) | Método analítico | Solo idea |

@@ -20,7 +20,7 @@ def test_health_and_catalog(client, gold):
     catalog = client.get("/api/agent/catalog").json()
     assert catalog["certified_queries"][0] == {**catalog["certified_queries"][0], "id": "CQ_TEST_SOURCES", "valid": True}
     assert set(catalog["views"]) == {"table", "bars", "timeseries", "points", "density", "choropleth", "hour_weekday", "month_calendar",
-                                     "stacked", "matrix", "dumbbell", "timeline", "histogram", "ecdf"}
+                                     "stacked", "matrix", "dumbbell", "timeline", "histogram", "ecdf", "globe"}
     assert catalog["country_m49"]["US"] == "840" and catalog["dimensions"]["country_iso2"]["label"] == "País"
     for code, metric in gold.metrics.items():
         if metric["type"] == "ratio":
@@ -116,6 +116,16 @@ def test_follow_up_appends_turn(client):
     use_stream([message("Dos.")])
     r = client.post("/api/agent/chat", json={"question": "Dos", "conversation_id": cid})
     assert len(client.get(f"/api/agent/conversations/{cid}").json()["turns"]) == 2 and r.json()["turn"]["answer"] == "Dos."
+
+
+def test_selected_area_limits_the_turn(client):
+    login(client)
+    phoenix = [[-113, 33], [-111, 33], [-111, 34], [-113, 34]]
+    use_stream([call("query_gold", {"dataset": "fact_report", "metrics": ["report_count"], "eligibility": ["map"]})], [message("Cuatro.")])
+    turn = client.post("/api/agent/chat", json={"question": "¿Cuántos?", "area": phoenix}).json()["turn"]
+    assert turn["area"] == phoenix
+    assert turn["visualizations"][0]["rows"][0]["report_count"] == 4
+    assert client.post("/api/agent/chat", json={"question": "x", "area": [[0, 0], [1, 1]]}).status_code == 422
 
 
 def test_model_must_belong_to_account(client):

@@ -21,6 +21,7 @@ import argparse
 from collections import Counter
 from contextlib import closing
 from dataclasses import dataclass
+from functools import lru_cache
 from datetime import datetime, timezone
 import json
 import math
@@ -54,6 +55,10 @@ VIEWS = {
                "description": "Un punto por informe con coordenadas aptas para mapa. Sin métricas."},
     "density": {"label": "Densidad espacial", "datasets": ["agg_spatial_cell", "fact_report"],
                 "description": "Informes por celda de la cuadrícula (1° o 5°). Cuenta informes, no área ni población."},
+    "globe": {"label": "Globo 3D", "datasets": ["fact_report"],
+              "description": "Vista global de todos los informes con coordenadas, en su ubicación exacta, sobre un globo. Sin "
+                             "filtros: pide solo report_count, sin group_by y con eligibility map. Para un subconjunto "
+                             "(país, año, forma…) usa points."},
     "choropleth": {"label": "Coropleta por país", "datasets": ["agg_country", "fact_report", "report_model_output"],
                    "description": "Informes por país ISO2. No normaliza por población."},
     "hour_weekday": {"label": "Matriz hora × día de la semana", "datasets": ["agg_weekday_hour", "fact_report"],
@@ -83,6 +88,33 @@ PERIOD_DIMENSIONS = ("decade", "event_year")
 TIMELINE_COLUMNS = ["report_id", "event_date", "source_code", "shape_code", "country_iso2", "num_witnesses",
                     "duration_seconds", "uses_external_evidence"]
 DURATION_MAX_MINUTES = 60
+AREA_MAX_VERTICES = 400
+
+
+@lru_cache(maxsize=32)
+def _polygon(text: str) -> tuple:
+    return tuple(tuple(p) for p in json.loads(text))
+
+
+def in_area(lng, lat, polygon: str) -> int:
+    """Ray casting in longitude/latitude: 1 if the point lies inside the drawn polygon.
+    The globe may give longitudes beyond ±180 when the shape crosses the antimeridian."""
+    if lng is None or lat is None:
+        return 0
+    poly = _polygon(polygon)
+    hit = 0
+    for shift in (0.0, 360.0, -360.0):
+        x, inside = lng + shift, False
+        j = len(poly) - 1
+        for i in range(len(poly)):
+            xi, yi = poly[i]
+            xj, yj = poly[j]
+            if (yi > lat) != (yj > lat) and x < (xj - xi) * (lat - yi) / (yj - yi) + xi:
+                inside = not inside
+            j = i
+        hit = hit or inside
+    return int(hit)
+
 POINT_COLUMNS = ["report_id", "lat", "lng", "source_code", "date_key", "shape_code", "coordinate_basis",
                  "uses_external_evidence", "duplicate_status"]
 DENSITY_GROUPS = {"agg_spatial_cell": [["cell_lat", "cell_lng"]],
@@ -162,9 +194,10 @@ class Query:
     descending: bool = True
     limit: int = 100
     rollup: bool = False
+    area: tuple | None = None  # polygon [(lng, lat), …] drawn on a map; only reports inside it
 
     FIELDS = ("dataset", "filters", "group_by", "metrics", "columns", "eligibility", "view", "title",
-              "order_by", "descending", "limit", "rollup")
+              "order_by", "descending", "limit", "rollup", "area")
 
     @staticmethod
     def parse(raw, limits: dict) -> "Query":
@@ -207,7 +240,14 @@ class Query:
         limit = raw.get("limit", limits["default_limit"])
         if isinstance(limit, bool) or not isinstance(limit, int) or not 1 <= limit <= limits["max_limit"]:
             raise QueryError("limit", f"limit debe ser un entero entre 1 y {limits['max_limit']}")
-        return Query(dataset=dataset, filters=tuple(Filter.parse(f) for f in filters),
+        area = raw.get("area")
+        if area is not None:
+            if (not isinstance(area, list) or not 3 <= len(area) <= AREA_MAX_VERTICES
+                    or not all(isinstance(p, list) and len(p) == 2 and all(isinstance(c, (int, float)) and not isinstance(c, bool) for c in p)
+                               and -540 <= p[0] <= 540 and -90 <= p[1] <= 90 for p in area)):
+                raise QueryError("contract", f"area debe ser un polígono de 3 a {AREA_MAX_VERTICES} vértices [lng, lat]")
+            area = tuple((float(p[0]), float(p[1])) for p in area)
+        return Query(dataset=dataset, filters=tuple(Filter.parse(f) for f in filters), area=area,
                      group_by=strings("group_by", limits["max_group_by"]), metrics=strings("metrics", limits["max_metrics"]),
                      columns=strings("columns", 20), eligibility=tuple(sorted(strings("eligibility", 8))), view=view,
                      title=title, order_by=order_by, descending=descending, limit=limit, rollup=rollup)
@@ -218,7 +258,8 @@ class Query:
                 "filters": sorted((f.as_dict() for f in self.filters), key=lambda f: json.dumps(f, sort_keys=True)),
                 "group_by": list(self.group_by), "metrics": list(self.metrics), "columns": list(self.columns),
                 "eligibility": sorted(self.eligibility), "view": self.view, "order_by": self.order_by,
-                "descending": self.descending, "limit": self.limit, "rollup": self.rollup}
+                "descending": self.descending, "limit": self.limit, "rollup": self.rollup,
+                **({"area": [list(p) for p in self.area]} if self.area else {})}
 
     def as_dict(self) -> dict:
         return {**self.canonical(), "title": self.title}
@@ -326,6 +367,7 @@ class Analytics:
             calls[0] += 1
             return int(calls[0] > limit)
         con.set_progress_handler(progress, step)
+        con.create_function("in_area", 3, in_area, deterministic=True)
         return con
 
     def _execute(self, con, sql, params):
@@ -502,7 +544,11 @@ class Analytics:
             if f.op == "is_null" and self._requirements(q.dataset, [f.column]):
                 raise QueryError("gated_null_filter", f"{f.column} es nulo cuando el informe no es elegible; usa la columna *_exclusion para ver los motivos")
         # Eligibility, enforced in code.
-        used = [*q.group_by, *(f.column for f in q.filters), *q.columns]
+        if q.area and not {"lat", "lng"} <= set(schema):
+            raise QueryError("area_unavailable", f"{q.dataset} no tiene coordenadas: para limitar al área seleccionada usa fact_report")
+        if q.area and q.view == "globe":
+            raise QueryError("view_contract", "El globo es solo la vista global: con un área seleccionada usa points o density")
+        used = [*q.group_by, *(f.column for f in q.filters), *q.columns, *(["lat"] if q.area else [])]
         need = self._requirements(q.dataset, used)
         for code in metrics:
             need |= set(self.metrics[code]["requires"])
@@ -556,6 +602,10 @@ class Analytics:
             where.append(clause); params.extend(values)
             if not gated:
                 base_where.append(clause); base_params.extend(values)
+        if q.area:
+            lats = [p[1] for p in q.area]
+            where.append('"lat" BETWEEN ? AND ? AND in_area("lng", "lat", ?) = 1')
+            params.extend([min(lats), max(lats), json.dumps([list(p) for p in q.area])])
         # View contracts.
         if q.view == "points":
             if metrics:
@@ -586,6 +636,12 @@ class Analytics:
             raise QueryError("view_contract", f"La vista {q.view} pide solo report_count y sin group_by: el servidor agrupa la duración")
         if q.view == "density" and list(q.group_by) not in DENSITY_GROUPS.get(q.dataset, []):
             raise QueryError("view_contract", f"La densidad agrupa por {DENSITY_GROUPS.get(q.dataset)}")
+        if q.view == "globe" and (list(metrics) != ["report_count"] or q.group_by):
+            raise QueryError("view_contract", "El globo pide solo report_count y sin group_by: el servidor agrupa por ubicación")
+        if q.view == "globe" and q.filters:
+            raise QueryError("view_contract", "El globo es solo la vista global, sin filtros: para un subconjunto usa points")
+        if q.view == "globe" and "map" not in closure(applied):
+            raise QueryError("eligibility_missing", "El globo solo admite coordenadas aptas para mapa: declara eligibility 'map'")
         if q.view == "bars" and (not metrics or not 1 <= len(q.group_by) <= 2):
             raise QueryError("view_contract", "Las barras requieren métricas y una o dos dimensiones")
         if q.order_by is not None:
@@ -615,6 +671,14 @@ class Analytics:
         with_duration = sum(b["report_count"] for b in bins) + over
         return {"rows": rows, "bins": bins, "over_max": over, "without_duration": missing,
                 "with_duration": with_duration, "max_minutes": DURATION_MAX_MINUTES}
+
+    def _globe_locations(self, con, table: str, plan: dict) -> list[dict]:
+        """Reports per exact coordinate pair, every location (no row limit): the globe draws
+        each point where it was reported. Reports at identical coordinates share one point."""
+        where = " WHERE " + " AND ".join(plan["where"]) if plan["where"] else ""
+        sql = (f"SELECT lat, lng, COUNT(*) AS report_count FROM {table}{where} GROUP BY lat, lng "
+               f"ORDER BY report_count DESC, lat, lng")
+        return [dict(r) for r in self._execute(con, sql, plan["params"])]
 
     def _check_calendar(self, q: Query) -> None:
         """A year × month matrix must fit in one result: bounded years, every cell within limit."""
@@ -746,13 +810,15 @@ class Analytics:
             order = (f' ORDER BY "{q.order_by}" {"DESC" if q.descending else "ASC"}, "{key}"' if q.order_by
                      else f' ORDER BY "event_date", "{key}"' if q.view == "timeline" else f' ORDER BY "{key}"')
         sql = "SELECT " + ", ".join(select) + f" FROM {table}{where}{group}{order} LIMIT ?"
+        limit = q.limit
         matched_expr = "COALESCE(SUM(report_count),0)" if "report_count" in spec["columns"] else "COUNT(*)"
         external_expr = ("COALESCE(SUM(external_evidence_reports),0)" if "external_evidence_reports" in spec["columns"]
                          else "COALESCE(SUM(uses_external_evidence),0)" if "uses_external_evidence" in spec["columns"] else None)
         with closing(self.connect()) as con:
-            rows = [dict(r) for r in self._execute(con, sql, [*plan["params"], q.limit + 1])]
+            rows = [dict(r) for r in self._execute(con, sql, [*plan["params"], limit + 1])]
             matched = self._execute(con, f"SELECT {matched_expr} FROM {table}{where}", plan["params"])[0][0]
             distribution = self._duration_distribution(con, table, plan) if q.view in ("histogram", "ecdf") else None
+            locations = self._globe_locations(con, table, plan) if q.view == "globe" else None
             external = self._execute(con, f"SELECT {external_expr} FROM {table}{where}", plan["params"])[0][0] if external_expr else None
             total_row = None
             if q.rollup:
@@ -760,10 +826,12 @@ class Analytics:
                                       + f" FROM {table}{where}", plan["params"])[0]
                 total_row = dict(total)
             exclusions = self._exclusions(con, q, plan)
-        truncated = len(rows) > q.limit
-        rows = rows[:q.limit]
+        truncated = len(rows) > limit
+        rows = rows[:limit]
         if distribution:
             rows, truncated = distribution.pop("rows"), False
+        if locations is not None:
+            rows, truncated = locations, False
         self._add_labels(rows, q.group_by if metrics else [c for c in rows[0]] if rows else [])
         query_sha = text_digest(q.canonical())
         certified, status = self._certified_match(query_sha)
@@ -878,6 +946,8 @@ class Analytics:
                 filters.append(f"{name}: {'sin dato' if f.value is not False else 'con dato'}")
             else:
                 filters.append(f"{name} {ops[f.op]} {label(f.column, f.value)}")
+        if q.area:
+            filters.append("Dentro del área seleccionada en el mapa")
         parts = {
             "dataset": f"{self.datasets[q.dataset]['label']} ({q.dataset})",
             "filtros": filters or ["ninguno"],

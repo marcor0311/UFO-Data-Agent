@@ -1,0 +1,24 @@
+<!doctype html><html lang="es"><meta charset="utf-8"><title>Arcos a instalaciones nucleares</title><link rel="stylesheet" href="estilo.css">
+<header><h1>¿Qué instalación nuclear queda más cerca?</h1><p>Cada arco une una zona con informes con la instalación del catálogo más cercana. Los arcos se dibujan como pulsos.</p></header>
+<div class="contador"><strong id="n">0</strong><span>instalaciones del catálogo</span></div><button data-play>Pausa</button>
+<p class="nota">Estar cerca no implica relación ni preferencia: la mayoría de las zonas pobladas queda cerca de alguna instalación. Catálogo local de 47 instalaciones; solo zonas a menos de 500 km de su instalación; celdas de 1°.</p>
+<div id="deck"></div>
+<script src="../_compartido/vendor/deck.gl-9.4.0.min.js"></script><script src="comun.js"></script><script>
+(async () => {
+  const [mundo, { facilities, arcs }] = await Promise.all([datos("world.geojson"), datos("arcos_nucleares.json")]);
+  const fac = Object.entries(facilities).map(([k, f]) => ({ k, ...f }));
+  document.getElementById("n").textContent = fac.length;
+  const datosArcos = arcs.filter((a) => a[3] <= 500).map(([la, ln, n, km, k]) => ({ s: [ln + 0.5, la + 0.5], t: [facilities[k].lng, facilities[k].lat], n, km, fase: Math.random() }));
+  const d = new deck.Deck({ parent: document.getElementById("deck"), controller: true, initialViewState: { longitude: -97, latitude: 40, zoom: 3.3, pitch: 40 }, layers: [] });
+  reproducir((t) => {
+    d.setProps({ layers: [
+      new deck.GeoJsonLayer({ id: "mundo", data: mundo, filled: true, getFillColor: [22, 33, 45], getLineColor: [42, 58, 75], lineWidthMinPixels: 0.5 }),
+      new deck.ArcLayer({ id: "arcos", data: datosArcos, getSourcePosition: (a) => a.s, getTargetPosition: (a) => a.t,
+        getSourceColor: (a) => [255, 210, 120, 40 + 200 * Math.max(0, Math.sin((t * 3 + a.fase) * Math.PI * 2))], getTargetColor: [90, 220, 200, 200],
+        getWidth: (a) => 0.5 + Math.sqrt(a.n) / 12, getHeight: 0.4, updateTriggers: { getSourceColor: t } }),
+      new deck.ScatterplotLayer({ id: "fac", data: fac, getPosition: (f) => [f.lng, f.lat], getRadius: 30000 + 12000 * Math.sin(t * Math.PI * 6),
+        getFillColor: [90, 220, 200], stroked: true, getLineColor: [255, 255, 255], lineWidthMinPixels: 1, updateTriggers: { getRadius: t } }),
+    ] });
+  }, 12000);
+})();
+</script></html>

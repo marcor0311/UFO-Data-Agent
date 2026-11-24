@@ -159,6 +159,7 @@ La puerta comprueba que el catálogo coincide con el esquema en ambos sentidos.
 - Operadores: `eq`, `ne`, `in` (1–100 valores), `gte`, `lte` e `is_null`.
 - Límites: 12 filtros, 4 dimensiones, 8 métricas y `limit` ≤ 500.
 - Valores escalares finitos; los booleanos no valen como enteros.
+- `area` (opcional): polígono de 3 a 400 vértices `[lng, lat]` dibujado en un mapa de la web. Limita la consulta a los informes dentro de la forma; exige coordenadas (`fact_report`, eligibility `map`) y no admite `globe`. El agente no lo envía: mientras hay un área activa, la API lo añade a cada `query_gold` y rechaza `run_certified` (`area_active`). Solo entra en el hash de la consulta cuando existe.
 - Identificadores validados contra el catálogo; valores validados contra los
   permitidos y ligados como parámetros.
 - Presupuesto de instrucciones SQLite: 400 millones de pasos de la VM,
@@ -186,6 +187,7 @@ Combinaciones prohibidas, con su código de error:
 | `timeseries` | `fact_report`, `report_model_output`, `fact_event`, `agg_year`, `agg_month` | La primera dimensión es temporal (`event_year`, `decade`, `year_month` o `event_date`). |
 | `points` | `fact_report` | Filas sin métricas; exige `map`. |
 | `density` | `agg_spatial_cell`, `fact_report` | Agrupa por celda de 1° o 5°. |
+| `globe` | `fact_report` | Vista global: solo `report_count`, sin filtros ni `group_by` y con `map`. El servidor agrupa por coordenadas idénticas y devuelve todas las ubicaciones, sin el `limit`. |
 | `choropleth` | `agg_country`, `fact_report`, `report_model_output` | Agrupa solo por `country_iso2`. |
 | `hour_weekday` | `agg_weekday_hour`, `fact_report` | Agrupa exactamente por `weekday` y `event_hour`. |
 | `stacked` | Los mismos que `bars` | Una métrica y exactamente dos dimensiones; 100 % por valor de la primera. |

@@ -1,0 +1,30 @@
+<!doctype html><html lang="es"><meta charset="utf-8"><title>Columnas 3D</title><link rel="stylesheet" href="estilo.css">
+<header><h1>El archivo crece en 3D</h1><p>Columnas por celda de 1° que suben año a año con los informes acumulados. La cámara gira lentamente sobre Norteamérica y Europa.</p></header>
+<div class="contador"><strong id="ano">1940</strong><span id="cuenta"></span></div><button data-play>Pausa</button>
+<p class="nota">Altura y color: informes acumulados hasta ese año en la celda. Solo coordenadas y año fiables.</p>
+<div id="deck"></div>
+<script src="../_compartido/vendor/deck.gl-9.4.0.min.js"></script><script src="comun.js"></script><script>
+(async () => {
+  const [mundo, filas] = await Promise.all([datos("world.geojson"), datos("celdas_por_ano.json")]);
+  const anos = [...new Set(filas.map((r) => r[0]))].sort((a, b) => a - b), celdas = new Map();
+  for (const [y, la, ln, n] of filas) { const k = la + "," + ln; (celdas.get(k) ?? celdas.set(k, { p: [ln + 0.5, la + 0.5], por: [] }).get(k)).por.push([y, n]); }
+  const lista = [...celdas.values()].filter((c) => Math.abs(c.p[1]) < 70);
+  const valor = (c, y) => c.por.reduce((s, [yy, n]) => yy <= y ? s + n : s, 0);
+  const max = Math.max(...lista.map((c) => valor(c, 9999)));
+  const color = (v) => { const t = Math.sqrt(v / max); return [255, 230 - 170 * t, 120 - 90 * t, 235]; };
+  const d = new deck.Deck({ parent: document.getElementById("deck"), controller: true,
+    initialViewState: { longitude: -60, latitude: 38, zoom: 2.1, pitch: 55, bearing: 0 }, layers: [] });
+  reproducir((t) => {
+    const y = anos[Math.min(anos.length - 1, Math.floor(Math.min(1, t * 1.15) * anos.length))];
+    const datosY = lista.map((c) => ({ p: c.p, v: valor(c, y) })).filter((c) => c.v > 0);
+    d.setProps({ viewState: { longitude: -60 + 40 * Math.sin(t * Math.PI * 2), latitude: 38, zoom: 2.1, pitch: 55, bearing: -15 + 30 * Math.sin(t * Math.PI) },
+      layers: [
+        new deck.GeoJsonLayer({ id: "mundo", data: mundo, filled: true, getFillColor: [22, 33, 45], getLineColor: [42, 58, 75], lineWidthMinPixels: 0.5, wrapLongitude: true }),
+        new deck.ColumnLayer({ id: "col", data: datosY, diskResolution: 6, radius: 42000, extruded: true, elevationScale: 140,
+          getPosition: (c) => c.p, getElevation: (c) => Math.sqrt(c.v) * 60, getFillColor: (c) => color(c.v), updateTriggers: { getElevation: y, getFillColor: y } }),
+      ] });
+    document.getElementById("ano").textContent = y;
+    document.getElementById("cuenta").textContent = fmt(datosY.reduce((s, c) => s + c.v, 0)) + " informes acumulados";
+  }, 30000);
+})();
+</script></html>

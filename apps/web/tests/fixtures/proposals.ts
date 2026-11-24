@@ -37,6 +37,10 @@ export const proposalResults: Record<string, GoldResult> = {
     num_witnesses: i === 0 ? 3 : null, duration_seconds: i === 0 ? 120 : null,
   })), { dataset: "fact_report", eligibility: ["day"] }),
   histogram: make("histogram", "Prueba histograma", durationRows, { dataset: "fact_report", metrics: ["report_count"] }, { distribution }),
+  globe: make("globe", "Prueba globo", [
+    { lat: 40.7128, lng: -74.006, report_count: 900 }, { lat: 51.5072, lng: -0.1276, report_count: 120 },
+    { lat: -33.8688, lng: 151.2093, report_count: 30 },
+  ], { dataset: "fact_report", metrics: ["report_count"], eligibility: ["map"] }),
   ecdf: make("ecdf", "Prueba acumulada", durationRows, { dataset: "fact_report", metrics: ["report_count"] }, { distribution }),
 };
 

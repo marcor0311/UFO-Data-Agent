@@ -153,6 +153,8 @@ class Chat(BaseModel):
     question: str = Field(min_length=1, max_length=4000)
     conversation_id: UUID | None = None
     model: str | None = Field(default=None, max_length=120)
+    # Area drawn on a map ([lng, lat] vertices); every query of the turn is limited to it.
+    area: list[list[float]] | None = Field(default=None, min_length=3, max_length=400)
 
 
 @router.get("/api/agent/models")
@@ -191,7 +193,7 @@ def chat(body: Chat, user=Depends(identity), a: Analytics = Depends(get_analytic
             raise HTTPException(404, "Conversación no encontrada")
         if len(previous) >= MAX_TURNS:
             raise HTTPException(422, "Inicia una conversación nueva para continuar.")
-        turn = DataAgent(a, stream=stream).answer(user[1], body.question, previous, selected)
+        turn = DataAgent(a, stream=stream).answer(user[1], body.question, previous, selected, body.area)
         store.save(cid, user[0], [*previous, turn])
         return {"conversation_id": cid, "turn": turn}
     finally:

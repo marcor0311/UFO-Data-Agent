@@ -11,6 +11,7 @@ import { groupResults, ResultPanel, resultTitle } from "./result-panel";
 import { TurnView } from "./turn";
 import { ModelViewer } from "@/components/views/model-viewer";
 import { modelCatalogIntent, type ModelKind } from "@/lib/map-models";
+import { MapAreaContext, type MapArea } from "@/lib/map-area";
 
 const STORAGE = "ufo-agent-conversation";
 const PANES = {
@@ -64,6 +65,7 @@ export default function AgentWorkspace() {
   const [session, setSession] = useState<Session | null>(null);
   const [models, setModels] = useState<Model[]>([]);
   const [model, setModel] = useState<string>("");
+  const [mapArea, setMapArea] = useState<MapArea | null>(null);
   const [conversations, setConversations] = useState<ConversationSummary[]>([]);
   const [conversationId, setConversationId] = useState<string | null>(null);
   const [turns, setTurns] = useState<Turn[]>([]);
@@ -175,7 +177,7 @@ export default function AgentWorkspace() {
     setDraft("");
     setFailure(null);
     try {
-      const result = await api<{ conversation_id: string; turn: Turn }>("agent/chat", { question, conversation_id: conversationId, model: model || null });
+      const result = await api<{ conversation_id: string; turn: Turn }>("agent/chat", { question, conversation_id: conversationId, model: model || null, ...(mapArea ? { area: mapArea.polygon } : {}) });
       setConversationId(result.conversation_id);
       savedConversation.set(result.conversation_id);
       appendTurn(result.turn);
@@ -294,6 +296,7 @@ export default function AgentWorkspace() {
   };
 
   return (
+    <MapAreaContext.Provider value={{ area: mapArea, setArea: setMapArea }}>
     <div className="workspace">
       <a className="skip-link" href={authenticated && view === "chat" ? "#question" : `#${pane.id}`}>Ir al panel principal</a>
       <header className="top">
@@ -400,8 +403,16 @@ export default function AgentWorkspace() {
             ) : null}
           </div>
           {view === "chat" ? (
+            <>
+            {mapArea ? (
+              <div className="area-chip" role="status">
+                <span><strong>Área seleccionada activa</strong> ({mapArea.label}). Las próximas preguntas se limitan a ella.</span>
+                <button type="button" onClick={() => setMapArea(null)}>Quitar área</button>
+              </div>
+            ) : null}
             <Composer inputRef={input} value={draft} onChange={setDraft} onSubmit={ask} busy={busy}
                       pending={pending !== null} authenticated={authenticated} models={models} model={model} onModelChange={setModel} />
+            </>
           ) : view === "explore" ? (
             <div className="explore-panel">
               <h2>Explora los informes UFO</h2>
@@ -480,5 +491,6 @@ export default function AgentWorkspace() {
         </section>
       </main>
     </div>
+    </MapAreaContext.Provider>
   );
 }

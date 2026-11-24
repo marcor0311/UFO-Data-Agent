@@ -65,6 +65,13 @@ def response_stream(account: dict, payload: dict) -> dict:
         raise HTTPException(502, "Conexión con la inferencia interrumpida; puedes reintentar.") from exc
 
 
+AREA_NOTE = ("Contexto de la interfaz: la persona tiene un área seleccionada en el mapa. Mientras esté activa, el servidor "
+             "limita automáticamente cada query_gold a los informes dentro de esa área; no hace falta filtrar por país ni por "
+             "coordenadas. Usa fact_report (el área exige coordenadas aptas: eligibility map) y aplica solo los filtros "
+             "que pida la pregunta, como el año o la forma. No uses run_certified ni la vista globe. Menciona que el "
+             "resultado se limita al área seleccionada.")
+
+
 def history_inputs(history: list[dict]) -> list[dict]:
     """Recent turns plus their verified evidence, for follow-up questions."""
     inputs = []
@@ -84,9 +91,11 @@ class DataAgent:
         self.analytics = analytics
         self.stream = stream
 
-    def answer(self, account: dict, question: str, history: list[dict], model: str) -> dict:
+    def answer(self, account: dict, question: str, history: list[dict], model: str, area: list | None = None) -> dict:
         prompt = instructions.build(self.analytics)
         inputs = [*history_inputs(history), {"role": "user", "content": question}]
+        if area:
+            inputs.append({"role": "user", "content": AREA_NOTE})
         visuals: list[dict] = []
         trace: list[dict] = []
         definitions = tools.schemas(self.analytics)
@@ -102,12 +111,13 @@ class DataAgent:
                 if not text:
                     raise HTTPException(502, "El modelo no devolvió una respuesta legible.")
                 return {"question": question, "answer": text, "visualizations": visuals, "trace": trace, "model": model,
+                        **({"area": area} if area else {}),
                         "load_id": self.analytics.load_id,
                         "created_at": datetime.now(timezone.utc).replace(microsecond=0).isoformat()}
             for call in calls:
                 try:
                     arguments = json.loads(call.get("arguments") or "{}")
-                    result = tools.execute(self.analytics, call["name"], arguments, visuals)
+                    result = tools.execute(self.analytics, call["name"], arguments, visuals, area)
                     trace.append({"tool": call["name"], "arguments": arguments, "ok": True})
                 except QueryError as exc:
                     result = {"error": str(exc)[:1500], "code": exc.code, "repair": "Corrige los argumentos y vuelve a llamar."}

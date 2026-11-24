@@ -1,0 +1,19 @@
+<!doctype html><html lang="es"><meta charset="utf-8"><title>Globo de informes</title><link rel="stylesheet" href="estilo.css">
+<header><h1>Un planeta de informes</h1><p>Todos los informes con coordenadas aptas sobre un globo que gira. Tamaño y brillo según los informes de cada celda de 1°.</p></header>
+<div class="contador"><strong id="n"></strong><span>informes con coordenadas aptas</span></div><button data-play>Pausa</button>
+<p class="nota">La concentración en Norteamérica refleja la cobertura de las fuentes, en su mayoría estadounidenses.</p>
+<div id="deck"></div>
+<script src="../_compartido/vendor/deck.gl-9.4.0.min.js"></script><script src="comun.js"></script><script>
+(async () => {
+  const [mundo, filas] = await Promise.all([datos("world.geojson"), datos("globo.json")]);
+  document.getElementById("n").textContent = fmt(filas.reduce((s, r) => s + r[2], 0));
+  const d = new deck.Deck({ parent: document.getElementById("deck"), views: new deck._GlobeView(), controller: true,
+    initialViewState: { longitude: 0, latitude: 25, zoom: 1.7 }, layers: [] });
+  reproducir((t) => d.setProps({ viewState: { longitude: -180 + t * 360, latitude: 25, zoom: 1.7 }, layers: [
+    new deck.SolidPolygonLayer({ id: "oceano", data: [[[-180, 90], [0, 90], [180, 90], [180, -90], [0, -90], [-180, -90]]], getPolygon: (p) => p, getFillColor: [11, 22, 34] }),
+    new deck.GeoJsonLayer({ id: "mundo", data: mundo, filled: true, getFillColor: [28, 42, 56], getLineColor: [55, 75, 95], lineWidthMinPixels: 0.5 }),
+    new deck.ScatterplotLayer({ id: "pts", data: filas, getPosition: (r) => [r[1] + 0.5, r[0] + 0.5], radiusUnits: "pixels",
+      getRadius: (r) => 0.8 + Math.sqrt(r[2]) / 9, getFillColor: (r) => [255, 190 + Math.min(60, r[2] / 20), 90, 180], parameters: { depthTest: false } }),
+  ] }), 24000);
+})();
+</script></html>

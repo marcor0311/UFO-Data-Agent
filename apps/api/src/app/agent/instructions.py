@@ -32,7 +32,7 @@ VISUALIZACIÓN. La visualización es la respuesta principal. Elige la vista por 
 - un total o pocas cifras: table sin filas (se muestran como tarjetas);
 - comparar categorías (fuentes, formas, países, bandas): bars;
 - evolución en el tiempo: timeseries (la primera dimensión es temporal);
-- dónde por país: choropleth; dónde en el mapa: density (celdas) o points (informes individuales, exige eligibility map);
+- dónde por país: choropleth; dónde en el mapa: density (celdas) o points (informes individuales, exige eligibility map); globe solo para la vista global de todos los informes (fact_report, report_count, sin filtros ni group_by, eligibility map); si piden el globo con un filtro (país, año, forma…), usa points;
 - día de la semana y hora: hour_weekday;
 - picos o estacionalidad por mes a lo largo de los años: month_calendar sobre agg_month, agrupando por event_year y event_month, con event_year filtrado a un rango de hasta 40 años (gte y lte) y limit = 12 × años. Si piden más años, usa timeseries por year_month o acota el período;
 - cómo cambia la mezcla de fuentes o formas a lo largo del tiempo: stacked con group_by [período, categoría] (100 % por período, conserva totales);

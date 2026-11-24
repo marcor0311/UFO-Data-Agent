@@ -180,12 +180,14 @@ historial 10px, compositor 14px. La pregunta del usuario usa una burbuja
 ### Resultados
 
 El registro de vistas (`components/views/registry.tsx`) admite `table`,
-`bars`, `timeseries`, `points`, `density`, `choropleth` y `hour_weekday`. Las
+`bars`, `timeseries`, `points`, `density`, `globe`, `choropleth`, `hour_weekday`, `month_calendar`, `stacked`, `matrix`, `dumbbell`, `timeline`, `histogram` y `ecdf`. Las
 reglas de cada vista:
 
 - Una tabla sin filas se presenta como tarjetas de cifra (`stat-grid`).
 - Una métrica por panel: nunca dos escalas en un eje.
 - Los mapas por país muestran la cobertura real y los países sin datos.
+- El globo gira solo sin movimiento reducido, se pausa al arrastrarlo y admite zoom con rueda y botones. Un área dibujada en el globo se abre en el mapa 2D y 3D.
+- Los mapas de puntos y el globo comparten las herramientas Mover, Rectángulo y Lazo; la selección se resalta en `critical` y se resume con su recuento.
 - La matriz día y hora distingue entre ceros y celdas ausentes.
 - Cada resultado lleva la tabla exacta, la procedencia (`provenance`), las
   exclusiones por elegibilidad y las limitaciones.

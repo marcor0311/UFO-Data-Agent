@@ -2,7 +2,7 @@
    and of the agent API (apps/api/src/app/agent/routes.py). */
 
 export type ViewCode = "table" | "bars" | "timeseries" | "points" | "density" | "choropleth" | "hour_weekday" | "month_calendar"
-  | "stacked" | "matrix" | "dumbbell" | "timeline" | "histogram" | "ecdf";
+  | "stacked" | "matrix" | "dumbbell" | "timeline" | "histogram" | "ecdf" | "globe";
 export type Scalar = string | number | boolean | null;
 export type Row = Record<string, Scalar>;
 
@@ -53,7 +53,9 @@ export type Catalog = {
 };
 
 export type TraceStep = { tool: string; ok: boolean; code?: string; error?: string; arguments?: unknown };
-export type Turn = { question: string; answer: string; visualizations: GoldResult[]; trace: TraceStep[]; model: string; load_id: string; created_at: string };
+export type Turn = { question: string; answer: string; visualizations: GoldResult[]; trace: TraceStep[]; model: string; load_id: string; created_at: string;
+  /* Area selected on a map when the question was asked ([lng, lat] vertices). */
+  area?: [number, number][] };
 export type Session = { authenticated: boolean; email?: string; account_id?: string; detail?: string };
 export type Model = { slug: string; display_name: string };
 export type ConversationSummary = { conversation_id: string; updated: number; title: string; turns: number };
