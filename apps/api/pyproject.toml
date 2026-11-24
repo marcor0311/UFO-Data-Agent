@@ -10,6 +10,7 @@ requires-python = ">=3.11"
 dependencies = [
     "fastapi[standard]>=0.115,<1.0",
     "httpx>=0.28,<1",
+    "langgraph>=1.0,<2.0",
     "PyJWT[crypto]>=2.10,<3",
 ]
 
@@ -18,6 +19,7 @@ test = ["pytest>=8,<10"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
+filterwarnings = ["ignore::DeprecationWarning:langsmith.*"]
 
 [tool.setuptools.packages.find]
 where = ["src"]

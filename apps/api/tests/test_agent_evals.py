@@ -25,7 +25,7 @@ def test_forbidden_phrase_detection():
 
 def test_frequent_question_passes_with_certified_flow(gold):
     stream = ScriptedStream([call("search_certified", {"question": "fuentes"})], [call("run_certified", {"id": "CQ_TEST_SOURCES"})],
-                            [message("Hay entre 8 y 12 informes por fuente.")])
+                            [message("Hay 9 informes por fuente.")])
     report = run_agent_evals.run(DataAgent(gold, stream=stream), {}, "m", [item(gold)], gold.limits, gold.load_id)
     assert report["passed"], report["results"][0]["checks"]
 

@@ -28,7 +28,8 @@ zoom y el movimiento reducido. Los respaldos de redistribución no amplían el
 alcance a móvil.
 
 Next.js y TypeScript sirven la interfaz. FastAPI y Python ejecutan el agente
-mediante Responses y herramientas tipadas sobre Gold. El modelo nunca escribe
+como un grafo LangGraph ([docs/agente-langgraph.md](docs/agente-langgraph.md))
+que combina Responses, herramientas tipadas sobre Gold y una verificación final. El modelo nunca escribe
 SQL: resuelve entidades con `find_entities`, busca una consulta certificada que
 cubra toda la pregunta (`search_certified` / `run_certified`) y, si no la hay,
 construye una `query_gold` validada. El agente admite hasta 10 rondas de

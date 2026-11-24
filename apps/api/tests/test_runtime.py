@@ -6,7 +6,7 @@ import httpx
 import pytest
 
 from conftest import ScriptedStream, call, message
-from app.agent import runtime
+from app.agent import graph, runtime
 from app.agent.runtime import DataAgent
 
 ACCOUNT = {"access_token": "token"}
@@ -25,7 +25,7 @@ def test_certified_first_then_answer(gold):
     stream = ScriptedStream(
         [call("search_certified", {"question": "informes por fuente"}, "a")],
         [call("run_certified", {"id": "CQ_TEST_SOURCES"}, "b")],
-        [message("Hay entre 8 y 12 informes.")])
+        [message("Hay 9 informes.")])
     turn = DataAgent(gold, stream=stream).answer(ACCOUNT, "¿Cuántos informes por fuente?", [], "model-a")
     assert [t["tool"] for t in turn["trace"]] == ["search_certified", "run_certified"]
     assert turn["visualizations"][0]["result_type"] == "certified"
@@ -46,7 +46,7 @@ def test_tool_error_is_returned_for_repair(gold):
 
 
 def test_round_limit(gold):
-    stream = ScriptedStream(*[[call("describe_data", {"dataset": None}, f"c{i}")] for i in range(runtime.MAX_ROUNDS)])
+    stream = ScriptedStream(*[[call("describe_data", {"dataset": None}, f"c{i}")] for i in range(graph.MAX_ROUNDS)])
     with pytest.raises(HTTPException) as err:
         DataAgent(gold, stream=stream).answer(ACCOUNT, "?", [], "model-a")
     assert err.value.status_code == 422
@@ -116,3 +116,37 @@ def test_model_catalog(transport):
     transport["handler"] = lambda r: httpx.Response(200, json={"models": []})
     with pytest.raises(HTTPException):
         runtime.model_catalog(ACCOUNT)
+
+
+def test_range_answer_is_rewritten_once(gold):
+    stream = ScriptedStream(
+        [call("run_certified", {"id": "CQ_TEST_SOURCES"}, "a")],
+        [message("Hay entre 8 y 12 informes.")],
+        [message("Hay 9 informes.")])
+    turn = DataAgent(gold, stream=stream).answer(ACCOUNT, "¿Cuántos?", [], "model-a")
+    assert turn["answer"] == "Hay 9 informes."
+    assert turn["trace"][-1] == {"tool": "verificar", "ok": False, "code": "range_in_answer"}
+    assert "una sola cifra" in stream.payloads[2]["input"][-1]["content"]
+
+
+def test_second_range_is_accepted_to_avoid_loops(gold):
+    stream = ScriptedStream([message("Entre 8 y 12 informes.")], [message("De 8 a 12 informes.")])
+    assert DataAgent(gold, stream=stream).answer(ACCOUNT, "?", [], "model-a")["answer"] == "De 8 a 12 informes."
+
+
+def test_visualization_action(gold):
+    created = DataAgent(gold, stream=ScriptedStream([call("run_certified", {"id": "CQ_TEST_SOURCES"}, "a")], [message("Hay 9 informes.")]))
+    assert created.answer(ACCOUNT, "?", [], "model-a")["visualization_action"] == "create"
+    kept = DataAgent(gold, stream=ScriptedStream([message("¿A qué país te refieres?")]))
+    assert kept.answer(ACCOUNT, "?", [], "model-a")["visualization_action"] == "retain"
+
+
+def test_documented_graph_matches_the_compiled_one():
+    from pathlib import Path
+    import re
+    compiled = graph.build_graph(None, lambda a, p: {}, lambda h: [], "").get_graph()
+    edges = {(e.source, e.target) for e in compiled.edges}
+    doc = (Path(__file__).resolve().parents[3] / "docs/agente-langgraph.md").read_text()
+    block = doc.split("```mermaid")[1].split("```")[0]
+    documented = {(a.split("(")[0], b.split("(")[0]) for a, b in re.findall(r"(\w+)(?:\([^)]*\))?\s*-\.?->\s*(\w+)", block)}
+    assert documented == edges
