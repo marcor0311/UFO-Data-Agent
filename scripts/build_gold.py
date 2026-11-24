@@ -613,7 +613,7 @@ def populate(conn, policy, catalogs):
 
 
 def build_database(path: Path, silver_path: Path, policy: dict, catalogs: dict) -> None:
-    with closing(sqlite3.connect(path)) as conn:
+    with closing(sqlite3.connect(path.resolve().as_uri(), uri=True)) as conn:
         conn.execute("PRAGMA journal_mode=OFF")
         conn.execute("PRAGMA synchronous=OFF")
         conn.execute("ATTACH DATABASE ? AS silver", (silver_path.resolve().as_uri() + "?mode=ro&immutable=1",))

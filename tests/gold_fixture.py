@@ -214,11 +214,15 @@ def write_provenance(folder: Path, gold_policy: dict | None, silver: Path, bronz
     return manifest
 
 
-def environment(folder: Path, rows=None):
+def environment(folder: Path, rows=None, *, progress=None):
     """Write fixtures and return (policy, silver, bronze, output) for build()."""
     from gold_common import load_policy
     silver, bronze = folder / "silver.db", folder / "bronze.db"
+    if progress:
+        progress("Creando la base Silver sintética...")
     write_silver(silver, rows)
+    if progress:
+        progress("Creando la base Bronze sintética...")
     write_bronze(bronze, rows)
     policy = copy.deepcopy(load_policy())
     write_provenance(folder, policy, silver, bronze)
@@ -230,20 +234,24 @@ def fake_gate(silver, bronze, output):
             "policy_version": 6, "verification": {"checks": 0, "run_id": "fixture"}}
 
 
-def build_fixture(folder: Path, rows=None, **kw):
+def build_fixture(folder: Path, rows=None, *, progress=None, **kw):
     import build_gold
-    policy, silver, bronze, output = environment(folder, rows)
+    policy, silver, bronze, output = environment(folder, rows, progress=progress)
+    if progress:
+        progress("Construyendo Gold a partir de las bases sintéticas...")
     manifest = build_gold.build(policy=policy, gate=kw.pop("gate", fake_gate), silver_path=silver, bronze_path=bronze,
                                 output=output, data=folder, bronze_manifest=Path(policy["inputs"]["bronze"]["manifest"]), **kw)
     return manifest, policy, silver, bronze, output
 
 
-def serving_fixture(folder: Path):
+def serving_fixture(folder: Path, *, progress=None):
     """Build Gold and its serving cache from the fixture; return an Analytics instance."""
     import discover_gold
     import gold_query
-    manifest, policy, silver, bronze, output = build_fixture(folder)
+    manifest, policy, silver, bronze, output = build_fixture(folder, progress=progress)
     serving = folder / "serving" / "ufo_gold_serving.db"
+    if progress:
+        progress("Generando la caché de servicio Gold...")
     discover_gold.discover(gold=output, serving=serving, docs=folder / "docs")
     certified = folder / "certified_queries.json"
     certified.write_text(json.dumps({"queries": [
@@ -251,5 +259,7 @@ def serving_fixture(folder: Path):
          "examples": ["¿Cuántos informes tiene cada fuente?"], "limitation": "Son informes.",
          "query": {"dataset": "agg_source", "group_by": ["source_code"], "metrics": ["report_count"], "view": "bars"}}]}))
     analytics = gold_query.Analytics(serving=serving, certified_path=certified)
+    if progress:
+        progress("Certificando la consulta de ejemplo Informes por fuente...")
     gold_query.certify(analytics=analytics)
     return gold_query.Analytics(serving=serving, certified_path=certified), manifest, (policy, silver, bronze, output)
