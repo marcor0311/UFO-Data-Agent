@@ -8,7 +8,7 @@ import type { GeometryCollection, Topology } from "topojson-specification";
 import world from "world-atlas/countries-110m.json";
 import type { Catalog, GoldResult, Row } from "@/lib/contracts";
 import { cell, metricLabel, num } from "@/lib/format";
-import { Empty, RAMP, formatMetric, lowerBound, metricsOf, rampIndex, useTooltip, value } from "./shared";
+import { Empty, RAMP, formatMetric, metricsOf, rampIndex, useTooltip, value } from "./shared";
 import { RampLegend } from "./charts";
 
 type Props = { result: GoldResult; catalog: Catalog | null };
@@ -94,19 +94,17 @@ export function DensityView({ result, catalog }: Props) {
     return { row, d: "M" + ring.map((p) => p.join(",")).join("L") + "Z", lat, lng };
   }), [result.rows, latKey, lngKey, res]);
   if (result.empty) return <Empty />;
-  const lower = lowerBound(result, metric);
   const max = Math.max(0, ...result.rows.map((r) => value(r, metric) ?? 0));
   return (
     <div className="viz" ref={ref}>
       <figure className="viz-panel">
-        <figcaption>{lower ? "Informes" : metricLabel(catalog, metric)} por celda de {res}°{result.truncated ? ` (las ${num(result.row_count)} celdas con más informes)` : ""}</figcaption>
+        <figcaption>{metricLabel(catalog, metric)} por celda de {res}°{result.truncated ? ` (las ${num(result.row_count)} celdas con más informes)` : ""}</figcaption>
         <svg viewBox={`0 0 ${WIDTH} ${HEIGHT}`} role="img" aria-label={`Densidad de informes por celdas de ${res} grados`}>
           <Basemap />
           {cells.map(({ row, d, lat, lng }, i) => {
             const v = value(row, metric) ?? 0;
             const title = `Celda ${lat}° a ${lat + res}° de latitud, ${lng}° a ${lng + res}° de longitud`;
-            const lines = [{ value: formatMetric(v, metric, catalog), label: lower ? "todos los informes" : metricLabel(catalog, metric) }];
-            if (lower) lines.push({ value: num(row[lower]), label: "sin candidatos pendientes" });
+            const lines = [{ value: formatMetric(v, metric, catalog), label: metricLabel(catalog, metric) }];
             return (
               <path key={i} d={d} fill={RAMP[Math.max(0, rampIndex(v, max))]} className="mark cell" tabIndex={0} aria-label={`${title}: ${lines[0].value}`}
                     onPointerMove={(e) => show(e, { title, lines })} onPointerLeave={hide}
@@ -134,14 +132,13 @@ export function ChoroplethView({ result, catalog }: Props) {
     return map;
   }, [result.rows, catalog]);
   if (result.empty) return <Empty />;
-  const lower = lowerBound(result, metric);
   const max = Math.max(0, ...result.rows.map((r) => value(r, metric) ?? 0));
   const unmapped = result.rows.filter((r) => !catalog?.country_m49[String(r.country_iso2)]
     || !countries.features.some((f: Feature) => String(f.id) === catalog.country_m49[String(r.country_iso2)]));
   return (
     <div className="viz" ref={ref}>
       <figure className="viz-panel">
-        <figcaption>{lower ? "Informes" : metricLabel(catalog, metric)} por país</figcaption>
+        <figcaption>{metricLabel(catalog, metric)} por país</figcaption>
         <svg viewBox={`0 0 ${WIDTH} ${HEIGHT}`} role="img" aria-label="Mapa coroplético de informes por país">
           <Basemap fill={false} />
           {countries.features.map((f, i) => {
@@ -149,8 +146,7 @@ export function ChoroplethView({ result, catalog }: Props) {
             const v = row ? value(row, metric) ?? 0 : 0;
             const idx = rampIndex(v, max);
             const title = row ? cell(row, "country_iso2") : f.properties?.name ?? "";
-            const lines = row ? [{ value: formatMetric(v, metric, catalog), label: lower ? "todos los informes" : metricLabel(catalog, metric) }] : [{ value: "0", label: "informes en este resultado" }];
-            if (row && lower) lines.push({ value: num(row[lower]), label: "sin candidatos pendientes" });
+            const lines = row ? [{ value: formatMetric(v, metric, catalog), label: metricLabel(catalog, metric) }] : [{ value: "0", label: "informes en este resultado" }];
             return (
               <path key={i} d={path(f) ?? ""} fill={idx < 0 ? "var(--empty-cell)" : RAMP[idx]} className="mark country"
                     tabIndex={row ? 0 : -1} aria-label={`${title}: ${lines[0].value}`}

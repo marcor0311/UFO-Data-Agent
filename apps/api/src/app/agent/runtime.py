@@ -71,7 +71,7 @@ def history_inputs(history: list[dict]) -> list[dict]:
     for turn in history[-HISTORY_TURNS:]:
         inputs += [{"role": "user", "content": turn["question"]}, {"role": "assistant", "content": turn["answer"]}]
         evidence = [{"query": v["query"], "readable_query": v["readable_query"]["texto"], "rows": v["rows"][:30],
-                     "duplicate_bounds": v.get("duplicate_bounds"), "result_type": v["result_type"]}
+                     "result_type": v["result_type"]}
                     for v in turn.get("visualizations", [])]
         if evidence:
             inputs.append({"role": "user", "content": "Evidencia verificada del turno anterior (no se vuelve a mostrar): "

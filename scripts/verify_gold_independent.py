@@ -272,10 +272,6 @@ class Interpreter:
                 if all(r[FLAG_OF[e]] for e in eligibility) and all(self.match(r, f) for f in filters)]
         group_by = query.get("group_by", [])
         metrics = list(query.get("metrics", []))
-        if "report_count" in metrics and "report_count_excl_candidates" not in metrics and dataset not in ("report_model_output",):
-            metrics.append("report_count_excl_candidates")
-        if "report_count_excl_candidates" in metrics and "report_count" not in metrics:
-            metrics.append("report_count")
         matched = len(rows)
         limit = query.get("limit", self.config["query"]["default_limit"])
         if not metrics:

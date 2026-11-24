@@ -26,8 +26,7 @@ def test_query_returns_compact_payload_and_full_visual(gold):
     visuals = []
     out = tools.execute(gold, "query_gold", {"dataset": "agg_source", "group_by": ["source_code"], "metrics": ["report_count"]}, visuals)
     assert len(visuals) == 1 and visuals[0]["provenance"]["gold_load_id"] == gold.load_id
-    assert out["duplicate_bounds"]["lower"] == "report_count_excl_candidates"
-    assert {"reports_not_facts", "pending_duplicates"} <= {l["code"] for l in out["limitations"]}
+    assert "reports_not_facts" in {l["code"] for l in out["limitations"]}
     assert "readable_query" in out and "provenance" not in out
 
 
@@ -163,3 +162,13 @@ def test_search_schema_requires_needs(gold):
     search = next(t for t in tools.schemas(gold) if t["name"] == "search_certified")
     assert search["parameters"]["required"] == ["question", "needs"]
     assert set(search["parameters"]["properties"]["needs"]["properties"]) == {"filters", "group_by", "metrics"}
+
+
+def test_report_count_is_a_single_figure(gold):
+    """Each report is one unit: asking for report_count returns one number, not a range."""
+    visuals = []
+    out = tools.execute(gold, "query_gold", {"dataset": "agg_year", "group_by": ["event_year"], "metrics": ["report_count"]}, visuals)
+    assert out["rows"] and all(set(r) - {"event_year", "event_year_label"} == {"report_count"} for r in out["rows"])
+    assert "duplicate_bounds" not in out and "duplicate_bounds" not in visuals[0]
+    texts = " ".join(l["text"] for l in out["limitations"])
+    assert "rango" not in texts and "cota" not in texts and "posibles duplicados" not in texts

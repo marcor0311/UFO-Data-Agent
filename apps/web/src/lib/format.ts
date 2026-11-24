@@ -19,8 +19,16 @@ export function compact(value: number): string {
   return Math.abs(value) < 10000 ? num(value) : compactFmt.format(value);
 }
 
+/** Plain-language names; each report counts as one unit. Gold's catalog keeps its technical labels. */
+const PLAIN_METRICS: Record<string, string> = {
+  report_count: "Informes",
+  report_count_excl_candidates: "Informes sin coincidencias por revisar",
+  pending_candidate_reports: "Informes con coincidencias por revisar",
+  pending_candidate_pct: "% de informes con coincidencias por revisar",
+};
+
 export function metricLabel(catalog: Catalog | null, code: string): string {
-  return catalog?.metrics[code]?.label ?? code;
+  return PLAIN_METRICS[code] ?? catalog?.metrics[code]?.label ?? code;
 }
 
 export function dimensionLabel(catalog: Catalog | null, code: string): string {

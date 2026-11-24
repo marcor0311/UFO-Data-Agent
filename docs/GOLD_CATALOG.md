@@ -2,12 +2,12 @@
 
 Generado por `scripts/discover_gold.py`; no editar a mano.
 
-- Carga Gold (`load_id`): `cb34d85bf862a18b55466abb2b22fc6b96a9219a3d018a6e7ab372063e665cb4`
+- Carga Gold (`load_id`): `c5acb1eb49fb3c2e2c0ba29d582a2d2d75448b58a48de7252df28234d14103c6`
 - SHA-256 de Gold: `4fa5cb9488638807e1fe0ba085bafa9ffe1e897982fdc8016d39623ec28ec03a`
 - SHA-256 de Silver: `72ada3670f79568025bc4f1c0184e4ae3b3c0236ece6f9f4a2483544a92aa25e`
 - SHA-256 de Bronze: `0200337eb1eadabd337ac4f479fceceb5a810eec8ab072cd7a206523703820e0`
-- Hash de definiciones: `04657006a72b938cc9bfd231663a737a8477d309edcbd62b5ec54ab23c90de43`
-- Construida: 2026-11-23T02:55:25+00:00
+- Hash de definiciones: `fd58301e1d438193dc1c9c477ec21316dfd5b06ba6985865c172d6642324d8cd`
+- Construida: 2026-11-24T00:51:57+00:00
 
 ## Tablas
 
@@ -71,8 +71,8 @@ Tipos, nulos, rangos, valores categóricos y conteos por columna: [GOLD_CATALOG.
 
 | Código | Etiqueta | Tipo | Cota de duplicados | Datasets |
 |---|---|---|---|---|
-| `report_count` | Informes (cota superior) | additive | upper | agg_country, agg_coverage, agg_month, agg_nuclear_band, agg_shape, agg_source, agg_spatial_cell, agg_weekday_hour, agg_year, fact_report, report_model_output |
-| `report_count_excl_candidates` | Informes sin candidatos pendientes (cota inferior) | additive | lower | agg_country, agg_coverage, agg_month, agg_nuclear_band, agg_shape, agg_source, agg_spatial_cell, agg_weekday_hour, agg_year, fact_report |
+| `report_count` | Informes | additive | — | agg_country, agg_coverage, agg_month, agg_nuclear_band, agg_shape, agg_source, agg_spatial_cell, agg_weekday_hour, agg_year, fact_report, report_model_output |
+| `report_count_excl_candidates` | Informes sin coincidencias por revisar | additive | — | agg_country, agg_coverage, agg_month, agg_nuclear_band, agg_shape, agg_source, agg_spatial_cell, agg_weekday_hour, agg_year, fact_report |
 | `pending_candidate_reports` | Informes con par candidato pendiente | additive | — | agg_country, agg_coverage, agg_month, agg_nuclear_band, agg_shape, agg_source, agg_spatial_cell, agg_weekday_hour, agg_year, fact_report |
 | `external_evidence_reports` | Informes con evidencia externa | additive | — | agg_country, agg_coverage, agg_month, agg_nuclear_band, agg_shape, agg_source, agg_spatial_cell, agg_weekday_hour, agg_year, fact_report |
 | `confirmed_group_reports` | Informes en grupos confirmados | additive | — | fact_report |
@@ -107,7 +107,7 @@ Tipos, nulos, rangos, valores categóricos y conteos por columna: [GOLD_CATALOG.
 ## Limitaciones
 
 - **reports_not_facts**: Cada fila es un informe registrado por una fuente, no un hecho verificado ni un avistamiento confirmado. Coincidir con Bronze no prueba que el relato sea verdadero.
-- **pending_duplicates**: Hay pares candidatos de duplicado pendientes de evidencia: el número de informes se da como rango (report_count como cota superior y report_count_excl_candidates como cota inferior). Ninguno de los dos es un número de eventos.
+- **pending_duplicates**: Algunos informes tienen coincidencias por revisar con otros. No están confirmados como duplicados: cada uno cuenta como un informe.
 - **confirmed_events_only**: Los eventos existen solo para los grupos de duplicados confirmados por coincidencia exacta. Los informes únicos y los candidatos pendientes no son eventos.
 - **eligibility_calendar**: Solo informes con fecha apta para calendario; quedan fuera fechas calificadas, intervalos, faltantes, inválidas y en revisión.
 - **eligibility_month**: Solo informes con mes fiable; quedan fuera las fechas de solo año y las 01-01 de fuentes con exceso de ese marcador.

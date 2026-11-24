@@ -187,12 +187,13 @@ class GoldQueryTest(unittest.TestCase):
         self.assertEqual(result["total"]["external_evidence_pct"], round(100 * 2 / 12, 4))
         self.assertNotEqual(result["total"]["external_evidence_pct"], sum(by.values()))
 
-    def test_duplicate_bounds_are_paired_and_coherent(self):
+    def test_report_count_is_a_single_figure(self):
         result = self.q(dataset="agg_source", group_by=["source_code"], metrics=["report_count"])
-        self.assertEqual(result["duplicate_bounds"]["lower"], "report_count_excl_candidates")
+        self.assertNotIn("duplicate_bounds", result)
         for row in result["rows"]:
-            self.assertLessEqual(row["report_count_excl_candidates"], row["report_count"])
-        both = self.q(dataset="fact_report", metrics=["report_count", "pending_candidate_reports"])["rows"][0]
+            self.assertNotIn("report_count_excl_candidates", row)
+        # The quality columns stay in Gold and keep adding up when requested explicitly.
+        both = self.q(dataset="fact_report", metrics=["report_count", "report_count_excl_candidates", "pending_candidate_reports"])["rows"][0]
         self.assertEqual(both["report_count"] - both["report_count_excl_candidates"], both["pending_candidate_reports"])
 
     def test_exclusions_add_up(self):
@@ -233,7 +234,7 @@ class GoldQueryTest(unittest.TestCase):
         self.assertEqual(len(prov["query_sha256"]), 64)
         self.assertIn("País", result["readable_query"]["texto"])
         codes = {l["code"] for l in result["limitations"]}
-        self.assertTrue({"reports_not_facts", "pending_duplicates", "eligibility_country", "external_evidence"} <= codes)
+        self.assertTrue({"reports_not_facts", "eligibility_country", "external_evidence"} <= codes)
         self.assertEqual(result["result_type"], "composed")
         self.assertIn("country_iso2_label", result["rows"][0])
 

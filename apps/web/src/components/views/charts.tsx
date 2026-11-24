@@ -2,10 +2,9 @@
 
 import { useMemo, useState } from "react";
 import type { Catalog, GoldResult, Row } from "@/lib/contracts";
-import { cell, compact, metricLabel, num } from "@/lib/format";
+import { cell, compact, metricLabel } from "@/lib/format";
 import {
-  BoundLegend, DataTable, Empty, RAMP, formatMetric, groupLabel, lowerBound, metricsOf, niceMax, panelMetrics, panelTitle,
-  rampIndex, rampLegend, rangeText, ticks, useTooltip, value, yearTicks,
+  DataTable, Empty, RAMP, formatMetric, groupLabel, metricsOf, niceMax, rampIndex, rampLegend, ticks, useTooltip, value, yearTicks,
 } from "./shared";
 
 type Props = { result: GoldResult; catalog: Catalog | null };
@@ -18,11 +17,10 @@ export function TableView({ result, catalog }: Props) {
     const row = result.rows[0];
     return (
       <div className="stat-grid">
-        {panelMetrics(result, catalog).map((m) => (
+        {metricsOf(result, catalog).map((m) => (
           <div className="stat" key={m}>
             <div className="stat-label">{metricLabel(catalog, m)}</div>
-            <div className="stat-value">{rangeText(row, m, result, catalog)}</div>
-            {lowerBound(result, m) ? <div className="stat-note">Rango por duplicados pendientes: sin candidatos – todos</div> : null}
+            <div className="stat-value">{formatMetric(value(row, m), m, catalog)}</div>
           </div>
         ))}
       </div>
@@ -41,8 +39,7 @@ export function BarsView({ result, catalog }: Props) {
   const groups = result.query.group_by;
   return (
     <div className="viz" ref={ref}>
-      {panelMetrics(result, catalog).map((metric) => {
-        const lower = lowerBound(result, metric);
+      {metricsOf(result, catalog).map((metric) => {
         const max = niceMax(Math.max(0, ...result.rows.map((r) => value(r, metric) ?? 0)));
         const labelWidth = Math.min(240, Math.round(width * 0.3));
         const plot = width - labelWidth - 140;
@@ -50,8 +47,7 @@ export function BarsView({ result, catalog }: Props) {
         const height = result.rows.length * (BAR + GAP) + 26;
         return (
           <figure className="viz-panel" key={metric}>
-            <figcaption>{panelTitle(result, metric, catalog)}</figcaption>
-            <BoundLegend result={result} metric={metric} />
+            <figcaption>{metricLabel(catalog, metric)}</figcaption>
             <svg viewBox={`0 0 ${width} ${height}`} role="img" aria-label={`${metricLabel(catalog, metric)} por ${groups.join(", ")}`}>
               {ticks(max).map((t) => {
                 const x = labelWidth + (t / max) * plot;
@@ -66,21 +62,19 @@ export function BarsView({ result, catalog }: Props) {
                 const y = i * (BAR + GAP) + 4;
                 const v = value(row, metric) ?? 0;
                 const w = Math.max(0, (v / max) * plot);
-                const lw = lower ? Math.max(0, ((value(row, lower) ?? 0) / max) * plot) : 0;
                 const label = groupLabel(row, groups);
-                const lines = [{ value: formatMetric(value(row, metric), metric, catalog), label: lower ? "todos los informes" : metricLabel(catalog, metric), key: lower ? "var(--bound-upper)" : "var(--series-1)" }];
-                if (lower) lines.push({ value: num(row[lower]), label: "sin candidatos pendientes", key: "var(--series-1)" });
+                const text = formatMetric(value(row, metric), metric, catalog);
+                const lines = [{ value: text, label: metricLabel(catalog, metric), key: "var(--series-1)" }];
                 return (
-                  <g key={i} className="mark" tabIndex={0} aria-label={`${label}: ${rangeText(row, metric, result, catalog)}`}
+                  <g key={i} className="mark" tabIndex={0} aria-label={`${label}: ${text}`}
                      onPointerMove={(e) => show(e, { title: label, lines })} onPointerLeave={hide}
                      onFocus={(e) => show(e.currentTarget.getBoundingClientRect(), { title: label, lines })} onBlur={hide}>
                     <rect x={0} y={y - GAP / 2} width={width} height={BAR + GAP} fill="transparent" />
                     <text x={labelWidth - 10} y={y + BAR / 2} className="cat" textAnchor="end" dominantBaseline="middle">
                       {label.length > chars ? label.slice(0, chars - 1) + "…" : label}
                     </text>
-                    <path d={barPath(labelWidth, y, w, BAR)} fill={lower ? "var(--bound-upper)" : "var(--series-1)"} />
-                    {lower ? <path d={barPath(labelWidth, y + 4, lw, BAR - 8)} fill="var(--series-1)" /> : null}
-                    <text x={labelWidth + w + 6} y={y + BAR / 2} className="val" dominantBaseline="middle">{rangeText(row, metric, result, catalog)}</text>
+                    <path d={barPath(labelWidth, y, w, BAR)} fill="var(--series-1)" />
+                    <text x={labelWidth + w + 6} y={y + BAR / 2} className="val" dominantBaseline="middle">{text}</text>
                   </g>
                 );
               })}
@@ -136,19 +130,12 @@ export function TimeseriesView({ result, catalog }: Props) {
   const xticks = yearTicks(x0, x1, Math.max(3, Math.floor(width / 110)));
   return (
     <div className="viz" ref={ref}>
-      {panelMetrics(result, catalog).map((metric) => {
-        const lower = lowerBound(result, metric);
+      {metricsOf(result, catalog).map((metric) => {
         const max = niceMax(Math.max(0, ...result.rows.map((r) => value(r, metric) ?? 0)));
         const sy = (v: number) => height - pad.b - (v / max) * (height - pad.t - pad.b);
         return (
           <figure className="viz-panel" key={metric}>
-            <figcaption>{panelTitle(result, metric, catalog)}</figcaption>
-            {lower ? (
-              <div className="viz-legend">
-                <span><i className="line-key" style={{ background: "var(--series-1)" }} />Todos los informes (cota superior)</span>
-                <span><i className="line-key" style={{ background: "var(--series-2)" }} />Sin candidatos pendientes (cota inferior)</span>
-              </div>
-            ) : null}
+            <figcaption>{metricLabel(catalog, metric)}</figcaption>
             <div className={facets.length > 1 ? "facets" : undefined}>
               {facets.map((f) => {
                 const points = f.rows.map((row) => ({ row, x: timeValue(row[time]) })).filter((p): p is { row: Row; x: number } => p.x !== null)
@@ -167,8 +154,7 @@ export function TimeseriesView({ result, catalog }: Props) {
                            const i = nearest(e.clientX, e.currentTarget);
                            setHover(i);
                            const p = points[i];
-                           const lines = [{ value: formatMetric(value(p.row, metric), metric, catalog), label: lower ? "todos los informes" : metricLabel(catalog, metric), key: "var(--series-1)" }];
-                           if (lower) lines.push({ value: num(p.row[lower]), label: "sin candidatos pendientes", key: "var(--series-2)" });
+                           const lines = [{ value: formatMetric(value(p.row, metric), metric, catalog), label: metricLabel(catalog, metric), key: "var(--series-1)" }];
                            show(e, { title: cell(p.row, time) + (f.label ? " · " + f.label : ""), lines });
                          }}
                          onPointerLeave={() => { setHover(null); hide(); }}>
@@ -183,12 +169,10 @@ export function TimeseriesView({ result, catalog }: Props) {
                       ))}
                       <line x1={pad.l} x2={width - pad.r} y1={sy(0)} y2={sy(0)} className="axis" />
                       <path d={path(metric)} className="series" stroke="var(--series-1)" />
-                      {lower ? <path d={path(lower)} className="series" stroke="var(--series-2)" /> : null}
                       {hover !== null && points[hover] ? (
                         <g>
                           <line x1={sx(points[hover].x)} x2={sx(points[hover].x)} y1={pad.t} y2={height - pad.b} className="crosshair" />
                           <circle cx={sx(points[hover].x)} cy={sy(value(points[hover].row, metric) ?? 0)} r={4} className="dot" fill="var(--series-1)" />
-                          {lower ? <circle cx={sx(points[hover].x)} cy={sy(value(points[hover].row, lower) ?? 0)} r={4} className="dot" fill="var(--series-2)" /> : null}
                         </g>
                       ) : null}
                     </svg>
@@ -212,7 +196,6 @@ export function HourWeekdayView({ result, catalog }: Props) {
   const { ref, show, hide, layer, width: measured } = useTooltip();
   if (result.empty) return <Empty />;
   const metric = metricsOf(result, catalog)[0];
-  const lower = lowerBound(result, metric);
   const grid = new Map(result.rows.map((r) => [`${r.weekday}-${r.event_hour}`, r]));
   const max = Math.max(0, ...result.rows.map((r) => value(r, metric) ?? 0));
   const left = 82;
@@ -222,7 +205,7 @@ export function HourWeekdayView({ result, catalog }: Props) {
   return (
     <div className="viz" ref={ref}>
       <figure className="viz-panel">
-        <figcaption>{lower ? "Informes" : metricLabel(catalog, metric)} por día de la semana y hora local declarada</figcaption>
+        <figcaption>{metricLabel(catalog, metric)} por día de la semana y hora local declarada</figcaption>
         <svg viewBox={`0 0 ${width} ${height}`} style={{ maxWidth: width }} role="img" aria-label="Matriz de informes por día de la semana y hora">
           {Array.from({ length: 24 }, (_, h) => h % 3 === 0 ? (
             <text key={h} x={left + h * size + size / 2} y={height - 8} className="tick" textAnchor="middle">{h}h</text>
@@ -234,8 +217,7 @@ export function HourWeekdayView({ result, catalog }: Props) {
                 const row = grid.get(`${d + 1}-${h}`);
                 const v = row ? value(row, metric) ?? 0 : 0;
                 const i = rampIndex(v, max, "linear");
-                const lines = [{ value: formatMetric(v, metric, catalog), label: lower ? "todos los informes" : metricLabel(catalog, metric) }];
-                if (lower && row) lines.push({ value: num(row[lower]), label: "sin candidatos pendientes" });
+                const lines = [{ value: formatMetric(v, metric, catalog), label: metricLabel(catalog, metric) }];
                 const title = `${day}, ${h}:00–${h}:59`;
                 return (
                   <rect key={h} x={left + h * size + 1} y={d * size + 1} width={size - 2} height={size - 2} rx={3}

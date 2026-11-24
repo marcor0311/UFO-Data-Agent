@@ -39,7 +39,6 @@ export function Evidence({ result, catalog }: { result: GoldResult; catalog: Cat
           <dt>Consulta</dt><dd><code title={result.provenance.query_sha256}>{short(result.provenance.query_sha256)}</code></dd>
           <dt>Filas de origen</dt><dd>{num(result.matched_source_rows)}{result.truncated ? " · resultado truncado" : ""}</dd>
         </dl>
-        {result.duplicate_bounds ? <p>{result.duplicate_bounds.text}</p> : null}
         {ex ? (
           <p>
             Elegibilidad aplicada: {result.eligibility_applied.map((e) => e.label + (e.implied ? " (implícita)" : "")).join(", ")}.{" "}
