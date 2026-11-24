@@ -4,7 +4,6 @@ from __future__ import annotations
 
 import argparse
 from contextlib import closing
-import hashlib
 import json
 import os
 import shutil
@@ -14,6 +13,13 @@ import sys
 from datetime import datetime, timezone
 from pathlib import Path
 from urllib.parse import urlparse
+
+if __package__:
+    from .pipeline_context import digest, replace, write_text
+else:
+    if str(Path(__file__).resolve().parent) not in sys.path:   # also when loaded by file path
+        sys.path.insert(0, str(Path(__file__).resolve().parent))
+    from pipeline_context import digest, replace, write_text
 
 ROOT = Path(__file__).resolve().parents[1]
 MANIFEST = ROOT / "config/bronze.json"
@@ -33,14 +39,6 @@ METRICS = {
     "roberta": "SELECT COUNT(*) FROM sighting WHERE roberta_sentiment IS NOT NULL",
     "nrc": "SELECT COUNT(*) FROM sighting WHERE nrc_joy IS NOT NULL",
 }
-
-
-def digest(path: Path) -> str:
-    h = hashlib.sha256()
-    with path.open("rb") as f:
-        for block in iter(lambda: f.read(4 * 1024 * 1024), b""):
-            h.update(block)
-    return h.hexdigest()
 
 
 def check_asset(path: Path, manifest: dict) -> dict:
@@ -76,7 +74,7 @@ def download(path: Path, manifest: dict, source: str | None = None) -> None:
             shutil.copyfile(Path(source).expanduser(), part)
     if not check_asset(part, manifest)["passed"]:
         raise RuntimeError("La descarga no pasó tamaño/SHA-256; se conserva como .part.")
-    part.rename(path)
+    replace(part, path)
 
 
 def quote(name: str) -> str:
@@ -187,7 +185,7 @@ def main() -> int:
         if not args.verify_only:
             download(args.database, manifest, args.source)
         report = validate(args.database, manifest)
-        report_path.write_text(json.dumps(report, indent=2, ensure_ascii=False) + "\n", encoding="utf-8")
+        write_text(report_path, json.dumps(report, indent=2, ensure_ascii=False) + "\n")
     except (OSError, ValueError, RuntimeError, sqlite3.Error, subprocess.CalledProcessError) as exc:
         print(f"ERROR: {exc}", file=sys.stderr)
         return 1

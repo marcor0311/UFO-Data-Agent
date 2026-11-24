@@ -1,35 +1,36 @@
 {
- "load_id": "c5acb1eb49fb3c2e2c0ba29d582a2d2d75448b58a48de7252df28234d14103c6",
+ "load_id": "3f1da0ee64350ecfbccd60e81f89722fcb69a21477de243c57c95d6b62be4714",
  "manifest": {
   "gold_version": 1,
-  "load_id": "c5acb1eb49fb3c2e2c0ba29d582a2d2d75448b58a48de7252df28234d14103c6",
-  "built_at": "2026-11-24T00:51:57+00:00",
+  "load_id": "3f1da0ee64350ecfbccd60e81f89722fcb69a21477de243c57c95d6b62be4714",
+  "built_at": "2026-11-24T04:16:38+00:00",
   "silver": {
-   "path": "data/silver/ufo.db",
-   "sha256": "72ada3670f79568025bc4f1c0184e4ae3b3c0236ece6f9f4a2483544a92aa25e",
+   "path": "silver/versions/20261124T040556Z-32526-356bca4b/ufo.db",
+   "sha256": "c6a298ec7641c48c62d1c43b42dcac99d076f6556e8ef0a446d9327adc60a22f",
    "policy_version": 6,
    "reference_date": "2026-11-21",
-   "run_id": "51921a5d827c5306369262f03b5777410d0b658edd99f36ee0ccf6b52ca29323",
+   "run_id": "45d4dd539cf81b4caf54748bc674824d39f2b50f4662d52ad85eaa3d950c6182",
    "readiness": {
     "ready_for_gold": true,
     "checks": 140,
-    "report": "data/gold/silver.readiness.json"
+    "report": "silver.readiness.json"
    }
   },
   "bronze": {
-   "path": "data/bronze/ufo.db",
+   "path": "bronze/ufo.db",
    "sha256": "0200337eb1eadabd337ac4f479fceceb5a810eec8ab072cd7a206523703820e0"
   },
-  "definitions_sha256": "fd58301e1d438193dc1c9c477ec21316dfd5b06ba6985865c172d6642324d8cd",
+  "silver_run_id": "45d4dd539cf81b4caf54748bc674824d39f2b50f4662d52ad85eaa3d950c6182",
+  "definitions_sha256": "29fd0caf429f1e6ec6748d87567f3ba6fa0a6ac84f6925cffbaa2774ddbc5ab2",
   "definitions": {
    "config/countries.json": "839e364587626cb417b37d18f2d57fdddccaa60a8aab2bfcfb607884b98288f2",
    "config/gold/country_names_es.json": "ac9030d7d9612815ce86c324fc985992484c658a4213bb07fac3f9f58a343bdc",
    "config/gold/dataset_catalog.json": "5076626167df243ec98c73b626291eac10086ae96043fb9176e93d5364cc78f2",
    "config/gold/dimension_catalog.json": "4195232b1f812305f6362ee7fc7aea3e20754c931dae927200e5598ac8b219c6",
-   "config/gold/gold.json": "d4ab2465ad9deb564e8779536de84423f52c20a5fbbbe1a2516b672cddcb513c",
+   "config/gold/gold.json": "031387b936ec1abef62d86a8b7e3a3005d42edeeea026430e752d063056e1f29",
    "config/gold/metric_catalog.json": "cb3f7531f5cebc93dd9d4f38e9e207c20301475f7cf01c720b48ea073e7231a3",
-   "scripts/build_gold.py": "0a53ebca5a5f01ed5ab9a3eb7cec7af4cf279e971f695c51adab2f247b1a0832",
-   "scripts/gold_common.py": "41ce40b4c6a00793b4f91db039a3e6806b5560bd3a3ce4dbfa011cdb78424ce8"
+   "scripts/build_gold.py": "114627aad3c8c92585720c07b6acdcd23d01e133e4c84fe2b5a6e9b667ba6029",
+   "scripts/gold_common.py": "1761b0a1f751b56db2c428b02cd27e68c9f1dff7d4a5e6ea10600ffe994ddd92"
   },
   "gold_sha256": "4fa5cb9488638807e1fe0ba085bafa9ffe1e897982fdc8016d39623ec28ec03a",
   "tables": {
@@ -74,8 +75,7 @@
   "validation": {
    "checks": 513,
    "passed": true
-  },
-  "archived_previous": "data/gold/.history/4fa5cb9488638807e1fe0ba085bafa9ffe1e897982fdc8016d39623ec28ec03a"
+  }
  },
  "dataset_catalog": {
   "fact_report": {

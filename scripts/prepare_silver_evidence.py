@@ -12,7 +12,7 @@ ROOT=Path(__file__).resolve().parents[1]
 def write_reference(path,document,field,entries):
     header=json.dumps(document,ensure_ascii=False,indent=2).rstrip()[:-1].rstrip()
     body=',\n'.join('    '+json.dumps(item,ensure_ascii=False,separators=(',',':')) for item in entries)
-    path.write_text(header+',\n  "'+field+'": [\n'+body+'\n  ]\n}\n',encoding='utf-8')
+    path.write_text(header+',\n  "'+field+'": [\n'+body+'\n  ]\n}\n',encoding='utf-8',newline='\n')
 
 
 def prepare(timeline):

@@ -1,21 +1,24 @@
 """Run the Gold evaluation set and certified queries on the real local snapshot.
 
-Skipped when the generated Gold serving cache is absent (for example in CI,
-which has no external data). The evaluation also records results per load_id.
+Skipped when no Gold load is approved in the local catalog (for example in
+CI, which has no external data). It opens the approved load exactly as the API
+does and evaluates it with that load's own certified queries and references,
+without writing anything.
 """
 from __future__ import annotations
 
-import json
 import sys
 import unittest
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "scripts"))
-SERVING = ROOT / "data/gold/serving/ufo_gold_serving.db"
+import releases  # noqa: E402
+
+APPROVED = releases.approved(releases.data_root(), "gold")
 
 
-@unittest.skipUnless(SERVING.exists(), "Gold serving cache not built locally")
+@unittest.skipUnless(APPROVED, "No approved Gold load in the local catalog")
 class GoldEvaluationSetTest(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
@@ -24,7 +27,7 @@ class GoldEvaluationSetTest(unittest.TestCase):
 
     def test_evaluation_set_passes_for_current_load(self):
         import run_gold_evals
-        report = run_gold_evals.run(analytics=self.analytics)
+        report = run_gold_evals.run(analytics=self.analytics, write=False)
         failed = [r for r in report["results"] if not r["passed"]]
         self.assertEqual(failed, [])
         self.assertTrue(report["summary"]["references_for_current_load"])
@@ -32,7 +35,8 @@ class GoldEvaluationSetTest(unittest.TestCase):
 
     def test_certified_queries_are_valid_and_reproduce(self):
         import gold_query
-        for item in json.loads((ROOT / "config/gold/certified_queries.json").read_text())["queries"]:
+        self.assertEqual(self.analytics.coherence_problems(), [])
+        for item in self.analytics.certified()["queries"]:
             with self.subTest(item["id"]):
                 self.assertTrue(self.analytics.certification_status(item)["valid"])
                 result = self.analytics.run_certified(item["id"])

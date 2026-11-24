@@ -10,8 +10,12 @@ import sys
 
 if __package__:
     from . import build_silver as silver
+    from .pipeline_context import write_text
+    from .releases import data_root, default_silver
 else:
     import build_silver as silver
+    from pipeline_context import write_text
+    from releases import data_root, default_silver
 
 
 def readiness(source, database, manifest, policy):
@@ -65,17 +69,21 @@ def readiness(source, database, manifest, policy):
 
 def main():
     parser=argparse.ArgumentParser(description=__doc__)
-    parser.add_argument('--source',type=Path,default=silver.ROOT/'data/bronze/ufo.db')
-    parser.add_argument('--database',type=Path,default=silver.ROOT/'data/silver/ufo.db')
-    parser.add_argument('--output',type=Path,default=silver.ROOT/'data/silver/ufo.readiness.json')
+    data=data_root()
+    parser.add_argument('--source',type=Path,default=data/'bronze/ufo.db')
+    parser.add_argument('--database',type=Path,default=None,
+                        help='Silver a revisar (por defecto: la versión aprobada del catálogo)')
+    parser.add_argument('--output',type=Path,default=data/'silver/ufo.readiness.json')
     args=parser.parse_args()
+    args.database=args.database or default_silver(data)
     protected={args.source.resolve(),args.database.resolve(),args.database.with_suffix('.validation.json').resolve(),
                silver.POLICY.resolve(),silver.MANIFEST.resolve()}
     if args.output.resolve() in protected:
         parser.error('El informe no puede sustituir una base, política o validación')
     try:
-        result=readiness(args.source,args.database,json.loads(silver.MANIFEST.read_text()),json.loads(silver.POLICY.read_text()))
-        args.output.write_text(json.dumps(result,ensure_ascii=False,indent=2)+'\n',encoding='utf-8')
+        result=readiness(args.source,args.database,json.loads(silver.MANIFEST.read_text(encoding='utf-8')),
+                         json.loads(silver.POLICY.read_text(encoding='utf-8')))
+        write_text(args.output,json.dumps(result,ensure_ascii=False,indent=2)+'\n')
     except (OSError,ValueError,sqlite3.Error) as exc:
         print(f'NO APTA PARA GOLD: {exc}',file=sys.stderr)
         return 1

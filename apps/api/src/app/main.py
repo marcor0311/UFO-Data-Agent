@@ -34,8 +34,12 @@ async def failed(request: Request, exc: Exception):
 
 @app.get("/api/health")
 def health(a: Analytics = Depends(get_analytics)):
-    return {"status": "ok", "gold_load_id": a.load_id, "gold_sha256": a.cache["gold_sha256"],
-            "serving_sha256": a.cache["sha256"], "cache_version": a.cache["cache_version"]}
+    release = getattr(a, "release", None) or {}
+    return {"status": "ok", "gold_load_id": a.load_id, "serving_load_id": a.cache["load_id"],
+            "readiness_load_id": release.get("readiness_load_id"), "gold_version": release.get("version"),
+            "source": release.get("source"), "promoted_at": release.get("promoted_at"),
+            "gold_sha256": a.cache["gold_sha256"], "serving_sha256": a.cache["sha256"],
+            "cache_version": a.cache["cache_version"]}
 
 
 app.include_router(router)

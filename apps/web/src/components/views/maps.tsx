@@ -1,7 +1,9 @@
 "use client";
 
-import { useMemo } from "react";
+import { useEffect, useId, useMemo, useRef, useState } from "react";
+import dynamic from "next/dynamic";
 import { geoGraticule10, geoNaturalEarth1, geoPath } from "d3-geo";
+import type { MapReport } from "./geo-map";
 import { feature, mesh } from "topojson-client";
 import type { Feature, FeatureCollection, Geometry, MultiLineString } from "geojson";
 import type { GeometryCollection, Topology } from "topojson-specification";
@@ -34,42 +36,41 @@ function Basemap({ fill = true }: { fill?: boolean }) {
   );
 }
 
-/* -- points: one report each ------------------------------------------------ */
+/* -- points: MapLibre + deck.gl map (2D/3D, points or 3D models) ------------- */
+// WebGL engine is fetched only when a map visualization exists, never in the initial bundle.
+const GeoMap = dynamic(() => import("./geo-map"), { ssr: false, loading: () => <div className="geo-map-canvas geo-map-loading">Cargando mapa…</div> });
+
+/** Mount the WebGL map only once it is near the viewport (limits live WebGL contexts). */
+function useNearViewport() {
+  const ref = useRef<HTMLDivElement>(null);
+  const [near, setNear] = useState(false);
+  useEffect(() => {
+    const el = ref.current;
+    if (!el || near) return;
+    const io = new IntersectionObserver(([e]) => { if (e.isIntersecting) { setNear(true); io.disconnect(); } }, { rootMargin: "300px" });
+    io.observe(el);
+    return () => io.disconnect();
+  }, [near]);
+  return { ref, near };
+}
+
 export function PointsView({ result }: Props) {
-  const { ref, show, hide, layer } = useTooltip();
-  const points = result.rows.filter((r) => typeof r.lat === "number" && typeof r.lng === "number");
-  if (!points.length) return <Empty>No hay informes con coordenadas aptas para el mapa con esos filtros.</Empty>;
-  const hasExternal = points.some((r) => r.uses_external_evidence === 1);
+  const { ref, near } = useNearViewport();
+  const reports = useMemo<MapReport[]>(() => result.rows
+    .filter((r) => typeof r.lat === "number" && typeof r.lng === "number")
+    .map((r) => ({
+      id: String(r.report_id), lng: r.lng as number, lat: r.lat as number,
+      shape: (r.shape_code as string | null) ?? null, shapeLabel: String(r.shape_code_label ?? ""),
+      source: String(r.source_code_label ?? r.source_code ?? ""), date: r.date_key == null ? null : String(r.date_key),
+      external: r.uses_external_evidence === 1,
+    })), [result.rows]);
+  if (!reports.length) return <Empty>No hay informes con coordenadas aptas para el mapa con esos filtros.</Empty>;
   return (
     <div className="viz" ref={ref}>
       <figure className="viz-panel">
-        <figcaption>{num(points.length)} informes con coordenadas aptas{result.truncated ? " (truncado)" : ""}</figcaption>
-        <div className="viz-legend">
-          <span><i className="swatch round" style={{ background: "var(--series-1)" }} />Coordenadas de Bronze</span>
-          {hasExternal ? <span><i className="swatch round" style={{ background: "var(--series-2)" }} />Coordenadas del catálogo externo (UFO-search)</span> : null}
-        </div>
-        <svg viewBox={`0 0 ${WIDTH} ${HEIGHT}`} role="img" aria-label="Mapa de puntos de informes">
-          <Basemap />
-          {points.map((row) => {
-            const xy = projection([row.lng as number, row.lat as number]);
-            if (!xy) return null;
-            const title = `Informe ${row.report_id}`;
-            const lines = [{ value: `${num(row.lat)}, ${num(row.lng)}`, label: "lat, lng" },
-              ...Object.keys(row).filter((k) => !["report_id", "lat", "lng"].includes(k) && !k.endsWith("_label"))
-                .map((k) => ({ value: cell(row, k), label: k }))];
-            return (
-              <g key={String(row.report_id)} className="mark" tabIndex={0} aria-label={title}
-                 onPointerMove={(e) => show(e, { title, lines })} onPointerLeave={hide}
-                 onFocus={(e) => show(e.currentTarget.getBoundingClientRect(), { title, lines })} onBlur={hide}>
-                <circle cx={xy[0]} cy={xy[1]} r={12} fill="transparent" />
-                <circle cx={xy[0]} cy={xy[1]} r={4} className="dot" fill={row.uses_external_evidence === 1 ? "var(--series-2)" : "var(--series-1)"} />
-              </g>
-            );
-          })}
-        </svg>
-        <p className="viz-note">Una coordenada puede ser el centro de una ciudad, no el lugar exacto del testigo.</p>
+        <figcaption>{num(reports.length)} informes con coordenadas aptas{result.truncated ? " (truncado)" : ""}</figcaption>
+        {near ? <GeoMap reports={reports} /> : <div className="geo-map-canvas geo-map-loading">Mapa</div>}
       </figure>
-      {layer}
     </div>
   );
 }
@@ -122,6 +123,7 @@ export function DensityView({ result, catalog }: Props) {
 /* -- choropleth: report counts per country -------------------------------- */
 export function ChoroplethView({ result, catalog }: Props) {
   const { ref, show, hide, layer } = useTooltip();
+  const missingId = useId();
   const metric = metricsOf(result, catalog)[0];
   const byM49 = useMemo(() => {
     const map = new Map<string, Row>();
@@ -136,30 +138,43 @@ export function ChoroplethView({ result, catalog }: Props) {
   const unmapped = result.rows.filter((r) => !catalog?.country_m49[String(r.country_iso2)]
     || !countries.features.some((f: Feature) => String(f.id) === catalog.country_m49[String(r.country_iso2)]));
   return (
-    <div className="viz" ref={ref}>
+    <div className="viz choropleth" ref={ref}>
       <figure className="viz-panel">
         <figcaption>{metricLabel(catalog, metric)} por país</figcaption>
-        <svg viewBox={`0 0 ${WIDTH} ${HEIGHT}`} role="img" aria-label="Mapa coroplético de informes por país">
+        <svg viewBox={`0 0 ${WIDTH} ${HEIGHT}`} role="group" aria-label={`Mapa de ${metricLabel(catalog, metric).toLowerCase()} por país`}
+             aria-describedby={`${missingId}-coverage`}>
+          <defs>
+            <pattern id={missingId} width={6} height={6} patternUnits="userSpaceOnUse">
+              <rect width={6} height={6} fill="var(--surface-2)" />
+              <path d="M-1 1L1 -1M0 6L6 0M5 7L7 5" stroke="var(--axis)" strokeWidth={1} />
+            </pattern>
+          </defs>
           <Basemap fill={false} />
           {countries.features.map((f, i) => {
             const row = byM49.get(String(f.id));
-            const v = row ? value(row, metric) ?? 0 : 0;
-            const idx = rampIndex(v, max);
+            const v = row ? value(row, metric) : null;
+            const idx = v === null ? -1 : rampIndex(v, max);
             const title = row ? cell(row, "country_iso2") : f.properties?.name ?? "";
-            const lines = row ? [{ value: formatMetric(v, metric, catalog), label: metricLabel(catalog, metric) }] : [{ value: "0", label: "informes en este resultado" }];
+            const text = !row ? "Sin fila en este resultado" : v === null ? "Sin valor disponible" : formatMetric(v, metric, catalog);
+            const lines = [{ value: text, label: metricLabel(catalog, metric) }];
             return (
-              <path key={i} d={path(f) ?? ""} fill={idx < 0 ? "var(--empty-cell)" : RAMP[idx]} className="mark country"
-                    tabIndex={row ? 0 : -1} aria-label={`${title}: ${lines[0].value}`}
+              <path key={i} d={path(f) ?? ""} fill={v === null ? `url(#${missingId})` : idx < 0 ? "var(--empty-cell)" : RAMP[idx]}
+                    className="mark country" data-m49={String(f.id)} role={row ? "img" : undefined} aria-hidden={!row}
+                    tabIndex={row ? 0 : -1} aria-label={`${title}: ${text}`}
                     onPointerMove={(e) => show(e, { title, lines })} onPointerLeave={hide}
                     onFocus={(e) => show(e.currentTarget.getBoundingClientRect(), { title, lines })} onBlur={hide} />
             );
           })}
           <path d={base.borders} className="map-borders" />
         </svg>
-        <RampLegend max={max} note="escala logarítmica de todos los informes; no normaliza por población" />
+        <RampLegend max={max} missing note="escala logarítmica de todos los informes; no normaliza por población" />
+        <p className="viz-note" id={`${missingId}-coverage`}>
+          {result.truncated ? "El mapa muestra solo los países devueltos por el resultado truncado." : "El mapa muestra los países devueltos por esta consulta."}
+          {" "}Las zonas rayadas no tienen fila o valor en este resultado; no equivalen a cero.
+        </p>
         {unmapped.length ? (
           <p className="viz-note">
-            {num(unmapped.length)} países o territorios pequeños no tienen geometría en el mapa de 110m (suman {num(unmapped.reduce((a, r) => a + (value(r, metric) ?? 0), 0))} informes); están en los datos exactos.
+            {num(unmapped.length)} {unmapped.length === 1 ? "país o territorio de este resultado no tiene" : "países o territorios de este resultado no tienen"} geometría disponible en este mapa. Sus valores se conservan en «Datos exactos».
           </p>
         ) : null}
       </figure>

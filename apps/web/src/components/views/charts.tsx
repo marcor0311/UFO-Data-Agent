@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useId, useMemo, useState, type KeyboardEvent } from "react";
 import type { Catalog, GoldResult, Row } from "@/lib/contracts";
 import { cell, compact, metricLabel } from "@/lib/format";
 import {
@@ -194,6 +194,8 @@ const DAYS = ["lunes", "martes", "miércoles", "jueves", "viernes", "sábado", "
 
 export function HourWeekdayView({ result, catalog }: Props) {
   const { ref, show, hide, layer, width: measured } = useTooltip();
+  const missingId = useId();
+  const [activeCell, setActiveCell] = useState(0);
   if (result.empty) return <Empty />;
   const metric = metricsOf(result, catalog)[0];
   const grid = new Map(result.rows.map((r) => [`${r.weekday}-${r.event_hour}`, r]));
@@ -202,44 +204,76 @@ export function HourWeekdayView({ result, catalog }: Props) {
   const size = Math.max(16, Math.min(36, Math.floor((measured - left - 8) / 24)));
   const width = left + 24 * size + 8;
   const height = 7 * size + 30;
+
+  function moveCell(event: KeyboardEvent<SVGRectElement>, day: number, hour: number) {
+    let nextDay = day, nextHour = hour;
+    switch (event.key) {
+      case "ArrowLeft": nextHour = Math.max(0, hour - 1); break;
+      case "ArrowRight": nextHour = Math.min(23, hour + 1); break;
+      case "ArrowUp": nextDay = Math.max(0, day - 1); break;
+      case "ArrowDown": nextDay = Math.min(6, day + 1); break;
+      case "Home": nextHour = 0; if (event.ctrlKey || event.metaKey) nextDay = 0; break;
+      case "End": nextHour = 23; if (event.ctrlKey || event.metaKey) nextDay = 6; break;
+      default: return;
+    }
+    event.preventDefault();
+    event.currentTarget.ownerSVGElement?.querySelector<SVGRectElement>(
+      `[data-weekday="${nextDay + 1}"][data-hour="${nextHour}"]`,
+    )?.focus();
+  }
+
   return (
-    <div className="viz" ref={ref}>
+    <div className="viz hour-weekday" ref={ref}>
       <figure className="viz-panel">
         <figcaption>{metricLabel(catalog, metric)} por día de la semana y hora local declarada</figcaption>
-        <svg viewBox={`0 0 ${width} ${height}`} style={{ maxWidth: width }} role="img" aria-label="Matriz de informes por día de la semana y hora">
+        <svg viewBox={`0 0 ${width} ${height}`} style={{ maxWidth: width }} role="grid" aria-readonly="true" aria-rowcount={7} aria-colcount={24}
+             aria-describedby={`${missingId}-help`}
+             aria-label={`Matriz de ${metricLabel(catalog, metric).toLowerCase()} por día de la semana y hora local declarada`}>
+          <defs>
+            <pattern id={missingId} width={6} height={6} patternUnits="userSpaceOnUse">
+              <rect width={6} height={6} fill="var(--surface-2)" />
+              <path d="M-1 1L1 -1M0 6L6 0M5 7L7 5" stroke="var(--axis)" strokeWidth={1} />
+            </pattern>
+          </defs>
           {Array.from({ length: 24 }, (_, h) => h % 3 === 0 ? (
-            <text key={h} x={left + h * size + size / 2} y={height - 8} className="tick" textAnchor="middle">{h}h</text>
+            <text key={h} x={left + h * size + size / 2} y={height - 8} className="tick" textAnchor="middle" aria-hidden="true">{h}h</text>
           ) : null)}
           {DAYS.map((day, d) => (
-            <g key={day}>
-              <text x={left - 8} y={d * size + size / 2 + 2} className="cat" textAnchor="end" dominantBaseline="middle">{day}</text>
+            <g key={day} role="row" aria-rowindex={d + 1} aria-label={day}>
+              <text x={left - 8} y={d * size + size / 2 + 2} className="cat" textAnchor="end" dominantBaseline="middle" aria-hidden="true">{day}</text>
               {Array.from({ length: 24 }, (_, h) => {
                 const row = grid.get(`${d + 1}-${h}`);
-                const v = row ? value(row, metric) ?? 0 : 0;
-                const i = rampIndex(v, max, "linear");
-                const lines = [{ value: formatMetric(v, metric, catalog), label: metricLabel(catalog, metric) }];
+                const v = row ? value(row, metric) : null;
+                const i = v === null ? -1 : rampIndex(v, max, "linear");
+                const text = !row ? "Sin fila en este resultado" : v === null ? "Sin valor disponible" : formatMetric(v, metric, catalog);
+                const lines = [{ value: text, label: metricLabel(catalog, metric) }];
                 const title = `${day}, ${h}:00–${h}:59`;
                 return (
                   <rect key={h} x={left + h * size + 1} y={d * size + 1} width={size - 2} height={size - 2} rx={3}
-                        fill={i < 0 ? "var(--empty-cell)" : RAMP[i]} className="mark" tabIndex={0} aria-label={`${title}: ${lines[0].value}`}
+                        fill={v === null ? `url(#${missingId})` : i < 0 ? "var(--empty-cell)" : RAMP[i]}
+                        className="mark" role="gridcell" aria-colindex={h + 1} data-weekday={d + 1} data-hour={h}
+                        tabIndex={activeCell === d * 24 + h ? 0 : -1} aria-label={`${title}: ${text}`}
                         onPointerMove={(e) => show(e, { title, lines })} onPointerLeave={hide}
-                        onFocus={(e) => show(e.currentTarget.getBoundingClientRect(), { title, lines })} onBlur={hide} />
+                        onFocus={(e) => { setActiveCell(d * 24 + h); show(e.currentTarget.getBoundingClientRect(), { title, lines }); }}
+                        onKeyDown={(e) => moveCell(e, d, h)} onBlur={hide} />
                 );
               })}
             </g>
           ))}
         </svg>
-        <RampLegend max={max} scale="linear" note="escala lineal de informes (todos los informes)" />
+        <RampLegend max={max} scale="linear" missing note="escala lineal de informes (todos los informes)" />
+        <p className="viz-note" id={`${missingId}-help`}>Las celdas rayadas no tienen fila o valor en este resultado; no equivalen a cero. Usa las flechas para recorrer los días y las horas.</p>
       </figure>
       {layer}
     </div>
   );
 }
 
-export function RampLegend({ max, note, scale = "log" }: { max: number; note?: string; scale?: "log" | "linear" }) {
+export function RampLegend({ max, note, scale = "log", missing = false }: { max: number; note?: string; scale?: "log" | "linear"; missing?: boolean }) {
   return (
     <div className="ramp-legend" aria-label="Escala">
       <span className="ramp-cell" style={{ background: "var(--empty-cell)" }} /><span>0</span>
+      {missing ? <span className="ramp-step"><span className="ramp-cell missing-cell" aria-hidden="true" /><span>Sin fila o valor en este resultado</span></span> : null}
       {rampLegend(max, scale).map((s, i) => (
         <span key={i} className="ramp-step"><span className="ramp-cell" style={{ background: s.color }} /><span>{compact(s.from)}+</span></span>
       ))}

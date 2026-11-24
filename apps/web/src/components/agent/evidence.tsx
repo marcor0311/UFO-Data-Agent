@@ -11,6 +11,7 @@ export function Evidence({ result, catalog }: { result: GoldResult; catalog: Cat
   const [open, setOpen] = useState<"data" | "source" | null>(null);
   const id = useId();
   const ex = result.exclusions;
+  const reportCount = result.total?.report_count ?? (result.rows.length === 1 ? result.rows[0].report_count : undefined);
   const dataset = catalog?.datasets[result.provenance.dataset]?.label ?? result.provenance.dataset;
   const toggle = (panel: "data" | "source") => setOpen((current) => current === panel ? null : panel);
   return (
@@ -40,11 +41,18 @@ export function Evidence({ result, catalog }: { result: GoldResult; catalog: Cat
           <dt>Filas de origen</dt><dd>{num(result.matched_source_rows)}{result.truncated ? " · resultado truncado" : ""}</dd>
         </dl>
         {ex ? (
-          <p>
-            Elegibilidad aplicada: {result.eligibility_applied.map((e) => e.label + (e.implied ? " (implícita)" : "")).join(", ")}.{" "}
-            Entran {num(ex.eligible_reports)} de {num(ex.base_reports)} informes y quedan fuera {num(ex.excluded_reports)}
-            {ex.excluded_by_reason.length ? " (" + ex.excluded_by_reason.slice(0, 4).map((r) => `${r.label.toLowerCase()} (${num(r.reports)})`).join(", ") + ")" : ""}.
-          </p>
+          <>
+            {typeof reportCount === "number" ? <p><strong>Informes del corte consultado:</strong> {num(reportCount)}.</p> : null}
+            <p>
+              Elegibilidad aplicada: {result.eligibility_applied.map((e) => e.label + (e.implied ? " (implícita)" : "")).join(", ")}.
+            </p>
+            <p>
+              <strong>Población evaluada para elegibilidad:</strong> {ex.scope}.{" "}
+              Base: {num(ex.base_reports)} informes; elegibles: {num(ex.eligible_reports)}; excluidos: {num(ex.excluded_reports)}
+              {ex.excluded_by_reason.length ? " (" + ex.excluded_by_reason.slice(0, 4).map((r) => `${r.label.toLowerCase()} (${num(r.reports)})`).join(", ") + ")" : ""}.
+              {" "}Estos conteos corresponden al alcance indicado y pueden abarcar una población mayor que el corte consultado.
+            </p>
+          </>
         ) : null}
         {result.external_evidence_reports ? (
           <p>{num(result.external_evidence_reports)} informes usan coordenadas, país u hora del catálogo externo de UFO-search.</p>

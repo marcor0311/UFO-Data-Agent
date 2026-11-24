@@ -101,13 +101,16 @@ def main() -> int:
         print("No hay una cuenta con sesión. Inicia sesión en /agent primero.", file=sys.stderr)
         return 1
     _, account = auth.account_by_key(key)
-    questions = json.loads((ROOT / "docs/GOLD_EVALS.json").read_text())["questions"]
+    # The load's own evaluation set carries reference answers for that load.
+    layout = getattr(analytics, "layout", None)
+    evals_path = layout.evals_spec if layout and layout.evals_spec.exists() else ROOT / "docs/GOLD_EVALS.json"
+    questions = json.loads(evals_path.read_text(encoding="utf-8"))["questions"]
     if args.ids:
         questions = [q for q in questions if q["id"] in set(args.ids)]
     report = run(DataAgent(analytics), account, args.model, questions, analytics.limits, analytics.load_id)
     out = ROOT / "data/agent/evals" / f"{analytics.load_id}__{re.sub(r'[^A-Za-z0-9._-]', '_', args.model)}.json"
     out.parent.mkdir(parents=True, exist_ok=True)
-    out.write_text(json.dumps(report, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
+    out.write_text(json.dumps(report, ensure_ascii=False, indent=2) + "\n", encoding="utf-8", newline="\n")
     s = report["summary"]
     print(f"Evaluación del agente ({args.model}): {s['passed']}/{s['questions']} aprobadas → {out}")
     return 0 if report["passed"] else 1

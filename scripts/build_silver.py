@@ -18,9 +18,11 @@ import tempfile
 
 if __package__:
     from .build_bronze import METRICS, check_asset, digest, quote
+    from .pipeline_context import replace as move_file, text_digest_file, write_text
     from .silver_quality import apply_quality, validate_quality, verify_change_ledger, Countries
 else:
     from build_bronze import METRICS, check_asset, digest, quote
+    from pipeline_context import replace as move_file, text_digest_file, write_text
     from silver_quality import apply_quality, validate_quality, verify_change_ledger, Countries
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -99,7 +101,19 @@ def columns(conn: sqlite3.Connection, table: str, schema: str = "main") -> list:
     return list(conn.execute(f"PRAGMA {schema}.table_info({quote(table)})"))
 
 
+def git_commit() -> str | None:
+    """Commit of the checkout, informative only (git may be absent, e.g. on Windows)."""
+    try:
+        commit = subprocess.run(["git", "rev-parse", "HEAD"], cwd=ROOT, capture_output=True, text=True, timeout=10)
+    except (OSError, subprocess.SubprocessError):
+        return None
+    return commit.stdout.strip() if commit.returncode == 0 else None
+
+
 def lineage_for(source_hash: str, policy: dict) -> tuple[dict, dict]:
+    """Recipe of a Silver build. Code and reference files are hashed with LF
+    endings, so the same checkout gives the same run_id on macOS and Windows."""
+    digest = text_digest_file
     files = [Path(__file__), Path(__file__).with_name("silver_quality.py"), Path(__file__).with_name("silver_analytics.py"), Path(__file__).with_name("silver_evidence.py")]
     code_hashes = {path.name: digest(path) for path in files}
     ref_path = ROOT / policy["quality"]["country_reference"]
@@ -120,8 +134,7 @@ def lineage_for(source_hash: str, policy: dict) -> tuple[dict, dict]:
         lineage['source_geography_reference_sha256'] = digest(source_path)
         lineage['source_geography_reference'] = source_data['source']
     lineage["run_id"] = hashlib.sha256(json.dumps(lineage, sort_keys=True).encode()).hexdigest()
-    commit = subprocess.run(["git", "rev-parse", "HEAD"], cwd=ROOT, capture_output=True, text=True)
-    lineage["git_base_commit"] = commit.stdout.strip() if commit.returncode == 0 else None
+    lineage["git_base_commit"] = git_commit()
     return lineage, reference
 
 
@@ -277,7 +290,7 @@ def build(source: Path, target: Path, manifest: dict, policy: dict, replace: boo
         report["size_bytes"] = output.stat().st_size
         report["sha256"] = digest(output)
         temp_report = Path(work) / "validation.json"
-        temp_report.write_text(json.dumps(report, indent=2, ensure_ascii=False) + "\n", encoding="utf-8")
+        write_text(temp_report, json.dumps(report, indent=2, ensure_ascii=False) + "\n")
         if previous:
             if digest(target) != previous["sha256"]:
                 raise ValueError("Silver cambió durante la construcción; se conserva")
@@ -294,13 +307,24 @@ def build(source: Path, target: Path, manifest: dict, policy: dict, replace: boo
                         raise ValueError(f"Historial distinto del archivo actual: {backup}")
                 else:
                     shutil.copy2(original, backup)
-            os.replace(output, target)
-            os.replace(temp_report, report_path)
+            move_file(output, target)
+            move_file(temp_report, report_path)
         else:
-            # Hard links publish only complete files and refuse existing outputs.
-            os.link(output, target)
-            os.link(temp_report, report_path)
+            publish_new(output, target)
+            publish_new(temp_report, report_path)
     return report
+
+
+def publish_new(source: Path, target: Path) -> None:
+    """Move a complete file to a path that must not exist yet.
+
+    Same-directory rename, without hard links (unsupported on some drives and
+    on Windows with FAT/exFAT): the database is published before its report,
+    so a reader never sees a report for a file that is not complete.
+    """
+    if target.exists():
+        raise FileExistsError(f"Se conserva la salida existente: {target}")
+    move_file(source, target)
 
 
 def verify(source: Path, target: Path, manifest: dict, policy: dict) -> dict:
