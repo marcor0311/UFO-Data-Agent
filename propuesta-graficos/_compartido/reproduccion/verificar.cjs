@@ -4,7 +4,7 @@ const path = require("node:path");
 const vm = require("node:vm");
 const { cargarPropuesta, renderizar, html } = require("./reproducir.cjs");
 
-const biblioteca = path.resolve(__dirname, "..");
+const biblioteca = path.resolve(__dirname, "../..");
 const origen = path.resolve(process.argv[2] || path.join(biblioteca, "../DB Test"));
 const original = vm.createContext({
   UAPSketchbookData: JSON.parse(fs.readFileSync(path.join(origen, "assets/analitica/sketchbook-v2.json"), "utf8")),
@@ -20,8 +20,9 @@ function grupos(render) {
 
 let montajes = 0;
 let renderizadores = 0;
-for (const carpeta of fs.readdirSync(biblioteca)) {
-  if (!fs.existsSync(path.join(biblioteca, carpeta, "propuesta.json"))) continue;
+const slugs = ["done", "pendientes"].flatMap((estado) => fs.readdirSync(path.join(biblioteca, estado))
+  .filter((slug) => fs.existsSync(path.join(biblioteca, estado, slug, "reproduccion", "propuesta.json"))));
+for (const carpeta of slugs) {
   const actual = cargarPropuesta(carpeta, origen);
   assert.match(html(actual), /^<!doctype html>/, carpeta);
   montajes++;

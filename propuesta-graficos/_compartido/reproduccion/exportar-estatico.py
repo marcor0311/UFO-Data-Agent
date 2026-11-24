@@ -14,7 +14,7 @@ matplotlib.use("Agg")
 import matplotlib.pyplot as plt
 from matplotlib.colors import LinearSegmentedColormap
 
-BIBLIOTECA = Path(__file__).resolve().parents[1]
+BIBLIOTECA = Path(__file__).resolve().parents[2]
 
 
 def main():
@@ -25,7 +25,10 @@ def main():
     args = parser.parse_args()
     if not re.fullmatch(r"[a-z0-9-]+", args.propuesta):
         parser.error("Indica el nombre de una carpeta de la biblioteca.")
-    fragmento = BIBLIOTECA / args.propuesta / "fuente-estatica.py"
+    fragmento = next((BIBLIOTECA / estado / args.propuesta / "reproduccion" / "fuente-estatica.py"
+                      for estado in ("done", "pendientes")
+                      if (BIBLIOTECA / estado / args.propuesta / "reproduccion" / "fuente-estatica.py").is_file()),
+                     BIBLIOTECA / "pendientes" / args.propuesta / "reproduccion" / "fuente-estatica.py")
     if not fragmento.is_file():
         parser.error("No hay generador Python para esta propuesta. Usa reproducir.cjs o la lámina recuperada.")
     if not args.salida.is_dir():
