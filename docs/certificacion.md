@@ -8,7 +8,7 @@
 | Evaluaciones aprobadas | **60 de 60** |
 | Con cifras correctas | 60 de 60 |
 
-La evaluación ejecuta `docs/GOLD_EVALS.json` con el agente completo y el modelo en vivo, y califica cada respuesta con las reglas de `scripts/run_agent_evals.py`: filas de referencia o equivalentes, consulta esperada o equivalente, limitaciones obligatorias, consulta certificada primero cuando corresponde y ausencia de frases prohibidas. El informe completo, con cada turno y su traza, está en [certificacion-gpt-6.1-sol.json](certificacion-gpt-6.1-sol.json). Las capturas de cada respuesta están en [images/README.md](images/README.md).
+Las 46 evaluaciones aprobadas en la ejecución anterior se conservan tal cual; solo se volvieron a evaluar las 14 que fallaban (E016, E017, E018, E023, E025, E026, E029, E031, E034, E035, E038, E041, E042 y E056). La evaluación ejecuta `docs/GOLD_EVALS.json` con el agente completo y el modelo en vivo, y califica cada respuesta con las reglas de `scripts/run_agent_evals.py`: filas de referencia o equivalentes, consulta esperada o equivalente, limitaciones obligatorias, consulta certificada primero cuando corresponde y ausencia de frases prohibidas. El informe completo, con cada turno y su traza, está en [certificacion-gpt-6.1-sol.json](certificacion-gpt-6.1-sol.json). Las capturas de cada respuesta están en [images/README.md](images/README.md).
 
 ## Cambios respecto a la ejecución anterior (46 de 60)
 
