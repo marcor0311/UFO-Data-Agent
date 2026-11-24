@@ -36,6 +36,59 @@ def test_invalid_query_raises_repairable_error(gold):
     assert err.value.code == "eligibility_missing"
 
 
+@pytest.mark.parametrize("dataset, filters, eligibility, scope", [
+    ("fact_report", [{"column": "country_iso2", "value": "US"}, {"column": "event_year", "value": 1997}],
+     ["calendar", "country"], "filtros no temporales ni geográficos de la consulta"),
+    ("agg_year", [{"column": "event_year", "value": 1997}], [], "agregado completo"),
+    ("agg_year", [{"column": "source_code", "value": "UFOCAT"}], [], "filtros de fuente"),
+    ("agg_year", [], [], "todas las fuentes"),
+])
+def test_model_receives_gold_exclusion_scope(gold, dataset, filters, eligibility, scope):
+    """Eligibility populations can be broader than the country/year shown in the result."""
+    visuals = []
+    out = tools.execute(gold, "query_gold", {
+        "dataset": dataset, "filters": filters, "eligibility": eligibility,
+        "group_by": ["event_year"], "metrics": ["report_count"],
+    }, visuals)
+    full = visuals[0]["exclusions"]
+    assert out["exclusions"]["scope"] == full["scope"] == scope
+    for key in ("base_reports", "eligible_reports", "excluded_reports"):
+        assert out["exclusions"][key] == full[key]
+    if dataset == "fact_report":
+        assert out["rows"][0]["report_count"] == 3
+        assert full["base_reports"] == 12
+        assert full["eligible_reports"] == 8
+        assert full["excluded_reports"] == 4
+
+
+def test_model_has_no_exclusions_without_eligibility(gold):
+    visuals = []
+    out = tools.execute(gold, "query_gold", {
+        "dataset": "agg_source", "group_by": ["source_code"], "metrics": ["report_count"],
+    }, visuals)
+    assert out["exclusions"] is None and visuals[0]["exclusions"] is None
+
+
+def test_costa_rica_1997_keeps_exclusions_separate_from_the_filtered_count(tmp_path, monkeypatch):
+    import gold_fixture
+
+    rows = [*gold_fixture.reports(), gold_fixture.report(13, "UFOCAT", canonical_country_iso2="CR")]
+    monkeypatch.setattr(gold_fixture, "reports", lambda: rows)
+    gold, _, _ = gold_fixture.serving_fixture(tmp_path)
+    visuals = []
+    out = tools.execute(gold, "query_gold", {
+        "dataset": "fact_report", "filters": [{"column": "country_iso2", "value": "CR"},
+                                                 {"column": "event_year", "value": 1997}],
+        "eligibility": ["calendar", "country"], "metrics": ["report_count"],
+    }, visuals)
+    assert out["rows"][0]["report_count"] == 1
+    assert "Costa Rica" in out["readable_query"] and "1997" in out["readable_query"]
+    assert out["exclusions"]["scope"] == visuals[0]["exclusions"]["scope"]
+    assert out["exclusions"]["base_reports"] == 13
+    assert out["exclusions"]["eligible_reports"] == 9
+    assert out["exclusions"]["excluded_reports"] == 4
+
+
 def test_visual_limit(gold):
     visuals = [{}] * tools.MAX_VISUALS
     with pytest.raises(QueryError) as err:
