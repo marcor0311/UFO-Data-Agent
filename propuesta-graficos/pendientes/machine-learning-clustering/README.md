@@ -1,6 +1,6 @@
 # Machine Learning – Clustering
 
-**Estado, Solo idea**
+**Estado: Solo idea**
 
 ## Concepto
 

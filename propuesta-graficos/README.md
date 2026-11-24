@@ -24,7 +24,7 @@ Recuperación del prototipo **DB Test** y de su Sketchbook v2 para evaluación v
 | [Machine Learning – Clustering](pendientes/machine-learning-clustering/) | Método analítico | Solo idea |
 | [Perfiles de duración y K-means](pendientes/perfiles-duracion-k-means/) | Método analítico | Solo idea |
 
-Las capturas de las vistas implementadas están en [fotos/](fotos/). Las propuestas están separadas en [pendientes/](pendientes/) y [done/](done/), que reúne las ya implementadas en el Data Agent. Al implementar una, se mueve de `pendientes/` a `done/` y se actualiza su estado.
+Las propuestas están separadas en [pendientes/](pendientes/) y [done/](done/), que reúne las ya implementadas en el Data Agent. Al implementar una, se mueve de `pendientes/` a `done/` y se actualiza su estado.
 
 ## Consultar las propuestas
 

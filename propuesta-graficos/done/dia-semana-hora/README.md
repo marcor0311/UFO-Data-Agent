@@ -1,6 +1,6 @@
 # Día de la semana por hora consignada
 
-**Estado, Implementada** en el Data Agent como vista `hour_weekday`.
+**Estado: Implementada** en el Data Agent como vista `hour_weekday`.
 
 Matriz de siete días por 24 horas. Usa el día validado y la hora textualmente consignada, con selección por celda.
 

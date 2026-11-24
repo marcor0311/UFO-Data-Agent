@@ -1,6 +1,6 @@
 # Mapa 2D de clusters
 
-**Estado, Recuperada**
+**Estado: Recuperada**
 
 Mapa plano de concentraciones espacio-temporales, con controles de radio y ventana, lista de grupos, registros fuera de grupo e inspector por selección.
 

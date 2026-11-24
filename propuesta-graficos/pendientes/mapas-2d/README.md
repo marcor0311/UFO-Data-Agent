@@ -1,6 +1,6 @@
 # Mapas 2D
 
-**Estado, Recuperada**
+**Estado: Recuperada**
 
 Mapa detallado por puntos con controles de movimiento, rectángulo y lazo, búsqueda, lista paginada y ficha. Conserva el encuadre y los IDs de la selección. Incluye el respaldo regional Canvas como fuente para el host original.
 

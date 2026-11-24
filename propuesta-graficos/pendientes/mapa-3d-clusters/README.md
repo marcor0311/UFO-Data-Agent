@@ -1,6 +1,6 @@
 # Mapa 3D de clusters
 
-**Estado, Recuperada**
+**Estado: Recuperada**
 
 La misma capa de grupos de M1 sobre mapa inclinado a 60°, con terreno y ajuste de posición al cargar teselas. Conserva ruido, IDs, radio y ventana.
 

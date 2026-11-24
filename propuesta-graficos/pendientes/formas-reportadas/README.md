@@ -1,6 +1,6 @@
 # Formas reportadas
 
-**Estado, Recuperada**
+**Estado: Recuperada**
 
 Barras horizontales de las formas normalizadas, con recuento, proporción, búsqueda, paginación y acceso a los informes de una categoría. Incluye “Sin clasificar”.
 

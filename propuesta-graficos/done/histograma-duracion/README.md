@@ -1,6 +1,6 @@
 # Histograma de duración
 
-**Estado, Implementada** en el Data Agent como vista `histogram` ([#53](https://github.com/marcor0311/UFO-Data-Agent/issues/53)). Captura: [fotos/](../../fotos/).
+**Estado: Implementada** en el Data Agent como vista `histogram` ([#53](https://github.com/marcor0311/UFO-Data-Agent/issues/53)).
 
 Histograma de intervalos iguales de 5, 10 o 15 minutos hasta 60. La cola superior y los registros sin duración tienen acceso separado. El núcleo compartido conserva también la alternativa con intervalos en escala logarítmica.
 

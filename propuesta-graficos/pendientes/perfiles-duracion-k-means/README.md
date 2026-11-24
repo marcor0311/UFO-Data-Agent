@@ -1,6 +1,6 @@
 # Perfiles de duración y K-means
 
-**Estado, Solo idea**
+**Estado: Solo idea**
 
 ## Concepto
 
