@@ -14,6 +14,7 @@ const webPort = process.env.AGENT_DEV_WEB_PORT ?? "3000";
 const apiPort = process.env.AGENT_DEV_API_PORT ?? "8000";
 const webOrigin = `http://${host}:${webPort}`;
 const apiOrigin = `http://${host}:${apiPort}`;
+const stopOnEof = process.env.AGENT_DEV_STOP_ON_EOF === "1";
 
 const commands = [
   {
@@ -33,7 +34,7 @@ const commands = [
 ];
 
 const children = commands.map(({ name, executable, args, cwd, env }) => {
-  const child = spawn(executable, args, { cwd, env, stdio: "inherit" });
+  const child = spawn(executable, args, { cwd, env, stdio: stopOnEof ? ["ignore", "inherit", "inherit"] : "inherit" });
   child.once("error", (error) => {
     console.error(`${name}: ${error.message}`);
     if (name === "API" && error.code === "ENOENT") {
@@ -48,14 +49,14 @@ const children = commands.map(({ name, executable, args, cwd, env }) => {
 function stop(exitCode) {
   if (process.exitCode !== undefined) return;
   process.exitCode = exitCode;
-  if (process.env.AGENT_DEV_STOP_ON_EOF === "1") process.stdin.pause();
+  if (stopOnEof) process.stdin.pause();
   for (const child of children) child.kill();
 }
 
 process.once("SIGINT", () => stop(0));
 process.once("SIGTERM", () => stop(0));
 
-if (process.env.AGENT_DEV_STOP_ON_EOF === "1") {
+if (stopOnEof) {
   process.stdin.once("end", () => stop(0));
   process.stdin.resume();
 }
