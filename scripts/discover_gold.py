@@ -27,10 +27,12 @@ if __package__:
     from .gold_common import ROOT, definitions_digest, digest, load_catalogs, load_json, load_policy, normalize, text_digest
     from .pipeline_context import write_text
     from . import releases
+    from . import gold_descriptors
 else:
     from gold_common import ROOT, definitions_digest, digest, load_catalogs, load_json, load_policy, normalize, text_digest
     from pipeline_context import write_text
     import releases
+    import gold_descriptors
 
 SERVING_INDEXES = {
     "fact_report": ["source_code", "event_year", "year_month", "event_date", "country_iso2", "shape_code", "color_code",
@@ -41,6 +43,9 @@ SERVING_INDEXES = {
     "event_report": ["canonical_event_id"],
     "agg_spatial_cell": ["resolution_deg"],
     "agg_coverage": ["aggregate_code"],
+    "report_behavior_tag": ["source_code", "event_year"],
+    "report_hoax_flag": ["source_code"],
+    "candidate_pair": ["source_pair", "similarity_band"],
 }
 RELATIONSHIPS = [
     "fact_report.report_id es el ID de sighting en Bronze y Silver (una fila por informe).",
@@ -51,6 +56,11 @@ RELATIONSHIPS = [
     "fact_report.country_iso2 → dim_country; shape_code → dim_shape; color_code → dim_color; duration_bucket → dim_duration_bucket; movement_type → dim_movement.",
     "fact_report.nearest_facility_key → dim_nuclear_facility; distance_band → dim_distance_band.",
     "agg_* se derivan de fact_report con el filtro de elegibilidad declarado en dataset_catalog.json; agg_coverage explica incluidos y excluidos de cada agregado.",
+    "report_behavior_tag y report_hoax_flag: una fila por informe y etiqueta (report_id → fact_report); report_count cuenta informes distintos.",
+    "candidate_pair.report_id_a / report_id_b → fact_report: pares por revisar de Silver con método y similitud.",
+    "quality_issue_summary y silver_change_summary resumen el registro de calidad y de cambios de Silver; source_code solo para filas de sighting.",
+    "fact_crash_retrieval y fact_nuclear_encounter son registros especiales de casos compilados, sin relación por ID con fact_report.",
+    "facility_catalog.nearest_facility_key → dim_nuclear_facility para las instalaciones admitidas (admitted=1).",
 ]
 
 
@@ -92,9 +102,17 @@ def labels_and_values(conn, catalogs: dict) -> tuple[dict, dict]:
     for column, sql in table_labels.items():
         labels[column] = {str(k): v for k, v in conn.execute(sql)}
         values[column] = sorted(labels[column])
-    for column in ("hynek", "emotion_7_dominant"):
-        table = "fact_report" if column == "hynek" else "report_model_output"
-        values[column] = sorted(v for (v,) in conn.execute(f'SELECT DISTINCT "{column}" FROM {table} WHERE "{column}" IS NOT NULL'))
+    # Categorical dimensions whose values come from the data itself.
+    for column, dim in dims["dimensions"].items():
+        source = dim.get("values_from")
+        if dim["kind"] != "categorical" or column in values or not source or source.startswith("dim_") or source == "exclusion_reasons":
+            continue
+        table = source if column in catalogs["datasets"].get(source, {}).get("columns", {}) else dim["datasets"][0]
+        values[column] = sorted(v for (v,) in conn.execute(f'SELECT DISTINCT "{column}" FROM "{table}" WHERE "{column}" IS NOT NULL'))
+    for column in ("source_code_a", "source_code_b"):
+        labels[column], values[column] = dict(labels["source_code"]), list(values["source_code"])
+    if "vallee_code" in values:
+        labels["vallee_code"] = {v: gold_descriptors.vallee_label(v) for v in values["vallee_code"]}
     for column in ("aggregate_code", "eligibility_code"):
         values[column] = sorted(v for (v,) in conn.execute(f'SELECT DISTINCT "{column}" FROM agg_coverage'))
     values["date_key"] = sorted(v for (v,) in conn.execute("SELECT date_key FROM dim_date"))
@@ -147,9 +165,20 @@ def entities(conn, catalogs: dict, load_id: str, root: Path = ROOT) -> dict:
                       "SELECT nearest_facility_key, name, facility_ids, facility_types, latitude, longitude, nearest_reports FROM dim_nuclear_facility ORDER BY 1")]
     return {"load_id": load_id,
             "description": "Entidades resolubles por el agente: ID real (código usado en filtros), nombre canónico, alias y nombre de visualización en español.",
-            "regions_note": "Silver no publica regiones por informe; las etiquetas multinacionales del catálogo original solo detectan contradicciones. No hay entidades de región.",
+            "regions_note": "Estados y provincias solo de EE. UU., Canadá y Australia, normalizados desde el texto de la fuente (region_code). Las ciudades se filtran por city_name sin resolver.",
             "sources": sources, "origins": origins, "collections": collections, "countries": country_items,
-            "shapes": shapes, "colors": colors, "nuclear_facilities": facilities, "regions": []}
+            "shapes": shapes, "colors": colors, "nuclear_facilities": facilities, "regions": regions(conn, catalogs)}
+
+
+def regions(conn, catalogs: dict) -> list:
+    """States and provinces with reports: id = region_code ("US-NM"), resolvable by name or code."""
+    labels = catalogs["dimensions"]["dimensions"]["region_code"]["values"]
+    out = []
+    for code, n in conn.execute("SELECT region_code, COUNT(*) FROM fact_report WHERE region_code IS NOT NULL GROUP BY 1 ORDER BY 1"):
+        name = labels.get(code, code)
+        out.append({"id": code, "canonical_name": name.split(" (")[0], "display_name": name,
+                    "aliases": sorted({code, code.split("-", 1)[1], name.split(" (")[0]}), "report_count": n})
+    return out
 
 
 def num(value) -> str:
@@ -235,7 +264,7 @@ def discover(root: Path = ROOT, gold: Path | None = None, serving: Path | None =
                    "dimension_catalog": {k: catalogs["dimensions"][k] for k in ("eligibility", "exclusion_reasons", "dimensions")},
                    "limitations": limitations, "relationships": RELATIONSHIPS, "labels": labels, "allowed_values": values,
                    "profiles": profiles,
-                   "entities": {k: entity_doc[k] for k in ("sources", "origins", "collections", "countries", "shapes", "colors", "nuclear_facilities")}}
+                   "entities": {k: entity_doc[k] for k in ("sources", "origins", "collections", "countries", "shapes", "colors", "nuclear_facilities", "regions")}}
         conn.execute("CREATE TABLE metadata (catalog TEXT NOT NULL)")
         conn.execute("INSERT INTO metadata VALUES (?)", (json.dumps(catalog, ensure_ascii=False),))
         conn.commit()

@@ -105,7 +105,7 @@ def catalog_checks(conn, catalogs: dict, results: list):
             if ok and metric["type"] == "ratio":
                 ok = all(dataset in metrics[metric[k]]["datasets"] for k in ("numerator", "denominator"))
             elif ok:
-                ok = expr.get("op") in ("count", "sum", "count_distinct", "avg", "min", "max") and (
+                ok = expr.get("op") in ("count", "sum", "count_distinct", "avg", "min", "max", "quantile") and (
                     "column" not in expr or expr["column"] in datasets[dataset]["columns"])
             check(results, f"catalog.metric_dataset.{code}.{dataset}", ok, expr)
         bound = metric.get("duplicate_bound")

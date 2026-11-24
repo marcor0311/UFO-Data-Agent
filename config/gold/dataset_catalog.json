@@ -77,29 +77,33 @@
         "in_confirmed_group": "measure",
         "duplicate_status": "dimension",
         "has_pending_candidate": "dimension",
-        "pending_pair_count": "attribute"
+        "pending_pair_count": "attribute",
+        "witness_band": "dimension",
+        "pending_pair_band": "dimension",
+        "region_code": "dimension",
+        "city_name": "dimension",
+        "sound_type": "dimension",
+        "direction_code": "dimension",
+        "weather_type": "dimension",
+        "terrain_type": "dimension",
+        "vallee_code": "dimension",
+        "event_type_code": "dimension",
+        "source_record_reused": "dimension",
+        "has_core_fields": "measure",
+        "map_without_country": "measure",
+        "has_placeholder_risk": "measure",
+        "has_known_shape": "measure",
+        "has_positive_duration": "measure",
+        "is_long_duration": "measure",
+        "has_witnesses": "measure",
+        "has_description_and_media": "measure",
+        "within_10km": "measure",
+        "within_50km": "measure",
+        "date_raw": "attribute",
+        "time_raw": "attribute"
       },
-      "attribute_requires": {
-        "lat": [
-          "map"
-        ],
-        "lng": [
-          "map"
-        ],
-        "nuclear_distance_km": [
-          "nuclear_proximity"
-        ]
-      },
-      "default_columns": [
-        "report_id",
-        "source_code",
-        "date_key",
-        "calendar_precision",
-        "country_iso2",
-        "shape_code",
-        "duplicate_status",
-        "uses_external_evidence"
-      ]
+      "attribute_requires": {"lat": ["map"], "lng": ["map"], "nuclear_distance_km": ["nuclear_proximity"]},
+      "default_columns": ["report_id", "source_code", "date_key", "calendar_precision", "country_iso2", "shape_code", "duplicate_status", "uses_external_evidence"]
     },
     "report_model_output": {
       "label": "Puntuaciones de modelos por informe",
@@ -119,20 +123,29 @@
         "vader_compound": "measure",
         "roberta_sentiment": "measure",
         "emotion_7_dominant": "dimension",
-        "emotion_28_dominant": "attribute",
+        "emotion_28_dominant": "dimension",
         "emotion_28_group": "dimension",
         "hoax_likelihood": "measure",
         "quality_score": "measure",
-        "richness_score": "measure"
+        "richness_score": "measure",
+        "nrc_joy": "measure",
+        "nrc_fear": "measure",
+        "nrc_anger": "measure",
+        "nrc_sadness": "measure",
+        "nrc_surprise": "measure",
+        "nrc_disgust": "measure",
+        "nrc_trust": "measure",
+        "nrc_anticipation": "measure",
+        "emotion_7_surprise": "measure",
+        "emotion_7_fear": "measure",
+        "emotion_7_neutral": "measure",
+        "emotion_7_anger": "measure",
+        "emotion_7_disgust": "measure",
+        "emotion_7_sadness": "measure",
+        "emotion_7_joy": "measure"
       },
       "attribute_requires": {},
-      "default_columns": [
-        "report_id",
-        "source_code",
-        "hoax_likelihood",
-        "quality_score",
-        "emotion_7_dominant"
-      ]
+      "default_columns": ["report_id", "source_code", "hoax_likelihood", "quality_score", "emotion_7_dominant"]
     },
     "fact_event": {
       "label": "Eventos confirmados (grupos de duplicados estrictos)",
@@ -155,19 +168,8 @@
         "usable_for_calendar": "dimension",
         "usable_for_country": "dimension"
       },
-      "attribute_requires": {
-        "date_key": [
-          "calendar"
-        ]
-      },
-      "default_columns": [
-        "canonical_event_id",
-        "member_count",
-        "source_codes",
-        "date_key",
-        "country_iso2",
-        "shape_code"
-      ]
+      "attribute_requires": {"date_key": ["calendar"]},
+      "default_columns": ["canonical_event_id", "member_count", "source_codes", "date_key", "country_iso2", "shape_code"]
     },
     "event_report": {
       "label": "Informes de cada evento confirmado",
@@ -175,92 +177,41 @@
       "eligibility": [],
       "row_listing": true,
       "partition_columns": [],
-      "columns": {
-        "canonical_event_id": "dimension",
-        "report_id": "key",
-        "is_canonical": "dimension",
-        "source_code": "dimension"
-      },
+      "columns": {"canonical_event_id": "dimension", "report_id": "key", "is_canonical": "dimension", "source_code": "dimension"},
       "attribute_requires": {},
-      "default_columns": [
-        "canonical_event_id",
-        "report_id",
-        "is_canonical",
-        "source_code"
-      ]
+      "default_columns": ["canonical_event_id", "report_id", "is_canonical", "source_code"]
     },
     "agg_year": {
       "label": "Serie anual de informes",
       "grain": "Año × fuente.",
-      "eligibility": [
-        "calendar"
-      ],
+      "eligibility": ["calendar"],
       "row_listing": false,
       "partition_columns": [],
-      "columns": {
-        "event_year": "dimension",
-        "decade": "dimension",
-        "source_code": "dimension",
-        "report_count": "measure",
-        "report_count_excl_candidates": "measure",
-        "pending_candidate_reports": "measure",
-        "external_evidence_reports": "measure"
-      }
+      "columns": {"event_year": "dimension", "decade": "dimension", "source_code": "dimension", "report_count": "measure", "report_count_excl_candidates": "measure", "pending_candidate_reports": "measure", "external_evidence_reports": "measure"}
     },
     "agg_month": {
       "label": "Serie mensual de informes",
       "grain": "Año × mes × fuente.",
-      "eligibility": [
-        "month"
-      ],
+      "eligibility": ["month"],
       "row_listing": false,
       "partition_columns": [],
-      "columns": {
-        "event_year": "dimension",
-        "event_month": "dimension",
-        "year_month": "dimension",
-        "source_code": "dimension",
-        "report_count": "measure",
-        "report_count_excl_candidates": "measure",
-        "pending_candidate_reports": "measure",
-        "external_evidence_reports": "measure"
-      }
+      "columns": {"event_year": "dimension", "event_month": "dimension", "year_month": "dimension", "source_code": "dimension", "report_count": "measure", "report_count_excl_candidates": "measure", "pending_candidate_reports": "measure", "external_evidence_reports": "measure"}
     },
     "agg_weekday_hour": {
       "label": "Matriz día de la semana × hora",
       "grain": "Día de la semana ISO × hora local declarada × fuente.",
-      "eligibility": [
-        "day",
-        "hour"
-      ],
+      "eligibility": ["day", "hour"],
       "row_listing": false,
       "partition_columns": [],
-      "columns": {
-        "weekday": "dimension",
-        "event_hour": "dimension",
-        "source_code": "dimension",
-        "report_count": "measure",
-        "report_count_excl_candidates": "measure",
-        "pending_candidate_reports": "measure",
-        "external_evidence_reports": "measure"
-      }
+      "columns": {"weekday": "dimension", "event_hour": "dimension", "source_code": "dimension", "report_count": "measure", "report_count_excl_candidates": "measure", "pending_candidate_reports": "measure", "external_evidence_reports": "measure"}
     },
     "agg_country": {
       "label": "Informes por país",
       "grain": "País ISO2 × fuente.",
-      "eligibility": [
-        "country"
-      ],
+      "eligibility": ["country"],
       "row_listing": false,
       "partition_columns": [],
-      "columns": {
-        "country_iso2": "dimension",
-        "source_code": "dimension",
-        "report_count": "measure",
-        "report_count_excl_candidates": "measure",
-        "pending_candidate_reports": "measure",
-        "external_evidence_reports": "measure"
-      }
+      "columns": {"country_iso2": "dimension", "source_code": "dimension", "report_count": "measure", "report_count_excl_candidates": "measure", "pending_candidate_reports": "measure", "external_evidence_reports": "measure"}
     },
     "agg_shape": {
       "label": "Informes por forma",
@@ -268,14 +219,7 @@
       "eligibility": [],
       "row_listing": false,
       "partition_columns": [],
-      "columns": {
-        "shape_code": "dimension",
-        "source_code": "dimension",
-        "report_count": "measure",
-        "report_count_excl_candidates": "measure",
-        "pending_candidate_reports": "measure",
-        "external_evidence_reports": "measure"
-      }
+      "columns": {"shape_code": "dimension", "source_code": "dimension", "report_count": "measure", "report_count_excl_candidates": "measure", "pending_candidate_reports": "measure", "external_evidence_reports": "measure"}
     },
     "agg_source": {
       "label": "Informes por fuente y origen",
@@ -283,132 +227,176 @@
       "eligibility": [],
       "row_listing": false,
       "partition_columns": [],
-      "columns": {
-        "source_code": "dimension",
-        "collection_code": "dimension",
-        "origin_code": "dimension",
-        "report_count": "measure",
-        "report_count_excl_candidates": "measure",
-        "pending_candidate_reports": "measure",
-        "external_evidence_reports": "measure"
-      }
+      "columns": {"source_code": "dimension", "collection_code": "dimension", "origin_code": "dimension", "report_count": "measure", "report_count_excl_candidates": "measure", "pending_candidate_reports": "measure", "external_evidence_reports": "measure"}
     },
     "agg_spatial_cell": {
       "label": "Densidad espacial por celdas",
       "grain": "Resolución × celda × fuente. Cada resolución contiene todos los informes del mapa: filtra una sola resolución.",
-      "eligibility": [
-        "map"
-      ],
+      "eligibility": ["map"],
       "row_listing": false,
-      "partition_columns": [
-        "resolution_deg"
-      ],
-      "columns": {
-        "resolution_deg": "dimension",
-        "cell_lat": "dimension",
-        "cell_lng": "dimension",
-        "source_code": "dimension",
-        "report_count": "measure",
-        "report_count_excl_candidates": "measure",
-        "pending_candidate_reports": "measure",
-        "external_evidence_reports": "measure"
-      }
+      "partition_columns": ["resolution_deg"],
+      "columns": {"resolution_deg": "dimension", "cell_lat": "dimension", "cell_lng": "dimension", "source_code": "dimension", "report_count": "measure", "report_count_excl_candidates": "measure", "pending_candidate_reports": "measure", "external_evidence_reports": "measure"}
     },
     "agg_nuclear_band": {
       "label": "Distancia a la instalación del catálogo más cercana",
       "grain": "Banda de distancia × instalación más cercana × fuente.",
-      "eligibility": [
-        "nuclear_proximity"
-      ],
+      "eligibility": ["nuclear_proximity"],
       "row_listing": false,
       "partition_columns": [],
-      "columns": {
-        "distance_band": "dimension",
-        "nearest_facility_key": "dimension",
-        "source_code": "dimension",
-        "report_count": "measure",
-        "report_count_excl_candidates": "measure",
-        "pending_candidate_reports": "measure",
-        "external_evidence_reports": "measure"
-      }
+      "columns": {"distance_band": "dimension", "nearest_facility_key": "dimension", "source_code": "dimension", "report_count": "measure", "report_count_excl_candidates": "measure", "pending_candidate_reports": "measure", "external_evidence_reports": "measure"}
     },
     "agg_coverage": {
       "label": "Cobertura de cada agregado: incluidos y excluidos con su motivo",
       "grain": "Agregado × estado × motivo × fuente. Cada agregado suma el total de informes: filtra o agrupa por aggregate_code.",
       "eligibility": [],
       "row_listing": false,
-      "partition_columns": [
-        "aggregate_code"
-      ],
+      "partition_columns": ["aggregate_code"],
+      "columns": {"aggregate_code": "dimension", "eligibility_code": "dimension", "coverage_status": "dimension", "reason": "dimension", "source_code": "dimension", "report_count": "measure", "report_count_excl_candidates": "measure", "pending_candidate_reports": "measure", "external_evidence_reports": "measure"}
+    },
+    "report_behavior_tag": {
+      "label": "Etiquetas de comportamiento por informe",
+      "grain": "Un informe × una etiqueta de comportamiento detectada en su texto por el origen.",
+      "eligibility": [],
+      "row_listing": true,
+      "partition_columns": [],
+      "attribute_requires": {},
+      "default_columns": ["report_id", "behavior_tag", "source_code", "event_year"],
+      "columns": {"report_id": "key", "behavior_tag": "dimension", "source_code": "dimension", "event_year": "dimension", "decade": "dimension", "country_iso2": "dimension", "shape_code": "dimension", "usable_for_calendar": "dimension", "usable_for_country": "dimension"}
+    },
+    "report_hoax_flag": {
+      "label": "Señales de posible engaño por informe",
+      "grain": "Un informe × una señal heurística del origen (texto muy corto, frases genéricas…).",
+      "eligibility": [],
+      "row_listing": true,
+      "partition_columns": [],
+      "attribute_requires": {},
+      "default_columns": ["report_id", "hoax_flag", "source_code", "event_year"],
+      "columns": {"report_id": "key", "hoax_flag": "dimension", "source_code": "dimension", "event_year": "dimension", "decade": "dimension", "country_iso2": "dimension", "shape_code": "dimension", "usable_for_calendar": "dimension", "usable_for_country": "dimension"}
+    },
+    "candidate_pair": {
+      "label": "Pares candidatos a duplicado",
+      "grain": "Un par de informes que Silver propuso como posible duplicado y dejó por revisar.",
+      "eligibility": [],
+      "row_listing": true,
+      "partition_columns": [],
+      "attribute_requires": {},
+      "default_columns": ["pair_id", "report_id_a", "report_id_b", "source_pair", "match_method", "similarity_score"],
       "columns": {
-        "aggregate_code": "dimension",
-        "eligibility_code": "dimension",
-        "coverage_status": "dimension",
-        "reason": "dimension",
-        "source_code": "dimension",
-        "report_count": "measure",
-        "report_count_excl_candidates": "measure",
-        "pending_candidate_reports": "measure",
-        "external_evidence_reports": "measure"
+        "pair_id": "key",
+        "report_id_a": "attribute",
+        "report_id_b": "attribute",
+        "source_code_a": "dimension",
+        "source_code_b": "dimension",
+        "source_pair": "dimension",
+        "same_source": "dimension",
+        "match_method": "dimension",
+        "similarity_score": "measure",
+        "similarity_band": "dimension",
+        "decision": "dimension"
       }
+    },
+    "quality_issue_summary": {
+      "label": "Incidencias de calidad de Silver",
+      "grain": "Tabla × columna × regla × acción × severidad × fuente.",
+      "eligibility": [],
+      "partition_columns": [],
+      "attribute_requires": {},
+      "columns": {"table_name": "dimension", "column_name": "dimension", "rule_id": "dimension", "action": "dimension", "severity": "dimension", "source_code": "dimension", "issue_count": "measure"}
+    },
+    "silver_change_summary": {
+      "label": "Cambios de Silver sobre Bronze",
+      "grain": "Tabla × columna × regla × fuente.",
+      "eligibility": [],
+      "partition_columns": [],
+      "attribute_requires": {},
+      "columns": {"table_name": "dimension", "column_name": "dimension", "rule_id": "dimension", "source_code": "dimension", "change_count": "measure"}
+    },
+    "fact_crash_retrieval": {
+      "label": "Casos de recuperación de naves (registro especial)",
+      "grain": "Un caso del registro de supuestas recuperaciones de naves; relatos, no hechos.",
+      "eligibility": [],
+      "row_listing": true,
+      "partition_columns": [],
+      "attribute_requires": {"lat": ["map"], "lng": ["map"]},
+      "default_columns": ["case_id", "title", "date_key", "country_iso2", "city_text", "craft_type", "recovery_status", "has_biologics", "lat", "lng"],
+      "columns": {
+        "case_id": "key",
+        "title": "attribute",
+        "event_year": "dimension",
+        "date_key": "attribute",
+        "country_iso2": "dimension",
+        "region_text": "attribute",
+        "city_text": "attribute",
+        "lat": "attribute",
+        "lng": "attribute",
+        "usable_for_map": "dimension",
+        "usable_for_calendar": "dimension",
+        "usable_for_country": "dimension",
+        "summary": "attribute",
+        "craft_type": "dimension",
+        "craft_size_m": "measure",
+        "recovery_status": "dimension",
+        "has_biologics": "dimension",
+        "crew_count": "attribute"
+      }
+    },
+    "fact_nuclear_encounter": {
+      "label": "Encuentros en instalaciones nucleares (registro especial)",
+      "grain": "Un caso del registro de encuentros con instalaciones nucleares; relatos, no hechos.",
+      "eligibility": [],
+      "row_listing": true,
+      "partition_columns": [],
+      "attribute_requires": {"lat": ["map"], "lng": ["map"]},
+      "default_columns": ["case_id", "title", "date_key", "base", "country_iso2", "incident_type", "missiles_affected", "evidence_quality", "lat", "lng"],
+      "columns": {
+        "case_id": "key",
+        "title": "attribute",
+        "event_year": "dimension",
+        "date_key": "attribute",
+        "country_iso2": "dimension",
+        "region_text": "attribute",
+        "city_text": "attribute",
+        "lat": "attribute",
+        "lng": "attribute",
+        "usable_for_map": "dimension",
+        "usable_for_calendar": "dimension",
+        "usable_for_country": "dimension",
+        "summary": "attribute",
+        "base": "attribute",
+        "weapon_system": "attribute",
+        "incident_type": "dimension",
+        "missiles_affected": "measure",
+        "sensor_confirmation": "attribute",
+        "witness_credibility": "dimension",
+        "evidence_quality": "dimension",
+        "source_confidence": "dimension"
+      }
+    },
+    "facility_catalog": {
+      "label": "Catálogo completo de instalaciones de Silver",
+      "grain": "Una fila física del catálogo de instalaciones; admitted=1 si entra en el cálculo de proximidad.",
+      "eligibility": [],
+      "row_listing": true,
+      "partition_columns": [],
+      "attribute_requires": {},
+      "default_columns": ["facility_id", "name", "facility_type", "admitted", "source", "lat", "lng"],
+      "columns": {"facility_id": "key", "name": "attribute", "facility_type": "dimension", "lat": "attribute", "lng": "attribute", "source": "dimension", "coordinate_status": "dimension", "admitted": "dimension", "nearest_facility_key": "dimension"}
     }
   },
   "limitations": [
-    {
-      "code": "reports_not_facts",
-      "text": "Cada fila es un informe registrado por una fuente, no un hecho verificado ni un avistamiento confirmado. Coincidir con Bronze no prueba que el relato sea verdadero."
-    },
-    {
-      "code": "pending_duplicates",
-      "text": "Algunos informes tienen coincidencias por revisar con otros. No están confirmados como duplicados: cada uno cuenta como un informe."
-    },
-    {
-      "code": "confirmed_events_only",
-      "text": "Los eventos existen solo para los grupos de duplicados confirmados por coincidencia exacta. Los informes únicos y los candidatos pendientes no son eventos."
-    },
-    {
-      "code": "eligibility_calendar",
-      "text": "Solo informes con fecha apta para calendario; quedan fuera fechas calificadas, intervalos, faltantes, inválidas y en revisión."
-    },
-    {
-      "code": "eligibility_month",
-      "text": "Solo informes con mes fiable; quedan fuera las fechas de solo año y las 01-01 de fuentes con exceso de ese marcador."
-    },
-    {
-      "code": "eligibility_day",
-      "text": "Solo informes con día fiable; quedan fuera los días 01 y 15 de las fuentes con exceso de marcadores, además de las fechas de mes o año."
-    },
-    {
-      "code": "eligibility_hour",
-      "text": "Solo informes con hora de minuto o mejor y fecha apta. Es hora local declarada sin zona horaria; muchas horas están redondeadas a la hora en punto."
-    },
-    {
-      "code": "eligibility_map",
-      "text": "Solo informes con coordenadas completas, en rango y fuera de cuarentena. Una coordenada puede ser el centro de una ciudad, no el lugar exacto del testigo."
-    },
-    {
-      "code": "eligibility_country",
-      "text": "Solo informes con país canónico consistente; los países contradictorios, históricos o no reconocidos quedan fuera."
-    },
-    {
-      "code": "eligibility_nuclear_proximity",
-      "text": "La distancia es a la instalación más cercana del catálogo local de Silver (bases, laboratorios y polígonos), no a todas las instalaciones del mundo. Cercanía no implica relación."
-    },
-    {
-      "code": "day_placeholders",
-      "text": "Algunas fuentes usan días marcadores (01, 15 o 01-01) cuando no conocen la fecha exacta; Silver reduce la precisión de esos informes en lugar de inventar o borrar fechas."
-    },
-    {
-      "code": "model_scores",
-      "text": "Sentimiento, emociones, hoax_likelihood y quality_score son salidas de modelos o heurísticas heredadas del origen, no hechos ni verificaciones. No se presentan como verdad."
-    },
-    {
-      "code": "source_bias",
-      "text": "La cobertura depende de cada fuente y época: predominan los informes de Estados Unidos y de los años con sistemas de reporte en línea; NUFORC aparece en UFOCAT y en UPDB."
-    },
-    {
-      "code": "external_evidence",
-      "text": "Parte de las coordenadas, países u horas procede del catálogo fijado de UFO-search y no de Bronze (uses_external_evidence=1)."
-    }
+    {"code": "reports_not_facts", "text": "Cada fila es un informe registrado por una fuente, no un hecho verificado ni un avistamiento confirmado. Coincidir con Bronze no prueba que el relato sea verdadero."},
+    {"code": "pending_duplicates", "text": "Algunos informes tienen coincidencias por revisar con otros. No están confirmados como duplicados: cada uno cuenta como un informe."},
+    {"code": "confirmed_events_only", "text": "Los eventos existen solo para los grupos de duplicados confirmados por coincidencia exacta. Los informes únicos y los candidatos pendientes no son eventos."},
+    {"code": "eligibility_calendar", "text": "Solo informes con fecha apta para calendario; quedan fuera fechas calificadas, intervalos, faltantes, inválidas y en revisión."},
+    {"code": "eligibility_month", "text": "Solo informes con mes fiable; quedan fuera las fechas de solo año y las 01-01 de fuentes con exceso de ese marcador."},
+    {"code": "eligibility_day", "text": "Solo informes con día fiable; quedan fuera los días 01 y 15 de las fuentes con exceso de marcadores, además de las fechas de mes o año."},
+    {"code": "eligibility_hour", "text": "Solo informes con hora de minuto o mejor y fecha apta. Es hora local declarada sin zona horaria; muchas horas están redondeadas a la hora en punto."},
+    {"code": "eligibility_map", "text": "Solo informes con coordenadas completas, en rango y fuera de cuarentena. Una coordenada puede ser el centro de una ciudad, no el lugar exacto del testigo."},
+    {"code": "eligibility_country", "text": "Solo informes con país canónico consistente; los países contradictorios, históricos o no reconocidos quedan fuera."},
+    {"code": "eligibility_nuclear_proximity", "text": "La distancia es a la instalación más cercana del catálogo local de Silver (bases, laboratorios y polígonos), no a todas las instalaciones del mundo. Cercanía no implica relación."},
+    {"code": "day_placeholders", "text": "Algunas fuentes usan días marcadores (01, 15 o 01-01) cuando no conocen la fecha exacta; Silver reduce la precisión de esos informes en lugar de inventar o borrar fechas."},
+    {"code": "model_scores", "text": "Sentimiento, emociones, hoax_likelihood y quality_score son salidas de modelos o heurísticas heredadas del origen, no hechos ni verificaciones. No se presentan como verdad."},
+    {"code": "source_bias", "text": "La cobertura depende de cada fuente y época: predominan los informes de Estados Unidos y de los años con sistemas de reporte en línea; NUFORC aparece en UFOCAT y en UPDB."},
+    {"code": "external_evidence", "text": "Parte de las coordenadas, países u horas procede del catálogo fijado de UFO-search y no de Bronze (uses_external_evidence=1)."}
   ]
 }
