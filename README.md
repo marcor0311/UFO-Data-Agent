@@ -58,7 +58,7 @@ La [galería completa](docs/images/README.md) reúne 87 capturas tomadas durante
 
 <p align="center">
   <img src="docs/images/082-g22-que-dia-de-la-semana-y-a-que-hora-se-reportan-mas-informes.png" alt="Matriz de hora y día de la semana" width="49%" />
-  <img src="docs/images/084-g24-muestra-los-informes-de-1952-en-un-globo.png" alt="Informes de 1952 en el mapa" width="49%" />
+  <img src="docs/images/084-g24-muestra-los-informes-de-1952-en-un-globo.png" alt="Globo 3D con los informes de 1952" width="49%" />
 </p>
 
 ## Inicio rápido

@@ -1,8 +1,0 @@
-{
-  "id": "M1b",
-  "title": "Mapa 3D · Clusters",
-  "explanation": "Reutiliza el mapa 3D con terreno e inclinación y añade los grupos espacio-temporales calculados: 25 km, 7 días, mínimo 4 reportes. Seleccionar un grupo abrirá sus IDs y período; el zoom visual no recalcula el modelo. La lámina es un boceto de capa; el mapa real se activa bajo demanda.",
-  "file": "M1b.svg",
-  "scope": "California y entorno, 2004",
-  "prompt": "En California y entorno, 2004, mostrame mapa 3d · clusters."
-}

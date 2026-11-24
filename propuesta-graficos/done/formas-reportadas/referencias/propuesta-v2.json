@@ -1,8 +1,0 @@
-{
-  "id": "D2",
-  "title": "Formas reportadas",
-  "explanation": "Barras horizontales ordenadas con conteo y porcentaje del corte. Se conservan «Sin clasificar», búsqueda y acceso a las categorías menos frecuentes; cada barra llevará a sus registros.",
-  "file": "D2.svg",
-  "scope": "California, 1990–1999",
-  "prompt": "En California, 1990–1999, mostrame formas reportadas."
-}

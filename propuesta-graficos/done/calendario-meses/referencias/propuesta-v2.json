@@ -1,8 +1,0 @@
-{
-  "id": "D14",
-  "title": "Calendario de meses por año",
-  "explanation": "Matriz que permite distinguir un pico puntual de un patrón mensual repetido. Seleccionar filas, columnas o celdas conservará sus reportes; nunca se asignará un mes a las fechas anuales.",
-  "file": "D14.svg",
-  "scope": "California, 1990–1999",
-  "prompt": "En California, 1990–1999, mostrame calendario de meses por año."
-}
