@@ -10,6 +10,15 @@
 
 La evaluación ejecuta `docs/GOLD_EVALS.json` con el agente completo y el modelo en vivo, y califica cada respuesta con las reglas de `scripts/run_agent_evals.py`: filas de referencia, consulta esperada o equivalente, limitaciones obligatorias, consulta certificada primero cuando corresponde y ausencia de frases prohibidas. El informe completo está en [certificacion-gpt-6.1-sol.json](certificacion-gpt-6.1-sol.json).
 
+## Correcciones tras la revisión
+
+Después de la evaluación se corrigieron cuatro problemas visibles en la galería, y E041 y G24 se volvieron a preguntar con el mismo modelo (sus capturas muestran la respuesta nueva; la nota de arriba corresponde a la ejecución original):
+
+- Las zonas dentro de un país usan el mapa de puntos 2D y 3D centrado en ese país, no la densidad mundial (E041).
+- El globo admite filtros, como el año (G24).
+- El mapa muestra un solo mundo, sin países repetidos, y se encuadra en el grueso de los informes; la densidad también se acerca cuando la selección es regional.
+- La composición con «Otras» ya no repite la categoría (G20).
+
 ## Por categoría
 
 | Categoría | Aprobadas |

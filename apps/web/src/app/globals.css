@@ -353,3 +353,4 @@ button.explore-link { background: none; border: 0; padding: 0; font: inherit; co
 ul.ecdf-answer { list-style: none; padding: 0; }
 .compare-table tr.differs td { color: var(--ink); background: color-mix(in srgb, var(--series-2) 10%, transparent); }
 .compare-table tr.same td { color: var(--ink-2); }
+

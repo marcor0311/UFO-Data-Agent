@@ -32,14 +32,18 @@ const TERRARIUM = "https://s3.amazonaws.com/elevation-tiles-prod/terrarium/{z}/{
 const REFERENCE_METERS = 12; // visual reference, not a measured size
 const CLEARANCE_METERS = 50; // illustrative height over terrain, not a flight altitude
 const POINT: [number, number, number] = [37, 99, 178];
-const EXTERNAL: [number, number, number] = [196, 120, 30];
 const SELECTED: [number, number, number] = [208, 59, 59]; // critical: stands out from both point colours
 const SHOWN_IDS = 12;
 const reducedMotion = () => typeof window !== "undefined" && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
 
 function bounds(reports: MapReport[]): [[number, number], [number, number]] {
   let w = 180, s = 90, e = -180, n = -90;
-  for (const r of reports) { w = Math.min(w, r.lng); e = Math.max(e, r.lng); s = Math.min(s, r.lat); n = Math.max(n, r.lat); }
+  if (reports.length >= 50) {
+    // Frame the bulk of the reports: a few stray coordinates (2 % per side) do not zoom the map out to the world.
+    const q = (xs: number[], f: number) => xs[Math.min(xs.length - 1, Math.floor(f * xs.length))];
+    const lngs = reports.map((r) => r.lng).sort((a, b) => a - b), lats = reports.map((r) => r.lat).sort((a, b) => a - b);
+    [w, e, s, n] = [q(lngs, 0.02), q(lngs, 0.98), q(lats, 0.02), q(lats, 0.98)];
+  } else for (const r of reports) { w = Math.min(w, r.lng); e = Math.max(e, r.lng); s = Math.min(s, r.lat); n = Math.max(n, r.lat); }
   const pad = Math.max(0.05, Math.max(e - w, n - s) * 0.08);
   return [[Math.max(-180, w - pad), Math.max(-85, s - pad)], [Math.min(180, e + pad), Math.min(85, n + pad)]];
 }
@@ -76,6 +80,7 @@ export default function GeoMap({ reports, initialSelection = null }: { reports: 
     const m = new maplibregl.Map({
       container: host.current, style: STYLE_URL, bounds: box, fitBoundsOptions: { padding: 40, maxZoom: 12 },
       maxPitch: 0, dragRotate: false, attributionControl: { compact: true }, cooperativeGestures: true,
+      renderWorldCopies: false, // one world: countries are not repeated
     });
     m.touchZoomRotate.disableRotation();
     m.addControl(new maplibregl.NavigationControl({ visualizePitch: true }), "top-left");
@@ -157,7 +162,7 @@ export default function GeoMap({ reports, initialSelection = null }: { reports: 
     layers.push(new ScatterplotLayer<MapReport>({
       id: "reports", data: reports, pickable: true, billboard: true, stroked: true, radiusUnits: "pixels", lineWidthUnits: "pixels",
       getPosition: (r) => [r.lng, r.lat, ground(r)], getRadius: (r) => (r.count ? 3 + Math.min(9, Math.sqrt(r.count) / 2) : modelled.has(r.id) ? 3 : 5.5),
-      getFillColor: (r) => [...(selected?.has(r.id) ? SELECTED : r.external ? EXTERNAL : POINT),
+      getFillColor: (r) => [...(selected?.has(r.id) ? SELECTED : POINT),
         selected && !selected.has(r.id) ? 70 : modelled.has(r.id) ? 140 : 235] as [number, number, number, number],
       getLineColor: [255, 255, 255, 230], getLineWidth: 1.2,
       parameters: { depthCompare: "always" },

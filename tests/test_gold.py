@@ -335,8 +335,11 @@ class GoldQueryTest(unittest.TestCase):
     def test_globe_contract(self):
         self.assertEqual(self.code(dataset="fact_report", view="globe", group_by=["cell1_lat", "cell1_lng"], metrics=["report_count"], eligibility=["map"]), "view_contract")
         self.assertEqual(self.code(dataset="fact_report", view="globe", metrics=["report_count"]), "eligibility_missing")
-        self.assertEqual(self.code(dataset="fact_report", view="globe", metrics=["report_count"], eligibility=["map"],
-                                   filters=[{"column": "source_code", "op": "eq", "value": "UFOCAT"}]), "view_contract")  # solo vista global
+        ufocat = self.q(dataset="fact_report", view="globe", metrics=["report_count"], eligibility=["map"],
+                        filters=[{"column": "source_code", "op": "eq", "value": "UFOCAT"}])        # el globo admite filtros
+        only = self.q(dataset="fact_report", metrics=["report_count"], eligibility=["map"],
+                      filters=[{"column": "source_code", "op": "eq", "value": "UFOCAT"}])["rows"][0]["report_count"]
+        self.assertEqual(sum(r["report_count"] for r in ufocat["rows"]), only)
         globe = self.q(dataset="fact_report", view="globe", metrics=["report_count"], eligibility=["map"], limit=1)   # el límite no recorta el globo
         total = self.q(dataset="fact_report", metrics=["report_count"], eligibility=["map"])["rows"][0]["report_count"]
         self.assertFalse(globe["truncated"])
