@@ -199,6 +199,7 @@ button.turn-question[aria-pressed="true"] { box-shadow: inset 0 0 0 1.5px var(--
 .viz .mark { outline: none; }
 .viz .mark:hover, .viz .mark:focus-visible { filter: brightness(1.12); }
 .hour-weekday .mark:focus-visible { stroke: var(--chat-blue, var(--accent)); stroke-width: 2; }
+.choropleth .country:focus-visible { stroke: var(--chat-blue, var(--accent)); stroke-width: 2; }
 .viz .cell, .viz .country { stroke: var(--surface); stroke-width: 0.5; }
 .map-sphere { fill: var(--surface-2); }
 .map-graticule { fill: none; stroke: var(--grid); stroke-width: 0.5; }
