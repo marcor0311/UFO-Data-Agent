@@ -27,7 +27,7 @@ El agente interpreta la pregunta, elige la consulta tipada sobre la carga Gold a
   <img src="docs/images/destacada-4-agrupaciones-eeuu.png" alt="Mapa de agrupaciones de informes en la misma semana y zona en Estados Unidos" width="49%" />
 </p>
 <p align="center">
-  <img src="docs/images/destacada-5-formas-por-decada.png" alt="Composición de formas por década desde 1950" width="49%" />
+  <img src="docs/images/destacada-5-barras-california-1990.png" alt="Barras de informes de California por mes en 1990" width="49%" />
   <img src="docs/images/destacada-6-mes-y-hora.png" alt="Matriz de informes por mes del año y hora del día" width="49%" />
 </p>
 
