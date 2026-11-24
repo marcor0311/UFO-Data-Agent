@@ -1,7 +1,7 @@
 /* Types of the Gold result envelope (scripts/gold_query.py, docs/gold-contract.md)
    and of the agent API (apps/api/src/app/agent/routes.py). */
 
-export type ViewCode = "table" | "bars" | "timeseries" | "points" | "density" | "choropleth" | "hour_weekday";
+export type ViewCode = "table" | "bars" | "timeseries" | "points" | "density" | "choropleth" | "hour_weekday" | "month_calendar";
 export type Scalar = string | number | boolean | null;
 export type Row = Record<string, Scalar>;
 
@@ -21,6 +21,8 @@ export type GoldResult = {
   certification: CertificationStatus | null;
   view: ViewCode; view_label: string; title: string | null;
   rows: Row[]; total: Row | null; truncated: boolean; row_count: number; matched_source_rows: number; empty: boolean;
+  /* month_calendar only: reports in the period, with a reliable month and without one. */
+  calendar_totals?: { reports: number; with_month: number; without_month: number };
   eligibility_applied: { code: string; label: string; flag: string; implied: boolean }[];
   exclusions: Exclusions | null;
   external_evidence_reports: number | null;

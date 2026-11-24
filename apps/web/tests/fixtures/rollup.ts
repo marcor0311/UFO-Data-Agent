@@ -30,7 +30,7 @@ export function rollupResult(truncated = true): GoldResult {
 const view = { label: "Tabla", datasets: "*" as const, description: "Datos de prueba" };
 export const rollupCatalog: Catalog = {
   load_id: "test-load", datasets: { fact_report: { label: "Informes", grain: "informe", eligibility: [], rows: 12 } },
-  views: { table: view, bars: view, timeseries: view, points: view, density: view, choropleth: view, hour_weekday: view },
+  views: { table: view, bars: view, timeseries: view, points: view, density: view, choropleth: view, hour_weekday: view, month_calendar: view },
   metrics: {
     report_count: { label: "Informes", type: "additive", unit: "informes" },
     external_evidence_pct: { label: "% de informes con evidencia externa", type: "ratio", unit: "%", denominator: "report_count" },

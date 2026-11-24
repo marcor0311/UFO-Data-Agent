@@ -2,7 +2,7 @@
 
 import type { ComponentType } from "react";
 import type { Catalog, GoldResult, ViewCode } from "@/lib/contracts";
-import { BarsView, HourWeekdayView, TableView, TimeseriesView } from "./charts";
+import { BarsView, HourWeekdayView, MonthCalendarView, TableView, TimeseriesView } from "./charts";
 import { ChoroplethView, DensityView, PointsView } from "./maps";
 
 type View = ComponentType<{ result: GoldResult; catalog: Catalog | null }>;
@@ -16,6 +16,7 @@ export const VIEW_REGISTRY: Record<ViewCode, View> = {
   density: DensityView,
   choropleth: ChoroplethView,
   hour_weekday: HourWeekdayView,
+  month_calendar: MonthCalendarView,
 };
 
 export function Visualization({ result, catalog }: { result: GoldResult; catalog: Catalog | null }) {
