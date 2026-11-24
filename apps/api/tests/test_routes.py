@@ -68,8 +68,29 @@ def test_follow_up_appends_turn(client):
 def test_model_must_belong_to_account(client):
     login(client)
     use_stream([message("x")])
-    assert client.post("/api/agent/chat", json={"question": "x", "model": "otro"}).status_code == 422
+    response = client.post("/api/agent/chat", json={"question": "x", "model": "otro"})
+    assert response.status_code == 422
+    assert response.json()["detail"]["code"] == "model_unavailable"
     assert client.get("/api/agent/models").json()["selected"] == "model-a"
+
+
+def test_expired_session_is_rejected(client):
+    login(client)
+    client.agent_auth.state["sessions"].clear()
+    response = client.post("/api/agent/chat", json={"question": "¿Cuántos informes?"})
+    assert response.status_code == 401
+
+
+def test_failed_attempt_does_not_append_or_replace_previous_turn(client):
+    login(client)
+    use_stream([message("Respuesta anterior.")])
+    created = client.post("/api/agent/chat", json={"question": "Primera pregunta"})
+    cid = created.json()["conversation_id"]
+    use_stream([message("  ")])
+    failed = client.post("/api/agent/chat", json={"question": "Pregunta que falla", "conversation_id": cid})
+    assert failed.status_code == 502
+    history = client.get(f"/api/agent/conversations/{cid}").json()["turns"]
+    assert len(history) == 1 and history[0]["answer"] == "Respuesta anterior."
 
 
 def test_one_query_at_a_time(client):

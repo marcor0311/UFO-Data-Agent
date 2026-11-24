@@ -50,12 +50,15 @@ def test_round_limit(gold):
     with pytest.raises(HTTPException) as err:
         DataAgent(gold, stream=stream).answer(ACCOUNT, "?", [], "model-a")
     assert err.value.status_code == 422
+    assert err.value.detail["code"] == "step_limit"
+    assert "Acota la pregunta" in err.value.detail["message"]
 
 
 def test_empty_model_text_fails(gold):
     with pytest.raises(HTTPException) as err:
         DataAgent(gold, stream=ScriptedStream([message("   ")])).answer(ACCOUNT, "?", [], "model-a")
     assert err.value.status_code == 502
+    assert err.value.detail["code"] == "inference_interrupted"
 
 
 def test_history_carries_previous_evidence(gold):
@@ -96,6 +99,16 @@ def test_stream_failures(transport, body, status):
     with pytest.raises(HTTPException) as err:
         runtime.response_stream(ACCOUNT, {"model": "m"})
     assert err.value.status_code == 502
+    assert err.value.detail["code"] == "inference_interrupted"
+
+
+def test_unavailable_provider_model_is_actionable(transport):
+    transport["handler"] = lambda r: httpx.Response(
+        404, json={"error": {"code": "model_not_found"}})
+    with pytest.raises(HTTPException) as err:
+        runtime.response_stream(ACCOUNT, {"model": "retired-model"})
+    assert err.value.status_code == 422
+    assert err.value.detail["code"] == "model_unavailable"
 
 
 def test_stream_sends_store_false(transport):

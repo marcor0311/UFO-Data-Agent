@@ -21,6 +21,18 @@ HISTORY_TURNS = 12
 HISTORY_CHARS = 45000
 
 
+def inference_error(status: int, code: str, message: str) -> HTTPException:
+    return HTTPException(status, {"code": code, "message": message})
+
+
+def provider_model_unavailable(body: dict) -> bool:
+    error = body.get("error", body)
+    if not isinstance(error, dict):
+        return False
+    code = str(error.get("code") or error.get("type") or "").casefold()
+    return code in {"model_not_found", "model_not_available", "unsupported_model"}
+
+
 def model_catalog(account: dict) -> list[dict]:
     """Models listed for this account, in the official catalog order."""
     try:
@@ -45,7 +57,15 @@ def response_stream(account: dict, payload: dict) -> dict:
                                json={**payload, "store": False, "stream": True}) as response:
                 if response.status_code >= 400:
                     response.read()
-                    raise HTTPException(502, f"La inferencia devolvió HTTP {response.status_code}. Revisa permisos y límites de tu plan.")
+                    try:
+                        body = response.json()
+                    except ValueError:
+                        body = {}
+                    if provider_model_unavailable(body):
+                        raise inference_error(422, "model_unavailable", "El modelo seleccionado ya no está disponible. Elige otro modelo y vuelve a enviar tu pregunta.")
+                    if response.status_code in (408, 429) or response.status_code >= 500:
+                        raise inference_error(502, "inference_interrupted", "La inferencia no pudo completarse. Puedes reintentar la pregunta.")
+                    raise inference_error(502, "inference_failed", f"La inferencia devolvió HTTP {response.status_code}. Revisa permisos y límites de tu plan.")
                 for line in response.iter_lines():
                     if not line.startswith("data: "):
                         continue
@@ -55,14 +75,18 @@ def response_stream(account: dict, payload: dict) -> dict:
                     event = json.loads(raw)
                     kind = event.get("type")
                     if kind in ("response.failed", "response.incomplete", "error"):
-                        raise HTTPException(502, "La inferencia no se completó. Revisa los límites de tu plan o vuelve a intentarlo.")
+                        details = event.get("response") or event
+                        error = details.get("error", {}) if isinstance(details, dict) else {}
+                        if isinstance(error, dict) and provider_model_unavailable({"error": error}):
+                            raise inference_error(422, "model_unavailable", "El modelo seleccionado ya no está disponible. Elige otro modelo y vuelve a enviar tu pregunta.")
+                        raise inference_error(502, "inference_interrupted", "La inferencia se interrumpió antes de completar la respuesta. Puedes reintentar la pregunta.")
                     if kind == "response.completed":
                         completed = event["response"]
         if completed is None:
-            raise HTTPException(502, "El stream terminó sin response.completed.")
+            raise inference_error(502, "inference_interrupted", "La conexión terminó antes de completar la respuesta. Puedes reintentar la pregunta.")
         return completed
     except httpx.HTTPError as exc:
-        raise HTTPException(502, "Conexión con la inferencia interrumpida; puedes reintentar.") from exc
+        raise inference_error(502, "inference_interrupted", "Se interrumpió la conexión con la inferencia. Puedes reintentar la pregunta.") from exc
 
 
 def history_inputs(history: list[dict]) -> list[dict]:
@@ -100,7 +124,7 @@ class DataAgent:
                 text = "\n".join(c["text"] for o in outputs if o.get("type") == "message"
                                  for c in o.get("content", []) if c.get("type") == "output_text").strip()
                 if not text:
-                    raise HTTPException(502, "El modelo no devolvió una respuesta legible.")
+                    raise inference_error(502, "inference_interrupted", "El modelo no devolvió una respuesta completa. Puedes reintentar la pregunta.")
                 return {"question": question, "answer": text, "visualizations": visuals, "trace": trace, "model": model,
                         "load_id": self.analytics.load_id,
                         "created_at": datetime.now(timezone.utc).replace(microsecond=0).isoformat()}
@@ -117,4 +141,4 @@ class DataAgent:
                     trace.append({"tool": call["name"], "ok": False, "code": "invalid_arguments", "error": str(exc)[:1500]})
                 inputs.append({"type": "function_call_output", "call_id": call["call_id"],
                                "output": json.dumps(result, ensure_ascii=False)})
-        raise HTTPException(422, "La consulta superó el límite de pasos; concreta la pregunta.")
+        raise inference_error(422, "step_limit", "La consulta alcanzó el límite de pasos. Acota la pregunta y vuelve a intentarlo.")

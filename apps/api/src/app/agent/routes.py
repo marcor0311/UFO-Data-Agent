@@ -174,7 +174,7 @@ def chat(body: Chat, user=Depends(identity), a: Analytics = Depends(get_analytic
         choices = catalog_fn(user[1])
         selected = body.model or choices[0]["slug"]
         if selected not in [m["slug"] for m in choices]:
-            raise HTTPException(422, "Modelo no disponible para esta cuenta")
+            raise HTTPException(422, {"code": "model_unavailable", "message": "El modelo seleccionado ya no está disponible. Elige otro modelo y vuelve a enviar tu pregunta."})
         cid = str(body.conversation_id or uuid4())
         previous = store.get(cid, user[0]) if body.conversation_id else []
         if previous is None:
