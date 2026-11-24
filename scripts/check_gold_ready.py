@@ -3,8 +3,12 @@
 
 ``model_checks`` validates a Gold database against Silver and the catalogs; the
 builder runs it on the ``*.building`` file before publishing. The full gate adds
-the manifest, pinned inputs, a fresh Silver acceptance, the serving cache,
-certified queries, the independent verification and the evaluation set.
+the manifest, the chain of custody of its inputs, the Silver acceptance of that
+exact snapshot, the serving cache, certified queries, the independent
+verification and the evaluation set, all from the same version directory.
+
+    check_gold_ready.py                 gate the approved load; report in <datos>/gold/
+    check_gold_ready.py --version DIR   gate one version directory
 """
 from __future__ import annotations
 
@@ -16,9 +20,13 @@ import sqlite3
 import sys
 
 if __package__:
-    from .gold_common import ROOT, definitions_digest, digest, load_catalogs, load_id_for, load_policy, text_digest
+    from .gold_common import ROOT, definitions_digest, digest, silver_provenance, load_catalogs, load_id_for, load_policy, text_digest
+    from .pipeline_context import write_text
+    from . import releases
 else:
-    from gold_common import ROOT, definitions_digest, digest, load_catalogs, load_id_for, load_policy, text_digest
+    from gold_common import ROOT, definitions_digest, digest, silver_provenance, load_catalogs, load_id_for, load_policy, text_digest
+    from pipeline_context import write_text
+    import releases
 
 AGG_KEYS = {
     "agg_year": ("event_year, decade, source_code", "usable_for_calendar=1"),
@@ -222,19 +230,33 @@ def model_checks(gold_path: Path, silver_path: Path, bronze_path: Path, policy: 
     return results
 
 
-def full_gate(root: Path = ROOT, run_silver_gate: bool = True) -> dict:
+def full_gate(root: Path = ROOT, run_silver_gate: bool = True, layout=None, silver_path: Path | None = None,
+              bronze_path: Path | None = None, bronze_manifest: Path | None = None, data: Path | None = None) -> dict:
+    """Gate one Gold version (default: the approved one) over the Silver it used."""
     policy = load_policy(root)
     catalogs = load_catalogs(root)
     results: list = []
-    gold_path = root / policy["outputs"]["database"]
-    manifest_path = gold_path.with_name(gold_path.stem + ".manifest.json")
-    silver_path = root / policy["inputs"]["silver"]["path"]
-    bronze_path = root / policy["inputs"]["bronze"]["path"]
-    manifest = json.loads(manifest_path.read_text())
+    data = Path(data or releases.data_root(root))
+    if layout is None:
+        current = releases.approved(data, "gold")
+        if current is None:
+            raise ValueError("No hay una carga Gold aprobada; indica --version DIR")
+        layout = releases.GoldLayout(current["path"])
+        if silver_path is None and current["parent_version"]:
+            silver_path = releases.SilverLayout(data / "silver" / "versions" / current["parent_version"]).database
+    gold_path = layout.database
+    manifest = json.loads(layout.manifest.read_text(encoding="utf-8"))
+    if silver_path is None:
+        stored = Path(manifest["silver"]["path"])
+        silver_path = stored if stored.is_absolute() else data / stored
+    bronze_path = Path(bronze_path or data / policy["inputs"]["bronze"]["path"])
+    bronze_manifest = Path(bronze_manifest or root / policy["inputs"]["bronze"]["manifest"])
     silver_sha, bronze_sha = digest(silver_path), digest(bronze_path)
     check(results, "manifest.gold_sha256", digest(gold_path) == manifest["gold_sha256"])
-    check(results, "inputs.silver_pinned", silver_sha == manifest["silver"]["sha256"] == policy["inputs"]["silver"]["sha256"], silver_sha)
-    check(results, "inputs.bronze_pinned", bronze_sha == manifest["bronze"]["sha256"] == policy["inputs"]["bronze"]["sha256"], bronze_sha)
+    custody = silver_provenance(silver_path, bronze_path, bronze_manifest)
+    check(results, "inputs.silver_provenance", custody["passed"], custody["problems"])
+    check(results, "inputs.match_gold_manifest", silver_sha == manifest["silver"]["sha256"]
+          and bronze_sha == manifest["bronze"]["sha256"], {"silver": silver_sha, "bronze": bronze_sha})
     definitions_sha, _ = definitions_digest(policy, root)
     check(results, "manifest.definitions_current", definitions_sha == manifest["definitions_sha256"], definitions_sha)
     load_id = load_id_for(policy, silver_sha, bronze_sha, definitions_sha)
@@ -244,28 +266,28 @@ def full_gate(root: Path = ROOT, run_silver_gate: bool = True) -> dict:
             from .build_gold import silver_gate
         else:
             from build_gold import silver_gate
-        readiness = silver_gate(silver_path, bronze_path, root / policy["outputs"]["silver_readiness"])
+        readiness = silver_gate(silver_path, bronze_path)
         check(results, "silver.ready_for_exact_snapshot", readiness["ready_for_gold"] and readiness["silver_sha256"] == silver_sha
               and readiness["bronze_sha256"] == bronze_sha, readiness.get("verification"))
     results.extend(model_checks(gold_path, silver_path, bronze_path, policy, catalogs))
-    # Serving cache, generated catalog and entities.
-    serving_manifest = json.loads((root / policy["serving"]["manifest"]).read_text())
-    serving = root / policy["serving"]["database"]
+    # Serving cache, generated catalog and entities of this version.
+    serving_manifest = json.loads(layout.serving_manifest.read_text(encoding="utf-8"))
+    serving = layout.serving
     check(results, "serving.manifest", serving_manifest["cache_version"] == policy["serving"]["cache_version"]
           and serving_manifest["sha256"] == digest(serving) and serving_manifest["load_id"] == load_id
           and serving_manifest["gold_sha256"] == manifest["gold_sha256"])
-    generated = json.loads((root / "docs/GOLD_CATALOG.json").read_text())
+    generated = json.loads((layout.docs / "GOLD_CATALOG.json").read_text(encoding="utf-8"))
     check(results, "docs.catalog_load", generated["load_id"] == load_id)
-    entities = json.loads((root / "docs/GOLD_ENTITIES.json").read_text())
+    entities = json.loads((layout.docs / "GOLD_ENTITIES.json").read_text(encoding="utf-8"))
     check(results, "docs.entities_load", entities["load_id"] == load_id)
-    # Certified queries: valid, unchanged and reproducing their expected result.
+    # Certified queries of this load: valid, unchanged and reproducing their expected result.
     sys.path.insert(0, str(root / "scripts"))
     if __package__:
         from . import gold_query
     else:
         import gold_query
-    analytics = gold_query.Analytics(root=root)
-    certified = json.loads((root / "config/gold/certified_queries.json").read_text())
+    analytics = gold_query.Analytics(root=root, serving=serving, certified_path=layout.certified)
+    certified = json.loads(layout.certified.read_text(encoding="utf-8"))
     for item in certified["queries"]:
         try:
             status = analytics.certification_status(item)
@@ -276,32 +298,37 @@ def full_gate(root: Path = ROOT, run_silver_gate: bool = True) -> dict:
         except (ValueError, KeyError) as exc:
             check(results, f"certified.{item['id']}", False, str(exc))
     # Independent verification and evaluation for this exact load.
-    verification_path = gold_path.with_name(gold_path.stem + ".verification.json")
-    verification = json.loads(verification_path.read_text()) if verification_path.exists() else {}
+    verification = json.loads(layout.verification.read_text(encoding="utf-8")) if layout.verification.exists() else {}
     check(results, "verification.independent", verification.get("load_id") == load_id and verification.get("passed") is True,
           {"load_id": verification.get("load_id"), "passed": verification.get("passed")})
-    evals_path = root / "data/gold/evals" / f"{load_id}.json"
-    evals = json.loads(evals_path.read_text()) if evals_path.exists() else {}
+    references = json.loads(layout.evals_spec.read_text(encoding="utf-8")) if layout.evals_spec.exists() else {}
+    check(results, "evals.references_for_load", (references.get("reference_load") or {}).get("load_id") == load_id)
+    evals_path = layout.evals_dir / f"{load_id}.json"
+    evals = json.loads(evals_path.read_text(encoding="utf-8")) if evals_path.exists() else {}
     check(results, "evals.current_load", evals.get("load_id") == load_id and evals.get("passed") is True,
           {"passed": evals.get("passed"), "summary": evals.get("summary")})
     check(results, "inputs.unchanged_after_gate", digest(silver_path) == silver_sha and digest(bronze_path) == bronze_sha)
     failed = [r for r in results if not r["passed"]]
-    return {"ready_for_agent": not failed, "load_id": load_id, "gold_sha256": manifest["gold_sha256"],
+    return {"ready_for_agent": not failed, "load_id": load_id, "version": layout.directory.name,
+            "gold_sha256": manifest["gold_sha256"],
             "silver_sha256": silver_sha, "bronze_sha256": bronze_sha, "definitions_sha256": definitions_sha,
             "checks": len(results), "failed": failed, "results": results,
             "interpretation": "Aceptación del contrato Gold implementado. No certifica que los informes sean hechos verificados."}
 
 
 def main() -> int:
-    parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("--output", type=Path, default=ROOT / "data/gold/ufo_gold.readiness.json")
+    parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
+    parser.add_argument("--version", type=Path, help="Directorio de versión Gold (por defecto, la aprobada)")
+    parser.add_argument("--output", type=Path, help="Informe (por defecto: <datos>/gold/ufo_gold.readiness.json; "
+                                                     "nunca reescribe el de una versión publicada)")
     args = parser.parse_args()
     try:
-        result = full_gate()
+        result = full_gate(layout=releases.GoldLayout(args.version) if args.version else None)
     except (OSError, ValueError, KeyError, sqlite3.Error) as exc:
         print(f"GOLD NO APTA PARA EL AGENTE: {exc}", file=sys.stderr)
         return 1
-    args.output.write_text(json.dumps(result, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
+    output = args.output or releases.data_root() / "gold" / "ufo_gold.readiness.json"
+    write_text(output, json.dumps(result, ensure_ascii=False, indent=2) + "\n")
     if not result["ready_for_agent"]:
         for item in result["failed"]:
             print(f"FALLA {item['check']}: {item['detail']}", file=sys.stderr)

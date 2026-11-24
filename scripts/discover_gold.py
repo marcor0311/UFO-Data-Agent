@@ -1,9 +1,16 @@
 #!/usr/bin/env python3
 """Verify Gold, profile it and materialize the read-only serving cache.
 
-Run once per Gold load, never inside a conversation. Writes:
-  data/gold/serving/ufo_gold_serving.db (+ .manifest.json with cache_version and SHA-256)
+Run once per Gold load, never inside a conversation, on a version directory
+that has no serving cache yet (a published cache is never replaced). Writes,
+inside that version:
+  serving/ufo_gold_serving.db (+ .manifest.json with cache_version and SHA-256)
   docs/GOLD_CATALOG.json, docs/GOLD_CATALOG.md, docs/GOLD_ENTITIES.json
+
+The versioned copies in docs/ change only with
+``python scripts/build_all.py --actualizar-referencias``.
+
+    discover_gold.py --version DIR
 """
 from __future__ import annotations
 
@@ -18,8 +25,12 @@ import sys
 
 if __package__:
     from .gold_common import ROOT, definitions_digest, digest, load_catalogs, load_json, load_policy, normalize, text_digest
+    from .pipeline_context import write_text
+    from . import releases
 else:
     from gold_common import ROOT, definitions_digest, digest, load_catalogs, load_json, load_policy, normalize, text_digest
+    from pipeline_context import write_text
+    import releases
 
 SERVING_INDEXES = {
     "fact_report": ["source_code", "event_year", "year_month", "event_date", "country_iso2", "shape_code", "color_code",
@@ -101,9 +112,9 @@ def labels_and_values(conn, catalogs: dict) -> tuple[dict, dict]:
     return labels, values
 
 
-def entities(conn, catalogs: dict, load_id: str) -> dict:
+def entities(conn, catalogs: dict, load_id: str, root: Path = ROOT) -> dict:
     labels = catalogs["dimensions"]["labels"]
-    countries = load_json(ROOT / "config/countries.json")
+    countries = load_json(root / "config/countries.json")
     inverse: dict = {}
     for alias, code in countries["aliases"].items():
         inverse.setdefault(code, []).append(alias.title())
@@ -177,17 +188,30 @@ def markdown(catalog: dict, coverage: list, sources: list) -> str:
 
 
 def discover(root: Path = ROOT, gold: Path | None = None, serving: Path | None = None, docs: Path | None = None) -> dict:
+    """Materialize the serving cache and catalog docs of one Gold version.
+
+    ``gold`` defaults to the approved version; ``serving`` and ``docs`` to its
+    ``serving/`` and ``docs/`` folders. An existing cache is never replaced.
+    """
     policy = load_policy(root)
     catalogs = load_catalogs(root)
-    gold = gold or root / policy["outputs"]["database"]
-    docs = docs or root / "docs"
-    manifest = json.loads(gold.with_name(gold.stem + ".manifest.json").read_text())
+    if gold is None:
+        current = releases.layout(releases.data_root(root), "gold")
+        if current is None:
+            raise ValueError("No hay una carga Gold aprobada; indica --version DIR")
+        gold = current.database
+    gold = Path(gold)
+    layout = releases.GoldLayout(gold.parent)
+    serving = Path(serving or layout.serving)
+    docs = Path(docs or layout.docs)
+    if serving.exists():
+        raise ValueError(f"Se conserva {serving}: una caché publicada no se reemplaza; construye una versión nueva")
+    manifest = json.loads(gold.with_name(gold.stem + ".manifest.json").read_text(encoding="utf-8"))
     if digest(gold) != manifest["gold_sha256"]:
         raise ValueError("Checksum Gold incorrecto")
     definitions_sha, _ = definitions_digest(policy, root)
     if definitions_sha != manifest["definitions_sha256"]:
-        raise ValueError("Las definiciones Gold cambiaron desde la construcción; ejecuta scripts/build_gold.py")
-    serving = serving or root / policy["serving"]["database"]
+        raise ValueError("Las definiciones Gold cambiaron desde la construcción; ejecuta scripts/build_all.py --desde gold")
     serving.parent.mkdir(parents=True, exist_ok=True)
     building = serving.with_name(serving.name + ".building")
     if building.exists():
@@ -204,7 +228,7 @@ def discover(root: Path = ROOT, gold: Path | None = None, serving: Path | None =
         profiles = {name: profile_table(conn, name) for (name,) in
                     conn.execute("SELECT name FROM sqlite_master WHERE type='table' ORDER BY name").fetchall()}
         labels, values = labels_and_values(conn, catalogs)
-        entity_doc = entities(conn, catalogs, manifest["load_id"])
+        entity_doc = entities(conn, catalogs, manifest["load_id"], root)
         limitations = load_json(root / "config/gold/dataset_catalog.json")["limitations"]
         catalog = {"cache_version": policy["serving"]["cache_version"], "load_id": manifest["load_id"], "manifest": manifest,
                    "dataset_catalog": catalogs["datasets"], "metric_catalog": catalogs["metrics"],
@@ -221,28 +245,31 @@ def discover(root: Path = ROOT, gold: Path | None = None, serving: Path | None =
             SUM(CASE WHEN coverage_status='excluded' THEN report_count ELSE 0 END) FROM agg_coverage GROUP BY 1,2 ORDER BY 1""").fetchall()
         sources = conn.execute("""SELECT source_code, SUM(report_count), SUM(report_count_excl_candidates), SUM(pending_candidate_reports),
             SUM(external_evidence_reports) FROM agg_source GROUP BY 1 ORDER BY 1""").fetchall()
-    os.chmod(building, stat.S_IRUSR | stat.S_IRGRP | stat.S_IROTH)
     if serving.exists():
-        os.chmod(serving, stat.S_IWUSR | stat.S_IRUSR)
-    building.replace(serving)
+        raise ValueError(f"Otro proceso publicó {serving} durante la construcción")
+    os.replace(building, serving)
+    # Read-only after the rename: Windows refuses to rename some read-only files.
+    os.chmod(serving, stat.S_IRUSR | stat.S_IRGRP | stat.S_IROTH)
     serving_manifest = {"cache_version": policy["serving"]["cache_version"], "sha256": digest(serving),
                         "load_id": manifest["load_id"], "gold_sha256": manifest["gold_sha256"],
                         "catalog_sha256": text_digest(catalog)}
-    serving.with_name(serving.stem + ".manifest.json").write_text(json.dumps(serving_manifest, indent=2) + "\n")
+    write_text(serving.with_name(serving.stem + ".manifest.json"), json.dumps(serving_manifest, indent=2) + "\n")
     public = {k: catalog[k] for k in ("load_id", "manifest", "dataset_catalog", "metric_catalog", "dimension_catalog",
                                       "limitations", "relationships", "profiles")}
     public["profiles"] = {name: p for name, p in profiles.items()}
     docs.mkdir(parents=True, exist_ok=True)
-    (docs / "GOLD_CATALOG.json").write_text(json.dumps(public, ensure_ascii=False, indent=1) + "\n", encoding="utf-8")
-    (docs / "GOLD_CATALOG.md").write_text(markdown(catalog, coverage, sources), encoding="utf-8")
-    (docs / "GOLD_ENTITIES.json").write_text(json.dumps(entity_doc, ensure_ascii=False, indent=1) + "\n", encoding="utf-8")
+    write_text(docs / "GOLD_CATALOG.json", json.dumps(public, ensure_ascii=False, indent=1) + "\n")
+    write_text(docs / "GOLD_CATALOG.md", markdown(catalog, coverage, sources))
+    write_text(docs / "GOLD_ENTITIES.json", json.dumps(entity_doc, ensure_ascii=False, indent=1) + "\n")
     return serving_manifest
 
 
 def main() -> int:
-    argparse.ArgumentParser(description=__doc__).parse_args()
+    parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
+    parser.add_argument("--version", type=Path, help="Directorio de versión Gold sin caché (por defecto, la aprobada)")
+    args = parser.parse_args()
     try:
-        result = discover()
+        result = discover(gold=releases.GoldLayout(args.version).database if args.version else None)
     except (OSError, ValueError, KeyError, sqlite3.Error) as exc:
         print(f"CACHÉ NO GENERADA: {exc}", file=sys.stderr)
         return 1

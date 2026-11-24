@@ -1,7 +1,27 @@
 # Verificación de Gold
 
+## Publicación por versión (24 de noviembre de 2026, UTC)
+
+El pipeline se ejecutó completo con `scripts/build_all.py` en macOS (Python
+3.14.7), sobre un directorio de datos temporal (`--datos`). Bronze se copió
+desde un archivo local, sin Internet. Las cifras proceden de
+`build.metrics.json`.
+
+| Ejecución | Resultado |
+|---|---|
+| `build_all.py` (lanzado con Python 3.9, se relanzó solo con 3.14) | 405 s. Bronze 18 s, Silver 146 s, aceptación de Silver 47 s (una sola vez), modelo Gold 56 s, caché 25 s, verificación independiente 76 s, evaluaciones 4 s y `ready_for_agent` 22 s (543 controles). |
+| `--desde gold` tras cambiar `scripts/build_silver.py` | Rechazada antes de leer Silver: «Silver está desactualizada (code_sha256, run_id)». La carga aprobada no cambió. |
+| `--desde silver` con el código final | 380 s. 22 lecturas completas de hash (2,40 GiB) y ningún archivo leído dos veces. Evaluaciones 60/60 con referencias de la carga y sin deriva. Quedan dos versiones por capa. |
+| API sobre la carga aprobada | `/api/health` devuelve el mismo `load_id` en `gold_load_id`, `serving_load_id` y `readiness_load_id`, también mientras otro build publicaba. |
+
+En las tres ejecuciones, `config/gold/certified_queries.json`, `docs/GOLD_EVALS.json`
+y `docs/GOLD_CATALOG.*` quedaron sin cambios.
+
+## Construcción del 23 de noviembre de 2026 (flujo anterior)
+
 Resultado de la construcción y verificación completa del 23 de noviembre de 2026
-(UTC). Todas las cifras proceden de la salida real de los scripts.
+(UTC), con los scripts por separado y las rutas fijas de entonces. Todas las
+cifras proceden de la salida real de los scripts.
 
 | Identificador | Valor |
 |---|---|
