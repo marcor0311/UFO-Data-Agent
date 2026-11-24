@@ -1,0 +1,34 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+# Debian/Ubuntu. Node is installed for the current user.
+case "$(uname -m)" in
+    x86_64) platform=linux-x64 ;;
+    aarch64) platform=linux-arm64 ;;
+    *) echo "Arquitectura de Linux no compatible." >&2; exit 1 ;;
+esac
+
+if ! command -v apt-get >/dev/null; then
+    echo "Este instalador requiere Debian o Ubuntu con apt." >&2
+    exit 1
+fi
+
+sudo apt-get update
+sudo apt-get install -y python3 python3-venv curl ca-certificates xz-utils
+python3 -c 'import sqlite3, sys; sys.exit(0 if sys.version_info >= (3, 11) else "Se requiere Python 3.11 o superior.")'
+
+work=$(mktemp -d)
+trap 'rm -rf -- "$work"' EXIT
+cd "$work"
+release=https://nodejs.org/download/release/latest-v22.x
+curl -fsSLO "$release/SHASUMS256.txt"
+archive=$(awk -v platform="$platform" '$2 ~ ("^node-v22[.][0-9.]+-" platform "[.]tar[.]xz$") {print $2}' SHASUMS256.txt)
+[[ "$archive" =~ ^node-v22\.[0-9]+\.[0-9]+-linux-(x64|arm64)\.tar\.xz$ ]]
+curl -fsSLO "$release/$archive"
+awk -v name="$archive" '$2 == name {print}' SHASUMS256.txt | sha256sum --check --strict -
+mkdir -p "$HOME/.local"
+tar -xJf "$archive" -C "$HOME/.local"
+
+printf 'Desde la raiz del repositorio, ejecuta:\n'
+printf 'export PATH="%s/bin:$PATH"\n' "$HOME/.local/${archive%.tar.xz}"
+printf 'python3 scripts/run_demo.py\n'

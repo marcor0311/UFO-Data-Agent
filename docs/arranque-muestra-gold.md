@@ -5,6 +5,31 @@ la salud de la API y explorar «Informes por fuente» sin descargar bases de
 datos ni iniciar sesión. Necesitas Python 3.11 o superior con SQLite, Node.js
 20.9 o superior y acceso a los registros de paquetes para instalar las dependencias.
 
+## Instalar Python y Node.js
+
+Si ya tienes ambos, continúa con el arranque. Para probar en Windows Sandbox
+x64, copia el repositorio dentro del Sandbox y ejecuta desde su raíz:
+
+```powershell
+.\scripts\install_demo_windows.ps1
+```
+
+El script descarga los instaladores oficiales y verifica su firma. Requiere
+acceso a Internet dentro del Sandbox. Abre una PowerShell nueva después de
+instalar para que se actualice el `PATH`.
+
+En Debian y Ubuntu (x64 o ARM64):
+
+```sh
+bash scripts/install_demo_linux.sh
+```
+
+El script instala Python y el soporte para entornos virtuales con `apt` y
+descarga Node.js 22 para el usuario actual. Ejecuta la línea `export PATH=...`
+que imprime antes de arrancar la muestra.
+
+## Arrancar la muestra
+
 Desde la raíz de un clon limpio, en PowerShell:
 
 ```powershell
