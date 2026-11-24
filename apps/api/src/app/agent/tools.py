@@ -206,6 +206,7 @@ def compact(result: dict) -> dict:
         "truncated": result["truncated"], "matched_source_rows": result["matched_source_rows"], "total": result.get("total"),
         "eligibility_applied": [e["code"] for e in result.get("eligibility_applied", [])],
         "exclusions": None if not exclusions else {
+            "scope": exclusions["scope"],
             "base_reports": exclusions["base_reports"], "eligible_reports": exclusions["eligible_reports"],
             "excluded_reports": exclusions["excluded_reports"],
             "top_reasons": exclusions["excluded_by_reason"][:5]},
