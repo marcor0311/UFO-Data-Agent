@@ -53,8 +53,7 @@ def figures_match(reference: list[dict], rows: list[dict]) -> bool:
 
     On the reference columns, the two row sets coincide in any order or one contains the
     other (a top 15 against a top 10, one NUFORC row against the breakdown by origin); or
-    ``rows`` is a single total equal to the sum of a reference metric. Informative only:
-    the strict ``reference_rows`` check still decides ``passed``."""
+    ``rows`` is a single total equal to the sum of a reference metric. An equivalent answer for ``reference_rows`` (issue #43)."""
     if not reference or not rows:
         return False
     columns = sorted(reference[0])
@@ -62,7 +61,28 @@ def figures_match(reference: list[dict], rows: list[dict]) -> bool:
         expected, actual = {_key(r, columns) for r in reference}, {_key(r, columns) for r in rows}
         return expected <= actual or actual <= expected
     metrics = [c for c in columns if isinstance(reference[0][c], (int, float)) and not isinstance(reference[0][c], bool)]
+    # Fewer columns: the dimensions and the metrics shown coincide (a share without its count).
+    shared = [c for c in columns if all(c in r for r in rows)]
+    if set(columns) - set(metrics) <= set(shared) and set(shared) & set(metrics):
+        expected, actual = {_key(r, shared) for r in reference}, {_key(r, shared) for r in rows}
+        if expected <= actual or actual <= expected:
+            return True
+    if len(rows) == len(reference) and _same_values(reference, rows, metrics):
+        return True
     return len(rows) == 1 and any(m in rows[0] and close(sum(r[m] or 0 for r in reference), rows[0][m]) for m in metrics)
+
+
+def _values(rows: list[dict], column: str) -> list:
+    return sorted(round(r[column], 2) if isinstance(r[column], float) else r[column] for r in rows if r.get(column) is not None)
+
+
+def _same_values(reference: list[dict], rows: list[dict], metrics: list[str]) -> bool:
+    """Every reference metric reappears, value by value, in some column of ``rows``
+    (renamed columns: a month as ``event_month`` instead of ``year_month``, ``report_count``
+    under a ``has_media`` filter instead of ``media_reports``)."""
+    columns = {c for r in rows for c in r}
+    return bool(metrics) and all(any(_values(reference, m) == _values(rows, c) for c in columns
+                                     if all(c in r for r in rows)) for m in metrics)
 
 
 def grade(item: dict, turn: dict, limits: dict) -> dict:
@@ -72,7 +92,9 @@ def grade(item: dict, turn: dict, limits: dict) -> dict:
     checks["no_forbidden_phrases"] = not forbidden_hits(turn["answer"], item.get("forbidden_phrases", []))
     if item["expected_behavior"] == "answer":
         reference = item.get("reference_answer") or {}
-        matching = [v for v in visuals if rows_equal(reference.get("rows", [None]), v["rows"])]
+        rows = reference.get("rows", [None])
+        # Same figures with another order, limit or columns are an equivalent answer (issue #43).
+        matching = [v for v in visuals if rows_equal(rows, v["rows"])] or [v for v in visuals if figures_match(rows, v["rows"])]
         checks["reference_rows"] = bool(matching)
         if item.get("certified_query_id"):
             checks["searched_certified_first"] = bool(tools) and tools[0] == "search_certified"

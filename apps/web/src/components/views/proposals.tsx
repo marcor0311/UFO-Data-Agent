@@ -55,7 +55,10 @@ export function StackedView({ result, catalog }: Props) {
   if (result.empty) return <Empty />;
   const [first, second] = result.query.group_by;
   const metric = metricsOf(result, catalog)[0];
-  const { keys, other } = categories(result.rows, second, metric, CATEGORY_COLORS.length);
+  // The engine may already collapse the tail into an "Otras" row: it is drawn once, last, in grey.
+  const found = categories(result.rows, second, metric, CATEGORY_COLORS.length);
+  const keys = found.keys.filter((k) => k !== "Otras");
+  const other = found.other || found.keys.includes("Otras");
   const series = [...keys, ...(other ? ["Otras"] : [])];
   const color = (k: string) => k === "Otras" ? "var(--axis)" : CATEGORY_COLORS[keys.indexOf(k)];
   const groups = byFirst(result.rows, first);

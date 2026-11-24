@@ -64,9 +64,8 @@ VIEWS = {
                 "description": "Informes (u otra métrica) por celda de la cuadrícula (1° o 5°). Admite limit hasta "
                                f"{DENSITY_MAX_CELLS} para dibujar todas las celdas. Cuenta informes, no área ni población."},
     "globe": {"label": "Globo 3D", "datasets": ["fact_report"],
-              "description": "Vista global de todos los informes con coordenadas, en su ubicación exacta, sobre un globo. Sin "
-                             "filtros: pide solo report_count, sin group_by y con eligibility map. Para un subconjunto "
-                             "(país, año, forma…) usa points."},
+              "description": "Informes con coordenadas en su ubicación exacta, sobre un globo. Pide solo report_count, sin "
+                             "group_by y con eligibility map; admite filtros (año, fuente, forma, país…)."},
     "choropleth": {"label": "Coropleta por país", "datasets": ["agg_country", "fact_report", "report_model_output", "report_behavior_tag", "report_hoax_flag", "fact_crash_retrieval", "fact_nuclear_encounter"],
                    "description": "Informes por país ISO2. No normaliza por población."},
     "hour_weekday": {"label": "Matriz hora × día de la semana", "datasets": ["agg_weekday_hour", "fact_report"],
@@ -757,8 +756,6 @@ class Analytics:
             raise QueryError("view_contract", f"La densidad agrupa por {DENSITY_GROUPS.get(q.dataset)}")
         if q.view == "globe" and (list(metrics) != ["report_count"] or q.group_by):
             raise QueryError("view_contract", "El globo pide solo report_count y sin group_by: el servidor agrupa por ubicación")
-        if q.view == "globe" and q.filters:
-            raise QueryError("view_contract", "El globo es solo la vista global, sin filtros: para un subconjunto usa points")
         if q.view == "globe" and "map" not in closure(applied):
             raise QueryError("eligibility_missing", "El globo solo admite coordenadas aptas para mapa: declara eligibility 'map'")
         if q.view == "bars" and (not metrics or not 1 <= len(q.group_by) <= 2):

@@ -9,10 +9,10 @@ datos ni iniciar sesión. Necesitas Python 3.11 o superior con SQLite, Node.js
 
 Si ya tienes ambos, continúa con el arranque. Para probar en Windows Sandbox
 x64, copia el repositorio dentro del Sandbox y haz doble clic en
-`install_demo_windows.cmd`. También puedes ejecutarlo en PowerShell desde la raíz:
+`scripts\windows\install_demo_windows.cmd`. También puedes ejecutarlo en PowerShell desde la raíz:
 
 ```powershell
-.\install_demo_windows.cmd
+.\scripts\windows\install_demo_windows.cmd
 ```
 
 El comando aplica la política de ejecución solo al proceso de PowerShell que
@@ -72,7 +72,7 @@ después de cambiar las variables.
 En Windows, detén la demo y ejecuta desde la raíz:
 
 ```powershell
-.\run_full_windows.cmd
+.\scripts\windows\run_full_windows.cmd
 ```
 
 El comando usa las dependencias de la app ya instaladas. Ejecuta `build_all.py`

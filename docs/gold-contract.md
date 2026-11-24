@@ -205,7 +205,7 @@ Combinaciones prohibidas, con su código de error:
 | `timeseries` | `fact_report`, `report_model_output`, `fact_event`, `agg_year`, `agg_month` | La primera dimensión es temporal (`event_year`, `decade`, `year_month` o `event_date`). |
 | `points` | `fact_report`, `fact_crash_retrieval`, `fact_nuclear_encounter` | Filas sin métricas; exige `map`. Sin `limit`: un punto por informe hasta 20.000 y, por encima, uno por coordenada idéntica con su número de informes (`points.grouped`). |
 | `density` | `agg_spatial_cell`, `fact_report` | Agrupa por celda de 1° o 5°. |
-| `globe` | `fact_report` | Vista global: solo `report_count`, sin filtros ni `group_by` y con `map`. El servidor agrupa por coordenadas idénticas y devuelve todas las ubicaciones, sin el `limit`. |
+| `globe` | `fact_report` | Informes sobre un globo: solo `report_count`, sin `group_by` y con `map`; admite filtros. El servidor agrupa por coordenadas idénticas y devuelve todas las ubicaciones, sin el `limit`. |
 | `choropleth` | `agg_country`, `fact_report`, `report_model_output` | Agrupa solo por `country_iso2`. |
 | `hour_weekday` | `agg_weekday_hour`, `fact_report` | Agrupa exactamente por `weekday` y `event_hour`. |
 | `stacked` | Los mismos que `bars` | Una métrica y exactamente dos dimensiones; 100 % por valor de la primera. |

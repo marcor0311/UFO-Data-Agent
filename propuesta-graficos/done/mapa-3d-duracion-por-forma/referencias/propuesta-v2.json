@@ -1,8 +1,0 @@
-{
-  "id": "D4",
-  "title": "Duración por forma",
-  "explanation": "Conserva la comparación de medianas y dispersión con escala común. Seleccionar una caja abrirá el grupo; los extremos y las formas de menor frecuencia seguirán disponibles.",
-  "file": "D4.svg",
-  "scope": "California, 1990–1999",
-  "prompt": "En California, 1990–1999, mostrame duración por forma."
-}

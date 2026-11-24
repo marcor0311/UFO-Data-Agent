@@ -117,6 +117,30 @@ export function DensityView({ result, catalog }: Props) {
       .map(([x, y]) => projection([x, y])).filter((p): p is [number, number] => p !== null);
     return { row, d: "M" + ring.map((p) => p.join(",")).join("L") + "Z", lat, lng };
   }), [result.rows, latKey, lngKey, res]);
+  // A selection inside one country or region is framed on its cells, not on the whole world.
+  const frame = useMemo(() => {
+    // Weighted by each cell's |value|: a few sparse stray cells do not zoom the map out to the world.
+    const pts: { x: number; y: number; w: number }[] = [];
+    for (const { row, lat, lng } of cells) {
+      const p = projection([lng + res / 2, lat + res / 2]);
+      const v = Math.abs(value(row, metricsOf(result, catalog)[0]) ?? 0) || 1;
+      if (p) pts.push({ x: p[0], y: p[1], w: result.analysis?.scale === "years" ? 1 : v });
+    }
+    if (pts.length < 2) return `0 0 ${WIDTH} ${HEIGHT}`;
+    const total = pts.reduce((s, p) => s + p.w, 0);
+    const q = (key: "x" | "y", f: number) => {
+      const sorted = [...pts].sort((a, b) => a[key] - b[key]);
+      let acc = 0;
+      for (const p of sorted) { acc += p.w; if (acc >= f * total) return p[key]; }
+      return sorted[sorted.length - 1][key];
+    };
+    const [x0, x1, y0, y1] = [q("x", 0.05), q("x", 0.95), q("y", 0.05), q("y", 0.95)];
+    if (x1 - x0 > WIDTH * 0.5 || y1 - y0 > HEIGHT * 0.5) return `0 0 ${WIDTH} ${HEIGHT}`;
+    const pad = 40, cx = (x0 + x1) / 2, cy = (y0 + y1) / 2;
+    const w = Math.max(x1 - x0 + 2 * pad, ((y1 - y0 + 2 * pad) * WIDTH) / HEIGHT, WIDTH / 8);
+    const h = (w * HEIGHT) / WIDTH;
+    return `${(cx - w / 2).toFixed(1)} ${(cy - h / 2).toFixed(1)} ${w.toFixed(1)} ${h.toFixed(1)}`;
+  }, [cells, res, result, catalog]);
   if (result.empty) return <Empty />;
   const values = result.rows.map((r) => value(r, metric)).filter((v): v is number => v !== null);
   const max = Math.max(0, ...values);
@@ -137,7 +161,7 @@ export function DensityView({ result, catalog }: Props) {
             <input type="range" min={minYear} max={maxYear} value={limit} onChange={(e) => setUntil(Number(e.target.value))} />
           </label>
         ) : null}
-        <svg viewBox={`0 0 ${WIDTH} ${HEIGHT}`} role="img" aria-label={`${metricLabel(catalog, metric)} por celdas de ${res} grados`}>
+        <svg viewBox={frame} style={{ overflow: "hidden" }} role="img" aria-label={`${metricLabel(catalog, metric)} por celdas de ${res} grados`}>
           <Basemap />
           {cells.map(({ row, d, lat, lng }, i) => {
             const v = value(row, metric) ?? 0;
