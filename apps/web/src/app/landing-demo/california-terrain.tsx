@@ -11,7 +11,7 @@ function clamp(value: number, min: number, max: number) {
   return Math.max(min, Math.min(max, value));
 }
 
-export default function CaliforniaTerrain({ reports }: { reports: ReportPoint[] }) {
+export default function CaliforniaTerrain({ reports, onViewChange }: { reports: ReportPoint[]; onViewChange: (overhead: boolean) => void }) {
   const helpId = useId();
   const canvas = useRef<HTMLCanvasElement>(null);
   const camera = useRef(initialCamera);
@@ -131,12 +131,12 @@ export default function CaliforniaTerrain({ reports }: { reports: ReportPoint[] 
         }}
         onLostPointerCapture={() => { drag.current = null; }}
       >
-        El mapa representa los informes seleccionados sobre California.
+        El mapa representa los informes seleccionados sobre California
       </canvas>
       <div className={styles.mapFooter}>
         <span id={helpId}>
-          {overhead ? "Arrastra para mover." : "Arrastra para girar."}
-          <span className="sr-only"> Usa las flechas, más y menos, o Inicio para restablecer.</span>
+          {overhead ? "Arrastra para mover" : "Arrastra para girar"}
+          <span className="sr-only">. Usa las flechas, más y menos, o Inicio para restablecer</span>
         </span>
         <div className={styles.mapControls} role="group" aria-label="Controles del mapa">
           <div className={styles.zoomControls} role="group" aria-label="Zoom">
@@ -146,9 +146,13 @@ export default function CaliforniaTerrain({ reports }: { reports: ReportPoint[] 
           <button
             type="button"
             aria-pressed={overhead}
-            onClick={() => setCamera({ ...camera.current, overhead: !overhead, panX: 0, panY: 0 })}
+            onClick={() => {
+              const nextOverhead = !overhead;
+              onViewChange(nextOverhead);
+              setCamera({ ...camera.current, overhead: nextOverhead, panX: 0, panY: 0 });
+            }}
           >
-            Vista cenital
+            {overhead ? "Vista 3D" : "Vista 2D"}
           </button>
           <button type="button" onClick={() => setCamera(initialCamera)}>Restablecer</button>
         </div>

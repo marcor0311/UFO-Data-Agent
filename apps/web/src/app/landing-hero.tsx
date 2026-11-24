@@ -2,7 +2,6 @@
 
 import gsap from "gsap";
 import Image from "next/image";
-import Link from "next/link";
 import { useEffect, useRef } from "react";
 import portada from "../../public/archivo-uap/portada.webp";
 import styles from "./landing.module.css";
@@ -31,12 +30,11 @@ export default function LandingHero() {
   return (
     <section className={styles.hero} id="portada" aria-labelledby="landing-title">
       <div className={styles.heroMedia} aria-hidden="true">
-        <Image className={styles.heroImage} src={portada} alt="" fill sizes="100vw" preload />
+        <Image className={styles.heroImage} src={portada} alt="" fill preload unoptimized />
       </div>
       <div ref={content} className={styles.heroContent}>
         <h1 id="landing-title">UFO <span>Data Agent</span></h1>
-        <p>Consulta informes sobre fenómenos aéreos no identificados (UAP) con preguntas en lenguaje natural.</p>
-        <Link className={styles.button} href="/agent">Entrar al Data Agent</Link>
+        <p>Consulta informes sobre fenómenos aéreos no identificados (UAP) con preguntas en lenguaje natural</p>
       </div>
     </section>
   );

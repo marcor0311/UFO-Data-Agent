@@ -10,13 +10,11 @@ export default function ArchiveGallery() {
         <dl>
           <div>
             <dt>El problema</dt>
-            <dd>Los informes UAP están dispersos en archivos con criterios distintos, lo que dificulta compararlos.</dd>
+            <dd>Los informes UAP están dispersos en archivos con criterios distintos, lo que dificulta compararlos</dd>
           </div>
           <div>
             <dt>La solución</dt>
-            <dd>
-              Un agente de datos con analítica conversacional para investigar casos UAP y explorar más de 700.000 reportes.
-            </dd>
+            <dd>Un agente de datos con analítica conversacional para investigar casos UAP</dd>
           </div>
         </dl>
       </div>
