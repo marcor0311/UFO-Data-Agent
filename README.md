@@ -36,6 +36,9 @@ versionadas: los resultados de cada carga se guardan en su versión.
 
 ## 2. Ejecutar la aplicación
 
+Para probar la web y la API desde un clon limpio con datos sintéticos, sigue la
+[guía de arranque con una muestra Gold](docs/arranque-muestra-gold.md).
+
 ```bash
 python3.14 -m venv apps/api/.venv
 apps/api/.venv/bin/python -m pip install -e apps/api
