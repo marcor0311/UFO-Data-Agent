@@ -2,12 +2,12 @@
 
 Generado por `scripts/discover_gold.py`; no editar a mano.
 
-- Carga Gold (`load_id`): `c5acb1eb49fb3c2e2c0ba29d582a2d2d75448b58a48de7252df28234d14103c6`
+- Carga Gold (`load_id`): `3f1da0ee64350ecfbccd60e81f89722fcb69a21477de243c57c95d6b62be4714`
 - SHA-256 de Gold: `4fa5cb9488638807e1fe0ba085bafa9ffe1e897982fdc8016d39623ec28ec03a`
-- SHA-256 de Silver: `72ada3670f79568025bc4f1c0184e4ae3b3c0236ece6f9f4a2483544a92aa25e`
+- SHA-256 de Silver: `c6a298ec7641c48c62d1c43b42dcac99d076f6556e8ef0a446d9327adc60a22f`
 - SHA-256 de Bronze: `0200337eb1eadabd337ac4f479fceceb5a810eec8ab072cd7a206523703820e0`
-- Hash de definiciones: `fd58301e1d438193dc1c9c477ec21316dfd5b06ba6985865c172d6642324d8cd`
-- Construida: 2026-11-24T00:51:57+00:00
+- Hash de definiciones: `29fd0caf429f1e6ec6748d87567f3ba6fa0a6ac84f6925cffbaa2774ddbc5ab2`
+- Construida: 2026-11-24T04:16:38+00:00
 
 ## Tablas
 

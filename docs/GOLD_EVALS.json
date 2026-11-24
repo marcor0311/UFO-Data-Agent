@@ -2,10 +2,10 @@
   "description": "Set de evaluación del agente Gold. frequent: cubiertas por consultas certificadas (el lookup debe encontrarlas); uncommon: requieren componer una consulta; trap: deben rechazarse, aclararse o responderse con las advertencias obligatorias. reference_answer lo calcula scripts/verify_gold_independent.py --write-references, sin código Gold. scripts/run_gold_evals.py ejecuta el set y guarda los resultados por load_id.",
   "version": 1,
   "reference_load": {
-    "load_id": "c5acb1eb49fb3c2e2c0ba29d582a2d2d75448b58a48de7252df28234d14103c6",
-    "silver_sha256": "72ada3670f79568025bc4f1c0184e4ae3b3c0236ece6f9f4a2483544a92aa25e",
+    "load_id": "3f1da0ee64350ecfbccd60e81f89722fcb69a21477de243c57c95d6b62be4714",
+    "silver_sha256": "c6a298ec7641c48c62d1c43b42dcac99d076f6556e8ef0a446d9327adc60a22f",
     "computed_by": "scripts/verify_gold_independent.py",
-    "computed_at": "2026-11-24T00:54:12+00:00"
+    "computed_at": "2026-11-24T04:18:44+00:00"
   },
   "questions": [
     {
