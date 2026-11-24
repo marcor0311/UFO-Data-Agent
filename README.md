@@ -19,16 +19,16 @@ Un agente conversacional que responde preguntas en lenguaje natural sobre más d
 El agente interpreta la pregunta, elige la consulta tipada sobre la carga Gold aprobada y muestra la visualización que la responde. Cada resultado indica cuántos informes entran, cuáles quedan fuera y por qué.
 
 <p align="center">
-  <img src="docs/images/destacada-1-globo-1952.png" alt="Globo 3D con los 9.878 informes de 1952" width="49%" />
-  <img src="docs/images/destacada-2-mapa-3d-italia.png" alt="Mapa 3D de los informes de Italia" width="49%" />
+  <img src="docs/images/destacada-1-globo-1997.png" alt="Globo 3D con los 3.403 informes de 1997 en 2.052 ubicaciones" width="49%" />
+  <img src="docs/images/destacada-2-mapa-3d-japon.png" alt="Mapa 3D de Japón con modelos 3D de las formas" width="49%" />
 </p>
 <p align="center">
-  <img src="docs/images/destacada-3-mapa-2d-agrupaciones.png" alt="Mapa 2D de agrupaciones de informes en la misma semana y celda" width="49%" />
-  <img src="docs/images/destacada-6-perfiles-kmeans.png" alt="Perfiles K-means de duración y testigos" width="49%" />
+  <img src="docs/images/destacada-3-mapa-2d-reino-unido.png" alt="Mapa 2D con los 22.503 informes del Reino Unido" width="49%" />
+  <img src="docs/images/destacada-4-agrupaciones-eeuu.png" alt="Mapa de agrupaciones de informes en la misma semana y zona en Estados Unidos" width="49%" />
 </p>
 <p align="center">
-  <img src="docs/images/destacada-4-formas-por-decada.png" alt="Composición de formas por década desde 1940" width="49%" />
-  <img src="docs/images/destacada-5-hora-y-dia.png" alt="Informes por día de la semana y hora" width="49%" />
+  <img src="docs/images/destacada-5-formas-por-decada.png" alt="Composición de formas por década desde 1950" width="49%" />
+  <img src="docs/images/destacada-6-mes-y-hora.png" alt="Matriz de informes por mes del año y hora del día" width="49%" />
 </p>
 
 ## Qué puedes explorar
