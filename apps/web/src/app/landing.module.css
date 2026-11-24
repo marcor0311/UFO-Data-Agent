@@ -5,8 +5,11 @@
   --muted: #b6c2cf;
   --signal: #c6d9e9;
   --rule: #354352;
+  --control-fill: rgb(197 225 255 / 9%);
+  --control-hover: rgb(197 225 255 / 17%);
+  --control-edge: rgb(213 235 255 / 22%);
+  --control-highlight: inset 0 1px 0 rgb(238 247 255 / 12%);
   --gutter: clamp(1.25rem, 6vw, 6rem);
-  --header-height: 4.5rem;
   color-scheme: dark;
   color: var(--ink);
   background: var(--backdrop);
@@ -22,13 +25,9 @@
   color: inherit;
 }
 
-.landing :where(main, section) {
-  scroll-margin-block-start: var(--header-height);
-}
-
 .skip {
   position: fixed;
-  z-index: 5;
+  z-index: 21;
   inset-block-start: 0.75rem;
   inset-inline-start: 0.75rem;
   padding: 0.65rem 1rem;
@@ -40,104 +39,30 @@
   transform: none;
 }
 
-.header {
-  position: sticky;
-  z-index: 3;
-  top: 0;
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 0.75rem 1.5rem;
-  min-height: var(--header-height);
-  padding: 0.65rem var(--gutter);
-  border-bottom: 1px solid var(--rule);
-  background: var(--backdrop);
-}
-
-.brand, .header nav {
-  display: flex;
-  align-items: center;
-}
-
-.brand {
-  flex: none;
-  gap: 0.65rem;
-  font-size: 0.875rem;
-  font-weight: 800;
-  letter-spacing: 0.105em;
-  text-decoration: none;
-}
-
-.brand > span > span {
-  color: var(--muted);
-  font-weight: 650;
-}
-
-.mark {
-  position: relative;
-  display: inline-block;
-  width: 1.4rem;
-  height: 0.8rem;
-  transform: rotate(-38deg);
-  border: 1px solid var(--signal);
-  border-radius: 50%;
-}
-
-.mark::after {
-  position: absolute;
-  inset: 50% auto auto 50%;
-  width: 0.26rem;
-  height: 0.26rem;
-  transform: translate(-50%, -50%);
-  border-radius: 50%;
-  background: var(--signal);
-  content: "";
-}
-
-.header nav {
-  gap: clamp(1rem, 2.6vw, 2.5rem);
-}
-
-.archiveLink {
-  font-size: 0.9375rem;
-  font-weight: 650;
-  text-decoration: none;
-}
-
-.archiveLink:hover {
-  text-decoration: underline;
-  text-underline-offset: 0.24em;
-}
-
-.landing .button, .landing .headerButton {
+.landing .button {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  min-height: 3.25rem;
-  padding: 0.55rem 1.3rem;
-  border: 1px solid var(--signal);
-  border-radius: 2px;
+  min-height: 3.15rem;
+  padding: 0.5rem 1.4rem;
+  border: 1px solid var(--control-edge);
+  border-radius: 100vmax;
   font-size: 1rem;
-  font-weight: 800;
+  font-weight: 700;
+  line-height: 1.2;
   text-align: center;
   text-decoration: none;
-  background: var(--signal);
-  color: var(--backdrop);
-}
-
-.landing .headerButton {
-  min-height: 2.65rem;
-  padding-inline: 1rem;
-  border-color: #677e92;
-  background: transparent;
+  background: #286399;
+  box-shadow: var(--control-highlight);
   color: var(--ink);
-  font-size: 0.9375rem;
 }
 
-.landing .button:hover, .landing .headerButton:hover {
-  border-color: var(--ink);
-  background: var(--ink);
-  color: var(--backdrop);
+.landing .button:hover {
+  background: #316fa8;
+}
+
+.landing .button:active {
+  background: #224f79;
 }
 
 .hero, .entrance {
@@ -149,8 +74,8 @@
 .hero {
   display: grid;
   align-items: center;
-  min-height: max(34rem, calc(100svh - var(--header-height)));
-  padding: 3rem var(--gutter) 6rem;
+  min-height: max(34rem, 100svh);
+  padding: 5rem var(--gutter);
 }
 
 .heroMedia {
@@ -181,8 +106,8 @@
 
 .hero::before {
   background:
-    linear-gradient(90deg, #090e15ed 0%, #090e15ce 26%, #090e156b 52%, transparent 75%),
-    linear-gradient(0deg, #090e15e6 0%, transparent 32%);
+    linear-gradient(0deg, var(--backdrop) 0 3%, color-mix(in srgb, var(--backdrop) 62%, transparent) 14%, transparent 38%),
+    linear-gradient(90deg, #090e15ed 0%, #090e15ce 26%, #090e156b 52%, transparent 75%);
 }
 
 .heroContent {
@@ -199,8 +124,8 @@
 }
 
 .hero h1 {
-  font-size: clamp(5rem, 9.4vw, 10rem);
-  letter-spacing: -0.028em;
+  font-size: clamp(6rem, 11.7vw, 13rem);
+  letter-spacing: -0.035em;
 }
 
 .hero h1 span {
@@ -209,10 +134,12 @@
 }
 
 .heroContent p {
-  max-width: 35ch;
-  margin: 1.4rem 0 1.55rem;
-  font-size: clamp(1.125rem, 1.55vw, 1.4rem);
-  line-height: 1.5;
+  max-width: 37ch;
+  margin: 1.5rem 0 0;
+  font-size: clamp(1.25rem, 2.05vw, 2rem);
+  font-weight: 500;
+  line-height: 1.4;
+  text-wrap: pretty;
 }
 
 .sectionTitle {
@@ -227,7 +154,7 @@
   gap: clamp(2.5rem, 6.5vw, 6.5rem);
   max-width: 100rem;
   margin-inline: auto;
-  padding: clamp(4rem, 8vw, 8rem) var(--gutter);
+  padding: clamp(4rem, 8vw, 8rem) var(--gutter) clamp(2.5rem, 4vw, 4rem);
 }
 
 .archiveText {
@@ -240,7 +167,7 @@
 }
 
 .archiveText dl > div {
-  padding: 0.9rem 0;
+  padding: 1.1rem 0;
   border-top: 1px solid var(--rule);
 }
 
@@ -249,15 +176,16 @@
 }
 
 .archiveText dt {
-  margin-bottom: 0.2rem;
-  font-size: 1.0625rem;
+  margin-bottom: 0.4rem;
+  font-size: clamp(1.5rem, 1.9vw, 2.15rem);
   font-weight: 800;
+  line-height: 1.2;
 }
 
 .archiveText dd {
   margin: 0;
   color: var(--muted);
-  font-size: 1.075rem;
+  font-size: clamp(1.2rem, 1.42vw, 1.55rem);
 }
 
 .archivePhoto {
@@ -274,6 +202,29 @@
   object-fit: cover;
   border: 1px solid var(--rule);
   background: var(--surface);
+}
+
+.archiveStat {
+  margin: 0;
+  padding: 0 var(--gutter) clamp(4rem, 7vw, 7rem);
+  color: var(--signal);
+  font-size: clamp(1.2rem, 1.42vw, 1.55rem);
+  line-height: 1.2;
+  text-align: center;
+}
+
+.archiveStatDisplay {
+  display: block;
+}
+
+.archiveStat strong {
+  display: block;
+  margin-block: 0.1em;
+  font-family: var(--archive-display), "Arial Narrow", sans-serif;
+  font-size: clamp(4.5rem, 7.2vw, 8rem);
+  font-variant-numeric: tabular-nums;
+  font-weight: 700;
+  line-height: 0.85;
 }
 
 .entrance {
@@ -310,25 +261,6 @@
 }
 
 @media (max-width: 640px) {
-  .landing {
-    --header-height: 6.4rem;
-  }
-
-  .header {
-    flex-wrap: wrap;
-    gap: 0.3rem;
-  }
-
-  .header nav {
-    width: 100%;
-    justify-content: space-between;
-    gap: 0.5rem;
-  }
-
-  .landing .headerButton {
-    padding-inline: 0.6rem;
-  }
-
   .hero {
     align-items: end;
     padding-top: 10rem;

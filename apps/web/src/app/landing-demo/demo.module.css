@@ -20,6 +20,12 @@
   min-width: 0;
 }
 
+.chart {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+}
+
 .chartTitle, .mapTitle, .mapFooter {
   display: flex;
   align-items: center;
@@ -33,16 +39,28 @@
 
 .demo button {
   color: var(--ink);
-  background: transparent;
-  border: 1px solid var(--rule);
-  border-radius: 2px;
   font-size: 0.875rem;
   font-weight: 700;
   cursor: pointer;
 }
 
-.demo button:hover {
-  border-color: var(--muted);
+:is(.chartActions, .mapControls) button {
+  min-height: 2.75rem;
+  padding: 0.35rem 0.9rem;
+  border: 1px solid var(--control-edge);
+  border-radius: 100vmax;
+  background: var(--control-fill);
+  box-shadow: var(--control-highlight);
+  white-space: nowrap;
+}
+
+:is(.chartActions, .mapControls) button:hover:not(:disabled) {
+  background: var(--control-hover);
+}
+
+:is(.chartActions, .mapControls) button[aria-pressed="true"] {
+  border-color: currentColor;
+  background: var(--control-hover);
 }
 
 .chartActions {
@@ -52,14 +70,7 @@
   margin-top: 0.75rem;
 }
 
-.chartActions button {
-  min-height: 2.4rem;
-  padding: 0.35rem 0.7rem;
-  white-space: nowrap;
-}
-
 .chartActions button[aria-pressed="true"] {
-  border-color: #677e92;
   color: var(--signal);
 }
 
@@ -91,19 +102,23 @@
 }
 
 .plot {
-  --plot-height: clamp(10.5rem, 18vw, 16rem);
+  --plot-height: clamp(17rem, 27vw, 25rem);
   position: relative;
-  margin-top: 1.8rem;
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  min-height: var(--plot-height);
+  height: 100%;
+  margin-top: 0.45rem;
   padding-inline-start: 1.75rem;
 }
 
 .grid {
   position: absolute;
-  inset: 0 0 auto;
+  inset: 0 0 1.8rem;
   display: flex;
   flex-direction: column;
   justify-content: space-between;
-  height: var(--plot-height);
   pointer-events: none;
 }
 
@@ -128,9 +143,19 @@
 
 .bars {
   position: relative;
+  flex: 1;
   display: grid;
   grid-template-columns: repeat(12, minmax(0, 1fr));
   gap: clamp(0.125rem, 0.35vw, 0.35rem);
+  padding-bottom: 1.8rem;
+}
+
+.chartHint {
+  margin: 0.55rem 0 0;
+  color: var(--selection);
+  font-size: 0.78rem;
+  line-height: 1.35;
+  text-align: center;
 }
 
 .bars button {
@@ -139,12 +164,13 @@
   min-width: 0;
   padding: 0;
   border: 0;
+  background: transparent;
 }
 
 .barSpace {
   position: relative;
   display: block;
-  height: var(--plot-height);
+  height: 100%;
 }
 
 .bar {
@@ -224,15 +250,7 @@
   margin-inline-start: auto;
 }
 
-.mapControls button {
-  min-width: 2.5rem;
-  min-height: 2.5rem;
-  padding: 0.25rem 0.65rem;
-  white-space: nowrap;
-}
-
 .mapControls button[aria-pressed="true"] {
-  border-color: var(--selection);
   color: var(--selection);
 }
 
@@ -243,6 +261,8 @@
 }
 
 .zoomControls button {
+  width: 2.75rem;
+  padding-inline: 0;
   font-size: 1.15rem;
 }
 
