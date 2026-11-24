@@ -14,6 +14,7 @@ import { modelCatalogIntent, type ModelKind } from "@/lib/map-models";
 import { MapAreaContext, type MapArea } from "@/lib/map-area";
 
 const STORAGE = "ufo-agent-conversation";
+const RECOVERED_QUESTION = "ufo-agent-recovered-question";
 const PANES = {
   chat: { title: "Conversación", hash: "", id: "chat-panel" },
   explore: { title: "Explorar datos", hash: "#explorar-datos", id: "explorar-datos" },
@@ -25,7 +26,7 @@ const STARTER_QUERIES = [
 ];
 
 type WorkspaceView = keyof typeof PANES;
-type Failure = { message: string; status: number; retry?: boolean };
+type Failure = { message: string; status: number; code?: string; retry?: boolean };
 
 const savedConversation = {
   get() {
@@ -56,7 +57,7 @@ function exampleTurn(item: CertifiedSummary, result: GoldResult): Turn {
 
 function failureFrom(error: unknown, fallback: string): Failure {
   return error instanceof ApiError
-    ? { message: error.code?.startsWith("certified_") ? fallback : error.message, status: error.status }
+    ? { message: error.code?.startsWith("certified_") ? fallback : error.message, status: error.status, code: error.code }
     : { message: fallback, status: 0 };
 }
 
@@ -114,6 +115,16 @@ export default function AgentWorkspace() {
     } else {
       update();
     }
+  }, []);
+
+  useEffect(() => {
+    try {
+      const recovered = window.sessionStorage.getItem(RECOVERED_QUESTION);
+      if (recovered) {
+        window.sessionStorage.removeItem(RECOVERED_QUESTION);
+        setDraft((current) => current.trim() ? current : recovered);
+      }
+    } catch { /* The in-memory draft still survives until navigation starts. */ }
   }, []);
 
   useEffect(() => {
@@ -246,6 +257,13 @@ export default function AgentWorkspace() {
     requestAnimationFrame(() => input.current?.focus());
   }
 
+  function reconnect() {
+    try {
+      if (draft.trim()) window.sessionStorage.setItem(RECOVERED_QUESTION, draft);
+    } catch { /* OAuth can continue even when session storage is disabled. */ }
+    window.location.assign("/api/auth/start");
+  }
+
   function showResults(index: number) {
     followLatest.current = false;
     setSelectedTurn(index);
@@ -314,7 +332,10 @@ export default function AgentWorkspace() {
               <button type="button" className="ghost" onClick={logout} disabled={busy}>Cerrar sesión</button>
             </>
           ) : (
-            <a className="button" href="/api/auth/start">Continuar con ChatGPT</a>
+            <a className="button" href="/api/auth/start" onClick={(event) => {
+              event.preventDefault();
+              reconnect();
+            }}>Continuar con ChatGPT</a>
           )}
         </div>
       </header>
@@ -398,9 +419,10 @@ export default function AgentWorkspace() {
             {restoring ? <p className="pending" role="status">Recuperando la conversación…</p> : null}
             {failure ? (
               <div className="chat-error" role="alert">
-                <p>{failure.status === 401 ? "Tu sesión venció. Vuelve a conectar tu cuenta." : failure.message}</p>
-                {failure.status === 401 ? <a className="explore-link" href="/api/auth/start">Conectar de nuevo</a>
-                  : failure.retry ? <p>Tu pregunta sigue en el campo para reintentarla.</p> : null}
+                <p>{failure.status === 401 ? "Tu sesión venció. Conecta tu cuenta de nuevo para continuar." : failure.message}</p>
+                {failure.status === 401 ? <button type="button" className="explore-link" onClick={reconnect}>Conectar de nuevo</button>
+                  : failure.code === "model_unavailable" ? <p>Cambia el modelo en el selector y vuelve a enviar la pregunta que quedó en el campo.</p>
+                    : failure.retry ? <button type="button" className="explore-link" onClick={() => void ask()}>Reintentar pregunta</button> : null}
               </div>
             ) : null}
           </div>

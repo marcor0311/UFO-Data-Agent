@@ -221,7 +221,8 @@ def build_graph(analytics: Analytics):
 
     def verificar(work: Work) -> Work:
         if not work["text"]:
-            raise HTTPException(502, "El modelo no devolvió una respuesta legible.")
+            raise HTTPException(502, {"code": "inference_interrupted",
+                                      "message": "El modelo no devolvió una respuesta completa. Puedes reintentar la pregunta."})
         if ungrounded(work) and not work.get("nudges") and not closing(work):
             # The only check that may call tools again: an answer from memory is never evidence.
             return {"inputs": [{"role": "user", "content": UNGROUNDED}], "nudges": 1, "text": "",
