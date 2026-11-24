@@ -38,7 +38,7 @@ export function Evidence({ result, catalog }: { result: GoldResult; catalog: Cat
           <dt>SHA de Silver</dt><dd><code title={result.provenance.silver_sha256}>{short(result.provenance.silver_sha256)}</code></dd>
           <dt>Definiciones</dt><dd><code title={result.provenance.definitions_sha256}>{short(result.provenance.definitions_sha256)}</code></dd>
           <dt>Consulta</dt><dd><code title={result.provenance.query_sha256}>{short(result.provenance.query_sha256)}</code></dd>
-          <dt>Filas de origen</dt><dd>{num(result.matched_source_rows)}{result.truncated ? " · resultado truncado" : ""}</dd>
+          <dt>Filas de origen</dt><dd>{num(result.matched_source_rows)}{result.truncated ? ", resultado truncado" : ""}</dd>
         </dl>
         {ex ? (
           <>

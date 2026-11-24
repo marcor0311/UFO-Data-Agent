@@ -107,7 +107,7 @@ export function DensityView({ result, catalog }: Props) {
             const title = `Celda ${lat}° a ${lat + res}° de latitud, ${lng}° a ${lng + res}° de longitud`;
             const lines = [{ value: formatMetric(v, metric, catalog), label: metricLabel(catalog, metric) }];
             return (
-              <path key={i} d={d} fill={RAMP[Math.max(0, rampIndex(v, max))]} className="mark cell" tabIndex={0} aria-label={`${title}: ${lines[0].value}`}
+              <path key={i} d={d} fill={RAMP[Math.max(0, rampIndex(v, max))]} className="mark cell" role="img" tabIndex={0} aria-label={`${title}: ${lines[0].value}`}
                     onPointerMove={(e) => show(e, { title, lines })} onPointerLeave={hide}
                     onFocus={(e) => show(e.currentTarget.getBoundingClientRect(), { title, lines })} onBlur={hide} />
             );
@@ -174,7 +174,7 @@ export function ChoroplethView({ result, catalog }: Props) {
         </p>
         {unmapped.length ? (
           <p className="viz-note">
-            {num(unmapped.length)} {unmapped.length === 1 ? "país o territorio de este resultado no tiene" : "países o territorios de este resultado no tienen"} geometría disponible en este mapa. Sus valores se conservan en «Datos exactos».
+            {num(unmapped.length)} {unmapped.length === 1 ? "país o territorio de este resultado no tiene" : "países o territorios de este resultado no tienen"} geometría disponible en este mapa. Sus valores se conservan en “Datos exactos”.
           </p>
         ) : null}
       </figure>

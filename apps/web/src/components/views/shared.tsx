@@ -25,7 +25,7 @@ export function formatMetric(v: number | null, metric: string, catalog: Catalog 
 }
 
 export function groupLabel(row: Row, groups: string[]): string {
-  return groups.map((g) => cell(row, g)).join(" · ") || "Total";
+  return groups.map((g) => cell(row, g)).join(", ") || "Total";
 }
 
 export function niceMax(max: number): number {
@@ -130,7 +130,7 @@ export function DataTable({ result, catalog, caption }: { result: GoldResult; ca
             ) : null}
             {result.total && percentages.length ? <p>Los porcentajes del total se recalculan sobre esa población; no se suman ni se promedian los porcentajes de las filas.</p> : null}
             {denominators.map(({ metric, denominator, count }) => (
-              <p key={metric}>Denominador de «{metricLabel(catalog, metric)}»: {num(count)} {metricLabel(catalog, denominator).toLowerCase()}.</p>
+              <p key={metric}>Denominador de “{metricLabel(catalog, metric)}”: {num(count)} {metricLabel(catalog, denominator).toLowerCase()}.</p>
             ))}
           </caption>
         ) : null}

@@ -1,8 +1,9 @@
 "use client";
 
 import { useId, useMemo, useState, type KeyboardEvent } from "react";
+import type React from "react";
 import type { Catalog, GoldResult, Row } from "@/lib/contracts";
-import { cell, compact, metricLabel } from "@/lib/format";
+import { cell, compact, metricLabel, num } from "@/lib/format";
 import {
   DataTable, Empty, RAMP, formatMetric, groupLabel, metricsOf, niceMax, rampIndex, rampLegend, ticks, useTooltip, value, yearTicks,
 } from "./shared";
@@ -66,7 +67,7 @@ export function BarsView({ result, catalog }: Props) {
                 const text = formatMetric(value(row, metric), metric, catalog);
                 const lines = [{ value: text, label: metricLabel(catalog, metric), key: "var(--series-1)" }];
                 return (
-                  <g key={i} className="mark" tabIndex={0} aria-label={`${label}: ${text}`}
+                  <g key={i} className="mark" role="img" tabIndex={0} aria-label={`${label}: ${text}`}
                      onPointerMove={(e) => show(e, { title: label, lines })} onPointerLeave={hide}
                      onFocus={(e) => show(e.currentTarget.getBoundingClientRect(), { title: label, lines })} onBlur={hide}>
                     <rect x={0} y={y - GAP / 2} width={width} height={BAR + GAP} fill="transparent" />
@@ -155,7 +156,7 @@ export function TimeseriesView({ result, catalog }: Props) {
                            setHover(i);
                            const p = points[i];
                            const lines = [{ value: formatMetric(value(p.row, metric), metric, catalog), label: metricLabel(catalog, metric), key: "var(--series-1)" }];
-                           show(e, { title: cell(p.row, time) + (f.label ? " · " + f.label : ""), lines });
+                           show(e, { title: cell(p.row, time) + (f.label ? ", " + f.label : ""), lines });
                          }}
                          onPointerLeave={() => { setHover(null); hide(); }}>
                       {ticks(max).map((t) => (
@@ -280,4 +281,168 @@ export function RampLegend({ max, note, scale = "log", missing = false }: { max:
       <span className="ramp-note">{note ?? "escala logarítmica de informes (todos los informes)"}</span>
     </div>
   );
+}
+
+/* -- year × month calendar ------------------------------------------------ */
+const MONTHS = ["ene", "feb", "mar", "abr", "may", "jun", "jul", "ago", "sep", "oct", "nov", "dic"];
+const MONTH_NAMES = ["enero", "febrero", "marzo", "abril", "mayo", "junio", "julio", "agosto", "septiembre", "octubre", "noviembre", "diciembre"];
+
+/* Years requested by the query filters, so a year without rows still gets its (missing) row. */
+function calendarYears(result: GoldResult): number[] {
+  let low: number | null = null, high: number | null = null;
+  for (const f of result.query.filters) {
+    if (f.column !== "event_year") continue;
+    const values = (Array.isArray(f.value) ? f.value : [f.value]).filter((v): v is number => typeof v === "number");
+    if (!values.length) continue;
+    const op = f.op ?? "eq";
+    if (op === "eq" || op === "in") { low = Math.max(low ?? -Infinity, Math.min(...values)); high = Math.min(high ?? Infinity, Math.max(...values)); }
+    else if (op === "gte") low = Math.max(low ?? -Infinity, values[0]);
+    else if (op === "lte") high = Math.min(high ?? Infinity, values[0]);
+  }
+  const seen = result.rows.map((r) => r.event_year).filter((v): v is number => typeof v === "number");
+  low ??= seen.length ? Math.min(...seen) : null;
+  high ??= seen.length ? Math.max(...seen) : null;
+  if (low === null || high === null || high < low || high - low > 60) return [...new Set(seen)].sort((a, b) => a - b);
+  return Array.from({ length: high - low + 1 }, (_, i) => low! + i);
+}
+
+export function MonthCalendarView({ result, catalog }: Props) {
+  const { ref, show, hide, layer, width: measured } = useTooltip();
+  const missingId = useId();
+  const [activeCell, setActiveCell] = useState(0);
+  const years = useMemo(() => calendarYears(result), [result]);
+  if (result.empty || !years.length) return <Empty />;
+  const metric = metricsOf(result, catalog)[0];
+  const monthly = result.rows.filter((r) => r.event_month !== null && r.event_month !== undefined);
+  const grid = new Map(monthly.map((r) => [`${r.event_year}-${r.event_month}`, r]));
+  const unknown = new Map(result.rows.filter((r) => r.event_month === null).map((r) => [r.event_year as number, r]));
+  const hasUnknown = unknown.size > 0;
+  const max = Math.max(0, ...monthly.map((r) => value(r, metric) ?? 0));
+  const label = metricLabel(catalog, metric);
+  const totals = result.calendar_totals;
+  const left = 52;
+  const extra = hasUnknown ? 2 : 0;                  // “Sin mes” and “Total” columns
+  const gap = hasUnknown ? 14 : 0;
+  const size = Math.max(18, Math.min(40, Math.floor((measured - left - gap - 8) / (12 + extra * 1.6))));
+  const wide = Math.round(size * 1.6);
+  const rowHeight = Math.max(16, Math.min(size, 26));
+  const xOf = (col: number) => col < 12 ? left + col * size : left + 12 * size + gap + (col - 12) * wide;
+  const wOf = (col: number) => col < 12 ? size : wide;
+  const width = xOf(12 + extra) + 8;
+  const height = 22 + years.length * rowHeight;
+  const lastCol = 11 + extra;
+
+  function moveCell(event: KeyboardEvent<SVGRectElement>, y: number, c: number) {
+    let nextY = y, nextC = c;
+    switch (event.key) {
+      case "ArrowLeft": nextC = Math.max(0, c - 1); break;
+      case "ArrowRight": nextC = Math.min(lastCol, c + 1); break;
+      case "ArrowUp": nextY = Math.max(0, y - 1); break;
+      case "ArrowDown": nextY = Math.min(years.length - 1, y + 1); break;
+      case "Home": nextC = 0; if (event.ctrlKey || event.metaKey) nextY = 0; break;
+      case "End": nextC = lastCol; if (event.ctrlKey || event.metaKey) nextY = years.length - 1; break;
+      default: return;
+    }
+    event.preventDefault();
+    event.currentTarget.ownerSVGElement?.querySelector<SVGRectElement>(`[data-year="${years[nextY]}"][data-col="${nextC}"]`)?.focus();
+  }
+
+  function cellProps(year: number, y: number, c: number, title: string, text: string) {
+    const lines = [{ value: text, label }];
+    const index = y * (lastCol + 1) + c;
+    return {
+      x: xOf(c) + 1, y: 22 + y * rowHeight + 1, width: wOf(c) - 2, height: rowHeight - 2, rx: 3,
+      role: "gridcell", "aria-colindex": c + 1, "data-year": year, "data-col": c,
+      tabIndex: activeCell === index ? 0 : -1, "aria-label": `${title}: ${text}`,
+      onPointerMove: (e: React.PointerEvent) => show(e, { title, lines }), onPointerLeave: hide,
+      onFocus: (e: React.FocusEvent<SVGRectElement>) => { setActiveCell(index); show(e.currentTarget.getBoundingClientRect(), { title, lines }); },
+      onKeyDown: (e: KeyboardEvent<SVGRectElement>) => moveCell(e, y, c), onBlur: hide,
+    };
+  }
+
+  return (
+    <div className="viz hour-weekday month-calendar" ref={ref}>
+      {totals ? (
+        <div className="stat-grid calendar-totals">
+          <div className="stat">
+            <div className="stat-label">Informes en el período</div>
+            <div className="stat-value">{num(totals.reports)}</div>
+            <div className="stat-note">{years[0]}{years.length > 1 ? `–${years[years.length - 1]}` : ""}, con año conocido</div>
+          </div>
+          <div className="stat">
+            <div className="stat-label">Con mes conocido</div>
+            <div className="stat-value">{num(totals.with_month)}</div>
+            <div className="stat-note">{share(totals.with_month, totals.reports)} del período, en el calendario</div>
+          </div>
+          <div className="stat stat-unknown">
+            <div className="stat-label">Mes desconocido</div>
+            <div className="stat-value">{num(totals.without_month)}</div>
+            <div className="stat-note">{share(totals.without_month, totals.reports)} del período, no se puede calcular su mes</div>
+          </div>
+        </div>
+      ) : null}
+      <figure className="viz-panel">
+        <figcaption>{label} por año y mes ({years[0]}{years.length > 1 ? `–${years[years.length - 1]}` : ""})</figcaption>
+        <svg viewBox={`0 0 ${width} ${height}`} style={{ maxWidth: width }} role="grid" aria-readonly="true"
+             aria-rowcount={years.length} aria-colcount={lastCol + 1} aria-describedby={`${missingId}-help`}
+             aria-label={`Calendario de ${label.toLowerCase()} por año y mes`}>
+          <defs>
+            <pattern id={missingId} width={6} height={6} patternUnits="userSpaceOnUse">
+              <rect width={6} height={6} fill="var(--surface-2)" />
+              <path d="M-1 1L1 -1M0 6L6 0M5 7L7 5" stroke="var(--axis)" strokeWidth={1} />
+            </pattern>
+          </defs>
+          {[...MONTHS, ...(hasUnknown ? ["sin mes", "total"] : [])].map((m, i) => (
+            <text key={m} x={xOf(i) + wOf(i) / 2} y={12} className="tick" textAnchor="middle" aria-hidden="true">{m}</text>
+          ))}
+          {hasUnknown ? <line x1={xOf(12) - gap / 2} x2={xOf(12) - gap / 2} y1={18} y2={height} className="calendar-divider" aria-hidden="true" /> : null}
+          {years.map((year, y) => {
+            const unknownRow = unknown.get(year);
+            const unknownValue = unknownRow ? value(unknownRow, metric) : null;
+            const known = MONTHS.reduce((sum, _, m) => sum + (value(grid.get(`${year}-${m + 1}`) ?? {}, metric) ?? 0), 0);
+            const yearTotal = unknownValue === null ? null : known + unknownValue;
+            const cy = 22 + y * rowHeight + rowHeight / 2;
+            return (
+              <g key={year} role="row" aria-rowindex={y + 1} aria-label={String(year)}>
+                <text x={left - 8} y={cy} className="cat" textAnchor="end" dominantBaseline="middle" aria-hidden="true">{year}</text>
+                {MONTHS.map((_, m) => {
+                  const row = grid.get(`${year}-${m + 1}`);
+                  const v = row ? value(row, metric) : null;
+                  const i = v === null ? -1 : rampIndex(v, max, "linear");
+                  const text = !row ? "Sin fila en este resultado" : v === null ? "Sin valor disponible" : formatMetric(v, metric, catalog);
+                  return <rect key={m} className="mark" fill={v === null ? `url(#${missingId})` : i < 0 ? "var(--empty-cell)" : RAMP[i]}
+                               {...cellProps(year, y, m, `${MONTH_NAMES[m]} de ${year}`, text)} />;
+                })}
+                {hasUnknown ? (
+                  <>
+                    <rect className="mark calendar-unknown" {...cellProps(year, y, 12, `Mes desconocido en ${year}`,
+                      unknownValue === null ? "Sin valor disponible" : `${formatMetric(unknownValue, metric, catalog)} (no se puede calcular su mes)`)} />
+                    <text x={xOf(12) + wide / 2} y={cy} className="calendar-figure" textAnchor="middle" dominantBaseline="middle" aria-hidden="true">
+                      {unknownValue === null ? "—" : compact(unknownValue)}
+                    </text>
+                    <rect className="mark calendar-total" {...cellProps(year, y, 13, `Total de ${year}`,
+                      yearTotal === null ? "Sin valor disponible" : formatMetric(yearTotal, metric, catalog))} />
+                    <text x={xOf(13) + wide / 2} y={cy} className="calendar-figure calendar-figure-total" textAnchor="middle" dominantBaseline="middle" aria-hidden="true">
+                      {yearTotal === null ? "—" : compact(yearTotal)}
+                    </text>
+                  </>
+                ) : null}
+              </g>
+            );
+          })}
+        </svg>
+        <RampLegend max={max} scale="linear" missing note="escala lineal de informes por mes" />
+        <p className="viz-note" id={`${missingId}-help`}>
+          Las celdas rayadas no tienen fila o valor en este resultado; no equivalen a cero.
+          {hasUnknown ? " “Sin mes” cuenta los informes del año cuyo mes no se puede calcular (solo consignan el año, fecha aproximada o marcador de día); no se reparten entre los meses. “Total” suma ambos." : ""}
+          {" "}Usa las flechas para recorrer los años y los meses.
+        </p>
+      </figure>
+      {layer}
+    </div>
+  );
+}
+
+function share(part: number, whole: number): string {
+  return whole ? `${(Math.round((part / whole) * 1000) / 10).toLocaleString("es-ES")} %` : "—";
 }

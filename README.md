@@ -115,6 +115,7 @@ reiniciarla, y `/api/health` muestra su `load_id`.
 
 ## Documentación
 
+- Producto y diseño: [PRODUCT.md](PRODUCT.md), [DESIGN.md](DESIGN.md)
 - Silver: [contrato](data/silver/README.md), [contrato analítico](docs/silver-contract.md), [revisión](docs/silver-review.md)
 - Pipeline local: [operación en macOS y Windows](docs/pipeline-local.md)
 - Gold: [contrato](docs/gold-contract.md), [catálogo](docs/GOLD_CATALOG.md), [guía de dominio](docs/gold-domain-guide.md), [verificación](docs/gold-verification.md)

@@ -19,7 +19,8 @@ def test_health_and_catalog(client, gold):
     assert client.get("/api/health").json()["gold_load_id"] == gold.load_id
     catalog = client.get("/api/agent/catalog").json()
     assert catalog["certified_queries"][0] == {**catalog["certified_queries"][0], "id": "CQ_TEST_SOURCES", "valid": True}
-    assert set(catalog["views"]) == {"table", "bars", "timeseries", "points", "density", "choropleth", "hour_weekday"}
+    assert set(catalog["views"]) == {"table", "bars", "timeseries", "points", "density", "choropleth", "hour_weekday", "month_calendar",
+                                     "stacked", "matrix", "dumbbell", "timeline", "histogram", "ecdf"}
     assert catalog["country_m49"]["US"] == "840" and catalog["dimensions"]["country_iso2"]["label"] == "País"
     for code, metric in gold.metrics.items():
         if metric["type"] == "ratio":

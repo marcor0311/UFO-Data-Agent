@@ -300,7 +300,7 @@ class Interpreter:
         order_by, descending = query.get("order_by"), query.get("descending", True)
         if order_by:
             out.sort(key=lambda row: nulls_first(row[order_by]), reverse=descending)
-        elif group_by and query.get("view", "table") not in ("timeseries", "hour_weekday", "density"):
+        elif group_by and query.get("view", "table") not in ("timeseries", "hour_weekday", "month_calendar", "density"):
             out.sort(key=lambda row: nulls_first(row[metrics[0]]), reverse=True)
         total = {m: self.metric(m, rows, dataset) for m in metrics} if query.get("rollup") else None
         return {"rows": out[:limit], "matched_source_rows": matched if dataset != "fact_event" else len(rows),
