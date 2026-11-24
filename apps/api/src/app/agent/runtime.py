@@ -11,12 +11,11 @@ from typing import Callable
 import httpx
 from fastapi import HTTPException
 
-from app.agent.graph import RECURSION_LIMIT, build_graph
+from app.agent import graph
+from app.agent.graph import AREA_NOTE, history_inputs  # noqa: F401 - re-exported
 from app.gold import Analytics
 
 API = "https://api.openai.com/v1"
-HISTORY_TURNS = 12
-HISTORY_CHARS = 45000
 
 
 def model_catalog(account: dict) -> list[dict]:
@@ -35,12 +34,34 @@ def model_catalog(account: dict) -> list[dict]:
 
 
 def response_stream(account: dict, payload: dict) -> dict:
-    """POST /responses with stream; accept the result only after response.completed."""
+    """POST /responses with stream; accept the result only after response.completed.
+
+    A dropped connection or a 5xx before any output is retried once: those are transient
+    and the request has no side effects (``store: false``)."""
+    for attempt in range(2):
+        try:
+            return _stream_once(account, payload)
+        except _Transient as exc:
+            if attempt:
+                raise HTTPException(502, exc.message) from exc
+    raise AssertionError("unreachable")
+
+
+class _Transient(Exception):
+    def __init__(self, message: str):
+        super().__init__(message)
+        self.message = message
+
+
+def _stream_once(account: dict, payload: dict) -> dict:
     completed = None
     try:
         with httpx.Client(timeout=httpx.Timeout(120, connect=20)) as client:
             with client.stream("POST", API + "/responses", headers={"Authorization": "Bearer " + account["access_token"]},
                                json={**payload, "store": False, "stream": True}) as response:
+                if response.status_code >= 500:
+                    response.read()
+                    raise _Transient(f"La inferencia devolvió HTTP {response.status_code}; puedes reintentar.")
                 if response.status_code >= 400:
                     response.read()
                     raise HTTPException(502, f"La inferencia devolvió HTTP {response.status_code}. Revisa permisos y límites de tu plan.")
@@ -60,39 +81,22 @@ def response_stream(account: dict, payload: dict) -> dict:
             raise HTTPException(502, "El stream terminó sin response.completed.")
         return completed
     except httpx.HTTPError as exc:
-        raise HTTPException(502, "Conexión con la inferencia interrumpida; puedes reintentar.") from exc
-
-
-AREA_NOTE = ("Contexto de la interfaz: la persona tiene un área seleccionada en el mapa. Mientras esté activa, el servidor "
-             "limita automáticamente cada query_gold a los informes dentro de esa área; no hace falta filtrar por país ni por "
-             "coordenadas. Usa fact_report (el área exige coordenadas aptas: eligibility map) y aplica solo los filtros "
-             "que pida la pregunta, como el año o la forma. No uses run_certified ni la vista globe. Menciona que el "
-             "resultado se limita al área seleccionada.")
-
-
-def history_inputs(history: list[dict]) -> list[dict]:
-    """Recent turns plus their verified evidence, for follow-up questions."""
-    inputs = []
-    for turn in history[-HISTORY_TURNS:]:
-        inputs += [{"role": "user", "content": turn["question"]}, {"role": "assistant", "content": turn["answer"]}]
-        evidence = [{"query": v["query"], "readable_query": v["readable_query"]["texto"], "rows": v["rows"][:30],
-                     "result_type": v["result_type"]}
-                    for v in turn.get("visualizations", [])]
-        if evidence:
-            inputs.append({"role": "user", "content": "Evidencia verificada del turno anterior (no se vuelve a mostrar): "
-                           + json.dumps(evidence, ensure_ascii=False)[:HISTORY_CHARS // HISTORY_TURNS]})
-    return inputs
+        raise _Transient("Conexión con la inferencia interrumpida; puedes reintentar.") from exc
 
 
 class DataAgent:
-    """Runs one turn through the LangGraph in ``app.agent.graph``."""
+    """Runs one turn through the LangGraph in ``app.agent.graph``.
+
+    Cheap to create: the compiled graph, the instructions and the tool schemas are
+    built once per Gold load and shared by every request."""
 
     def __init__(self, analytics: Analytics, stream: Callable[[dict, dict], dict] = response_stream):
         self.analytics = analytics
         self.stream = stream
-        self.graph = build_graph(analytics, stream, history_inputs, AREA_NOTE)
+
+    @property
+    def graph(self):
+        return graph.compiled(self.analytics)
 
     def answer(self, account: dict, question: str, history: list[dict], model: str, area: list | None = None) -> dict:
-        work = self.graph.invoke({"account": account, "model": model, "question": question, "history": history, "area": area},
-                                 {"recursion_limit": RECURSION_LIMIT})
-        return work["turn"]
+        return graph.run(self.analytics, self.stream, account, model, question, history, area)

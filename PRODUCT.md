@@ -32,8 +32,9 @@ como un grafo LangGraph ([docs/agente-langgraph.md](docs/agente-langgraph.md))
 que combina Responses, herramientas tipadas sobre Gold y una verificación final. El modelo nunca escribe
 SQL: resuelve entidades con `find_entities`, busca una consulta certificada que
 cubra toda la pregunta (`search_certified` / `run_certified`) y, si no la hay,
-construye una `query_gold` validada. El agente admite hasta 10 rondas de
-herramientas por turno.
+construye una `query_gold` validada. El agente admite 10 vueltas del modelo por
+turno, 2 más por cada visualización producida (hasta 18), y al agotarlas
+responde con lo que ya tiene.
 
 Gold integra UFOCAT, UPDB, UFO-search y Capella / PhenomAInon. La unidad es el
 **informe**, no el avistamiento ni el evento. Solo los grupos de duplicados

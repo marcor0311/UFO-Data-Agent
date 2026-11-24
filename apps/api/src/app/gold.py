@@ -26,7 +26,7 @@ if str(ROOT / "scripts") not in sys.path:
     sys.path.insert(0, str(ROOT / "scripts"))
 
 import gold_query  # noqa: E402
-from gold_query import OPS, VIEWS, Analytics, GoldUnavailable, Query, QueryError  # noqa: E402,F401
+from gold_query import OPS, VIEWS, Analytics, GoldUnavailable, Query, QueryError, query_digest  # noqa: E402,F401
 
 _lock = threading.Lock()
 _analytics: Analytics | None = None

@@ -189,11 +189,38 @@ def test_certified_filter_is_replaced_not_stacked(coverage_gold):
 def test_full_match_keeps_the_certified_route(coverage_gold):
     found = tools.execute(coverage_gold, "search_certified",
                           {"question": "¿Cuántos informes hay por década?", "needs": {"group_by": ["decade"]}}, [])
-    assert found["decision"] == {"tool": "run_certified", "id": "CQ_TEST_DECADE"}
+    decision = found["decision"]
+    assert (decision["tool"], decision["id"], decision["executed"]) == ("run_certified", "CQ_TEST_DECADE", True)
     decade = next(c for c in found["candidates"] if c["id"] == "CQ_TEST_DECADE")
     assert decade["coverage"] == "total" and decade["missing"] == [] and "composed_query" not in decade
     out = tools.execute(coverage_gold, "run_certified", {"id": "CQ_TEST_DECADE"}, [])
     assert out["result_type"] == "certified"
+
+
+def test_certified_with_total_coverage_runs_in_the_search_step(coverage_gold):
+    """One round trip less: the search that finds a full match already shows it."""
+    visuals = []
+    found = tools.execute(coverage_gold, "search_certified",
+                          {"question": "¿Cuántos informes hay por década?", "needs": {"group_by": ["decade"]}}, visuals)
+    assert len(visuals) == 1 and visuals[0]["certified_query_id"] == "CQ_TEST_DECADE"
+    assert found["decision"]["result"]["result_type"] == "certified" and found["decision"]["result"]["rows"]
+    again = tools.execute(coverage_gold, "run_certified", {"id": "CQ_TEST_DECADE"}, visuals)
+    assert len(visuals) == 1 and "ya se muestra" in again["note"]
+
+
+def test_partial_coverage_is_not_executed(coverage_gold):
+    visuals = []
+    needs = {"filters": [{"column": "event_year", "op": "gte", "value": 1990}], "group_by": ["event_year"]}
+    found = tools.execute(coverage_gold, "search_certified", {"question": "serie anual desde 1990", "needs": needs}, visuals)
+    assert found["decision"]["tool"] == "query_gold" and "executed" not in found["decision"] and visuals == []
+
+
+def test_repeated_query_is_not_run_or_shown_twice(gold):
+    visuals = []
+    query = {"dataset": "agg_source", "group_by": ["source_code"], "metrics": ["report_count"], "view": "bars"}
+    tools.execute(gold, "query_gold", {**query, "title": "Fuentes"}, visuals)
+    out = tools.execute(gold, "query_gold", {**query, "title": "Otra vez"}, visuals)
+    assert len(visuals) == 1 and out["rows"] and "ya se muestra" in out["note"]
 
 
 def test_stale_certification_is_replaced_by_equivalent_composition(coverage_gold):
