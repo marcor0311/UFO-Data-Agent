@@ -1,6 +1,6 @@
 @echo off
 setlocal
-pushd "%~dp0" || exit /b 1
+pushd "%~dp0..\.." || exit /b 1
 
 rem Use the same Python environment as the development server.
 if not exist "apps\api\.venv\Scripts\python.exe" (

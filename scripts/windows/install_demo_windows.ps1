@@ -1,5 +1,5 @@
 $ErrorActionPreference = 'Stop'
-$launcher = Join-Path $PSScriptRoot 'run_demo.py'
+$launcher = Join-Path (Split-Path $PSScriptRoot -Parent) 'run_demo.py'
 
 if ($env:PROCESSOR_ARCHITECTURE -ne 'AMD64') {
     throw 'Este instalador requiere Windows x64.'
@@ -33,7 +33,7 @@ function Invoke-Installer($file, $arguments) {
             Start-Sleep -Seconds 15
         }
     }
-    throw 'Windows Installer sigue ocupado (1618). Espera a que termine la otra instalacion y vuelve a ejecutar install_demo_windows.cmd.'
+    throw 'Windows Installer sigue ocupado (1618). Espera a que termine la otra instalacion y vuelve a ejecutar scripts\windows\install_demo_windows.cmd.'
 }
 
 try {
