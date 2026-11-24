@@ -14,7 +14,8 @@ const months = [
 ].map(([short, label], index) => ({
   short, label, number: index + 1, count: reports.filter(({ month }) => month === index + 1).length,
 }));
-const scale = Math.ceil(Math.max(...months.map(({ count }) => count)) / 20) * 20;
+const maxBarShare = 2 / 3;
+const scale = Math.ceil(Math.max(...months.map(({ count }) => count)) / (20 * maxBarShare)) * 20;
 export default function CaliforniaDemo() {
   const [month, setMonth] = useState<number | null>(null);
   const [overhead, setOverhead] = useState(false);
