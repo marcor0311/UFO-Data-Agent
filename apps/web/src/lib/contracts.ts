@@ -55,7 +55,9 @@ export type Catalog = {
 export type TraceStep = { tool: string; ok: boolean; code?: string; error?: string; arguments?: unknown };
 export type Turn = { question: string; answer: string; visualizations: GoldResult[]; trace: TraceStep[]; model: string; load_id: string; created_at: string;
   /* Area selected on a map when the question was asked ([lng, lat] vertices). */
-  area?: [number, number][] };
+  area?: [number, number][];
+  /* create: the turn brings new results; retain: it keeps the previous ones on screen (clarifications, comments). */
+  visualization_action?: "create" | "retain" };
 export type Session = { authenticated: boolean; email?: string; account_id?: string; detail?: string };
 export type Model = { slug: string; display_name: string };
 export type ConversationSummary = { conversation_id: string; updated: number; title: string; turns: number };

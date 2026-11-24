@@ -39,6 +39,8 @@ test("un área seleccionada en el globo acompaña las preguntas siguientes", asy
   await input.fill("Filtra de 1995 a 1999");
   await page.keyboard.press("Enter");
   await expect(page.locator(".turn-area")).toHaveText("Limitada al área seleccionada en el mapa");
+  // The answer brought no new results (retain): the globe stays on screen.
+  await expect(page.locator(".globe-canvas canvas")).toBeVisible();
   expect(chats[0].area!.length).toBeGreaterThanOrEqual(4);
 
   await chip.getByRole("button", { name: "Quitar área" }).click();

@@ -6,7 +6,7 @@ import httpx
 import pytest
 
 from conftest import ScriptedStream, call, message
-from app.agent import runtime
+from app.agent import graph, runtime
 from app.agent.runtime import DataAgent
 
 ACCOUNT = {"access_token": "token"}
@@ -17,7 +17,7 @@ def test_direct_answer(gold):
     turn = DataAgent(gold, stream=stream).answer(ACCOUNT, "Hola", [], "model-a")
     assert turn["answer"] == "Pide un dato concreto." and turn["visualizations"] == [] and turn["load_id"] == gold.load_id
     payload = stream.payloads[0]
-    assert payload["model"] == "model-a" and payload["parallel_tool_calls"] is False
+    assert payload["model"] == "model-a" and payload["parallel_tool_calls"] is True and "tool_choice" not in payload
     assert "search_certified" in payload["instructions"] and "CQ_TEST_SOURCES" in payload["instructions"]
 
 
@@ -25,7 +25,7 @@ def test_certified_first_then_answer(gold):
     stream = ScriptedStream(
         [call("search_certified", {"question": "informes por fuente"}, "a")],
         [call("run_certified", {"id": "CQ_TEST_SOURCES"}, "b")],
-        [message("Hay entre 8 y 12 informes.")])
+        [message("Hay 9 informes.")])
     turn = DataAgent(gold, stream=stream).answer(ACCOUNT, "¿Cuántos informes por fuente?", [], "model-a")
     assert [t["tool"] for t in turn["trace"]] == ["search_certified", "run_certified"]
     assert turn["visualizations"][0]["result_type"] == "certified"
@@ -45,11 +45,79 @@ def test_tool_error_is_returned_for_repair(gold):
     assert json.loads(repaired["output"])["code"] == "eligibility_missing"
 
 
-def test_round_limit(gold):
-    stream = ScriptedStream(*[[call("describe_data", {"dataset": None}, f"c{i}")] for i in range(runtime.MAX_ROUNDS)])
-    with pytest.raises(HTTPException) as err:
-        DataAgent(gold, stream=stream).answer(ACCOUNT, "?", [], "model-a")
-    assert err.value.status_code == 422
+def test_spent_budget_forces_an_answer(gold):
+    """Without charts the budget is BASE_ROUNDS model calls; the last one may not call tools."""
+    stalls = [[call("describe_data", {"dataset": None}, f"c{i}")] for i in range(graph.BASE_ROUNDS - 1)]
+    stream = ScriptedStream(*stalls, [call("describe_data", {"dataset": None}, "late"), message("No pude concretar la consulta.")])
+    turn = DataAgent(gold, stream=stream).answer(ACCOUNT, "?", [], "model-a")
+    assert turn["answer"] == "No pude concretar la consulta."
+    last = stream.payloads[-1]
+    assert len(stream.payloads) == graph.BASE_ROUNDS and last["tool_choice"] == "none"
+    assert last["input"][-1]["content"] == graph.CLOSE
+    # The ignored call never reaches the next request without its output.
+    assert all(t["tool"] == "describe_data" for t in turn["trace"]) and len(turn["trace"]) == graph.BASE_ROUNDS - 1
+
+
+def test_charts_extend_the_budget():
+    assert graph.budget(0) == graph.BASE_ROUNDS
+    assert graph.budget(2) == graph.BASE_ROUNDS + 2 * graph.ROUNDS_PER_CHART
+    assert graph.budget(100) == graph.MAX_ROUNDS
+
+
+def test_parallel_calls_run_in_one_step_and_credentials_stay_out_of_state(gold):
+    stream = ScriptedStream(
+        [call("query_gold", {"dataset": "agg_source", "group_by": ["source_code"], "metrics": ["report_count"], "view": "bars"}, "a"),
+         call("query_gold", {"dataset": "agg_year", "group_by": ["event_year"], "metrics": ["report_count"], "view": "timeseries"}, "b")],
+        [message("Hay 9 informes.")])
+    agent = DataAgent(gold, stream=stream)
+    turn = agent.answer({"access_token": "secreto"}, "Fuentes y años", [], "model-a")
+    assert len(stream.payloads) == 2 and len(turn["visualizations"]) == 2
+    outputs = [i["call_id"] for i in stream.payloads[1]["input"] if i.get("type") == "function_call_output"]
+    assert outputs == ["a", "b"]
+    assert "secreto" not in json.dumps(turn) and "account" not in graph.Work.__annotations__
+
+
+def test_graph_and_instructions_are_built_once_per_load(gold):
+    assert DataAgent(gold).graph is DataAgent(gold).graph
+    from app.agent import instructions, tools
+    assert instructions.build(gold) is instructions.build(gold) and tools.schemas(gold) is tools.schemas(gold)
+
+
+def test_instructions_list_entity_ids(gold):
+    from app.agent import instructions
+    text = instructions.build(gold)
+    assert "ENTIDADES" in text and "PAÍSES (id = nombre)" in text and "US = " in text
+
+
+def test_unexpected_tool_failure_goes_back_to_the_model(gold, monkeypatch):
+    from app.agent import tools
+
+    def boom(*args, **kwargs):
+        raise RuntimeError("disk")
+    monkeypatch.setattr(tools, "execute", boom)
+    stream = ScriptedStream([call("describe_data", {"dataset": None}, "a")], [message("No pude leer el catálogo.")])
+    turn = DataAgent(gold, stream=stream).answer(ACCOUNT, "?", [], "model-a")
+    assert turn["trace"][0]["code"] == "tool_failed"
+    out = [i for i in stream.payloads[1]["input"] if i.get("type") == "function_call_output"][0]
+    assert json.loads(out["output"])["code"] == "tool_failed"
+
+
+@pytest.mark.parametrize("text,code", [
+    ("No está comprobado que haya relación: hay 9 informes.", "forbidden_phrase"),
+    ("**Hallazgo**: hay 9 informes.", "markdown"),
+    ("La métrica report_count da 9 informes.", "code_in_answer"),
+])
+def test_rule_breaking_answers_are_rewritten_once(gold, text, code):
+    stream = ScriptedStream([message(text)], [message("Hay 9 informes.")])
+    turn = DataAgent(gold, stream=stream).answer(ACCOUNT, "?", [], "model-a")
+    assert turn["answer"] == "Hay 9 informes." and {"tool": "verificar", "ok": False, "code": code} in turn["trace"]
+    assert stream.payloads[1]["tool_choice"] == "none"
+
+
+def test_clean_answers_pass_the_checks(gold):
+    codes = graph.codes_of(gold)
+    assert graph.problems("Hay 9 informes; según un modelo heredado del origen, la mitad tiene baja calidad.", codes) == []
+    assert graph.problems("En 1997 hubo 1.234 informes en Estados Unidos.", codes) == []
 
 
 def test_empty_model_text_fails(gold):
@@ -116,3 +184,53 @@ def test_model_catalog(transport):
     transport["handler"] = lambda r: httpx.Response(200, json={"models": []})
     with pytest.raises(HTTPException):
         runtime.model_catalog(ACCOUNT)
+
+
+def test_range_answer_is_rewritten_once(gold):
+    stream = ScriptedStream(
+        [call("run_certified", {"id": "CQ_TEST_SOURCES"}, "a")],
+        [message("Hay entre 8 y 12 informes.")],
+        [message("Hay 9 informes.")])
+    turn = DataAgent(gold, stream=stream).answer(ACCOUNT, "¿Cuántos?", [], "model-a")
+    assert turn["answer"] == "Hay 9 informes."
+    assert turn["trace"][-1] == {"tool": "verificar", "ok": False, "code": "range_in_answer"}
+    assert "una sola cifra" in stream.payloads[2]["input"][-1]["content"]
+
+
+def test_second_range_is_accepted_to_avoid_loops(gold):
+    stream = ScriptedStream([message("Entre 8 y 12 informes.")], [message("De 8 a 12 informes.")])
+    assert DataAgent(gold, stream=stream).answer(ACCOUNT, "?", [], "model-a")["answer"] == "De 8 a 12 informes."
+
+
+def test_visualization_action(gold):
+    created = DataAgent(gold, stream=ScriptedStream([call("run_certified", {"id": "CQ_TEST_SOURCES"}, "a")], [message("Hay 9 informes.")]))
+    assert created.answer(ACCOUNT, "?", [], "model-a")["visualization_action"] == "create"
+    kept = DataAgent(gold, stream=ScriptedStream([message("¿A qué país te refieres?")]))
+    assert kept.answer(ACCOUNT, "?", [], "model-a")["visualization_action"] == "retain"
+
+
+def test_documented_graph_matches_the_compiled_one():
+    from pathlib import Path
+    import re
+    compiled = graph.build_graph(None).get_graph()
+    edges = {(e.source, e.target) for e in compiled.edges}
+    doc = (Path(__file__).resolve().parents[3] / "docs/agente-langgraph.md").read_text()
+    block = doc.split("```mermaid")[1].split("```")[0]
+    documented = {(a.split("(")[0], b.split("(")[0]) for a, b in re.findall(r"(\w+)(?:\([^)]*\))?\s*-\.?->\s*(\w+)", block)}
+    assert documented == edges
+
+
+def test_stream_retries_a_transient_failure_once(transport):
+    seen = []
+
+    def handler(request):
+        seen.append(1)
+        if len(seen) == 1:
+            return httpx.Response(503, text="")
+        return httpx.Response(200, text=sse({"type": "response.completed", "response": {"output": []}}))
+    transport["handler"] = handler
+    assert runtime.response_stream(ACCOUNT, {"model": "m"}) == {"output": []} and len(seen) == 2
+    transport["handler"] = lambda r: httpx.Response(503, text="")
+    with pytest.raises(HTTPException) as err:
+        runtime.response_stream(ACCOUNT, {"model": "m"})
+    assert err.value.status_code == 502

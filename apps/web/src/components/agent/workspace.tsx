@@ -90,7 +90,9 @@ export default function AgentWorkspace() {
   const resultsHeading = useRef<HTMLHeadingElement>(null);
   const authenticated = Boolean(session?.authenticated);
   const busy = pending !== null || restoring;
-  const activeIndex = selectedTurn ?? turns.length - 1;
+  // A turn without new results (visualization_action "retain") keeps the latest results on screen.
+  const latestWithResults = turns.findLastIndex((turn) => turn.visualizations.length > 0);
+  const activeIndex = selectedTurn ?? (latestWithResults >= 0 ? latestWithResults : turns.length - 1);
   const activeTurn = turns[activeIndex];
   const groups = activeTurn ? groupResults(activeTurn.visualizations) : [];
   const pane = PANES[view];

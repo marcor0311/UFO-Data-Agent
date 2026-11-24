@@ -94,12 +94,12 @@ def test_oauth_callback_requires_cookie_from_loopback_host(client, monkeypatch):
 
 def test_chat_stores_owner_scoped_history(client):
     login(client)
-    use_stream([call("run_certified", {"id": "CQ_TEST_SOURCES"})], [message("Hay entre 8 y 12 informes.")])
+    use_stream([call("run_certified", {"id": "CQ_TEST_SOURCES"})], [message("Hay 9 informes.")])
     r = client.post("/api/agent/chat", json={"question": "¿Cuántos informes por fuente?"})
     assert r.status_code == 200
     cid = r.json()["conversation_id"]
     turn = r.json()["turn"]
-    assert turn["answer"].startswith("Hay entre") and turn["visualizations"][0]["result_type"] == "certified"
+    assert turn["answer"].startswith("Hay 9") and turn["visualizations"][0]["result_type"] == "certified"
     history = client.get(f"/api/agent/conversations/{cid}").json()
     assert len(history["turns"]) == 1
     assert client.get("/api/agent/conversations").json()[0]["conversation_id"] == cid

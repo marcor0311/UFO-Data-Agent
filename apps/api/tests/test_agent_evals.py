@@ -25,14 +25,15 @@ def test_forbidden_phrase_detection():
 
 def test_frequent_question_passes_with_certified_flow(gold):
     stream = ScriptedStream([call("search_certified", {"question": "fuentes"})], [call("run_certified", {"id": "CQ_TEST_SOURCES"})],
-                            [message("Hay entre 8 y 12 informes por fuente.")])
+                            [message("Hay 9 informes por fuente.")])
     report = run_agent_evals.run(DataAgent(gold, stream=stream), {}, "m", [item(gold)], gold.limits, gold.load_id)
     assert report["passed"], report["results"][0]["checks"]
 
 
 def test_wording_and_routing_failures_are_caught(gold):
     stream = ScriptedStream([call("query_gold", {"dataset": "agg_source", "group_by": ["source_code"], "metrics": ["report_count"], "view": "table"})],
-                            [message("Hubo 12 avistamientos.")])
+                            # verificar asks for one rewrite; a model that repeats the phrase is still caught by the grader.
+                            [message("Hubo 12 avistamientos.")], [message("Hubo 12 avistamientos.")])
     result = run_agent_evals.run(DataAgent(gold, stream=stream), {}, "m", [item(gold)], gold.limits, gold.load_id)["results"][0]
     assert not result["passed"]
     assert result["checks"]["no_forbidden_phrases"] is False and result["checks"]["searched_certified_first"] is False

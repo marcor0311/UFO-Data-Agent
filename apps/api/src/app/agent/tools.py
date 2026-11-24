@@ -6,9 +6,10 @@ with their code so it can repair the call; they never end the turn.
 """
 from __future__ import annotations
 
+from functools import lru_cache
 import json
 
-from app.gold import OPS, VIEWS, Analytics, Query, QueryError
+from app.gold import OPS, VIEWS, Analytics, Query, QueryError, query_digest
 
 MAX_VISUALS = 4
 MODEL_ROWS = 60
@@ -164,13 +165,16 @@ def search(analytics: Analytics, question: str, needs: dict) -> dict:
         composed = next((c["composed_query"] for c in candidates if c.get("composed_query")), None)
         decision = {"tool": "query_gold", "query": composed} if composed else {"tool": "query_gold", "query": None}
     return {"candidates": candidates, "decision": decision,
-            "rule": ("Ejecuta run_certified solo si la candidata es válida y su coverage es total. "
+            "rule": ("Si decision trae executed, la certificada ya se ejecutó y se muestra: no la vuelvas a llamar. "
+                     "Ejecuta run_certified solo si la candidata es válida y su coverage es total. "
                      "Con coverage parcial o certificación inválida, usa query_gold con composed_query "
                      "(añade title) o compón otra que cubra todos los filtros, la agrupación y las métricas pedidas. "
                      "Si no declaraste needs, compara tú certified_query con la pregunta antes de decidir.")}
 
 
+@lru_cache(maxsize=4)
 def schemas(analytics: Analytics) -> list[dict]:
+    """Tool definitions, built once per Gold load (the Analytics instance)."""
     certified = [q["id"] for q in analytics.certified()["queries"]]
 
     def fn(name, description, properties, required):
@@ -265,6 +269,28 @@ def visual_pack(analytics: Analytics, raw: dict, room: int) -> list[dict]:
     return results
 
 
+def _already_shown(analytics: Analytics, name: str, arguments: dict, visuals: list) -> dict | None:
+    """The visualization of this answer that already runs the same query (titles aside)."""
+    try:
+        if name == "run_certified":
+            items = {i["id"]: i for i in analytics.certified()["queries"]}
+            if arguments.get("id") not in items:
+                return None
+            raw = items[arguments["id"]]["query"]
+        else:
+            raw = arguments
+        wanted = query_digest(raw, analytics.limits)
+    except QueryError:
+        return None
+    for visual in visuals:
+        try:
+            if query_digest(visual["query"], analytics.limits) == wanted:
+                return visual
+        except (QueryError, KeyError):
+            continue
+    return None
+
+
 def execute(analytics: Analytics, name: str, arguments: dict, visuals: list, area: list | None = None) -> dict:
     """Run one tool call. Data results are appended to ``visuals`` (full envelope).
 
@@ -277,12 +303,18 @@ def execute(analytics: Analytics, name: str, arguments: dict, visuals: list, are
     if area and name == "query_gold":
         arguments = {**arguments, "area": area}
     if name in ("query_gold", "run_certified"):
-        if len(visuals) >= MAX_VISUALS:
-            raise QueryError("visual_limit", f"Máximo {MAX_VISUALS} visualizaciones por respuesta; responde con las que ya tienes.")
         if name == "query_gold" and isinstance(arguments.get("metrics"), list):
             # One figure per question: never a second "excluding pending matches" count.
             kept = [m for m in arguments["metrics"] if m != "report_count_excl_candidates"]
             arguments = {**arguments, "metrics": kept or ["report_count"]}
+        if name == "run_certified" and (set(arguments) != {"id"} or not isinstance(arguments["id"], str)):
+            raise QueryError("contract", "run_certified requiere solo id")
+        repeated = _already_shown(analytics, name, arguments, visuals)
+        if repeated is not None:
+            return {**compact(repeated), "note": "Esta misma consulta ya se muestra en esta respuesta; no se repite. "
+                                                 "Usa estas filas o pide otra visualización distinta."}
+        if len(visuals) >= MAX_VISUALS:
+            raise QueryError("visual_limit", f"Máximo {MAX_VISUALS} visualizaciones por respuesta; responde con las que ya tienes.")
         if name == "query_gold" and _is_listing(arguments):
             pack = visual_pack(analytics, arguments, MAX_VISUALS - len(visuals))
             if pack:
@@ -290,19 +322,24 @@ def execute(analytics: Analytics, name: str, arguments: dict, visuals: list, are
                 return {"note": "Un listado de informes se muestra como mapa (2D/3D), evolución por año y formas. "
                                 "Describe estas visualizaciones; no menciones tablas.",
                         "visualizations": [compact(r) for r in pack]}
-        if name == "query_gold":
-            result = analytics.query(arguments)
-        else:
-            if set(arguments) != {"id"} or not isinstance(arguments["id"], str):
-                raise QueryError("contract", "run_certified requiere solo id")
-            result = analytics.run_certified(arguments["id"])
+        result = analytics.query(arguments) if name == "query_gold" else analytics.run_certified(arguments["id"])
         visuals.append(result)
         return compact(result)
     if name == "search_certified":
         question = arguments.get("question")
         if not isinstance(question, str) or not question.strip():
             raise QueryError("contract", "search_certified requiere question")
-        return search(analytics, question, _needs(arguments.get("needs")))
+        found = search(analytics, question, _needs(arguments.get("needs")))
+        decision = found.get("decision") or {}
+        # A valid certified query that covers the whole question runs in the same step:
+        # the model would only call run_certified with it, one more round trip.
+        if decision.get("tool") == "run_certified" and not area and len(visuals) < MAX_VISUALS:
+            result = _already_shown(analytics, "run_certified", {"id": decision["id"]}, visuals)
+            if result is None:
+                result = analytics.run_certified(decision["id"])
+                visuals.append(result)
+            found["decision"] = {**decision, "executed": True, "result": compact(result)}
+        return found
     if name == "find_entities":
         text, kind = arguments.get("text"), arguments.get("kind")
         if not isinstance(text, str) or (kind is not None and kind not in KINDS):
