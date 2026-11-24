@@ -48,8 +48,14 @@ const children = commands.map(({ name, executable, args, cwd, env }) => {
 function stop(exitCode) {
   if (process.exitCode !== undefined) return;
   process.exitCode = exitCode;
+  if (process.env.AGENT_DEV_STOP_ON_EOF === "1") process.stdin.pause();
   for (const child of children) child.kill();
 }
 
 process.once("SIGINT", () => stop(0));
 process.once("SIGTERM", () => stop(0));
+
+if (process.env.AGENT_DEV_STOP_ON_EOF === "1") {
+  process.stdin.once("end", () => stop(0));
+  process.stdin.resume();
+}

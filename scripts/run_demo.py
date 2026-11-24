@@ -63,8 +63,9 @@ def main() -> int:
             subprocess.run([python, "-X", "utf8", "scripts/build_demo.py"], cwd=ROOT, check=True)
         if not all(path.is_file() for path in (serving, serving.with_suffix(".manifest.json"), certified)):
             raise RuntimeError("La muestra está incompleta. Mueve data/demo y vuelve a ejecutar el lanzador.")
-        env = dict(os.environ, AGENT_GOLD_SERVING=str(serving), AGENT_CERTIFIED_QUERIES=str(certified))
-        server = subprocess.Popen([node, "apps/web/scripts/dev.mjs"], cwd=ROOT, env=env)
+        env = dict(os.environ, AGENT_GOLD_SERVING=str(serving), AGENT_CERTIFIED_QUERIES=str(certified),
+                   AGENT_DEV_STOP_ON_EOF="1")
+        server = subprocess.Popen([node, "apps/web/scripts/dev.mjs"], cwd=ROOT, env=env, stdin=subprocess.PIPE)
         verify(server, api, web)
         print(f"API y ejemplo verificados. Abre {web}/agent#consultas-de-ejemplo y elige «Informes por fuente».", flush=True)
         return 0 if args.check else server.wait()
@@ -75,11 +76,12 @@ def main() -> int:
         return 1
     finally:
         if server is not None and server.poll() is None:
-            if windows:
-                subprocess.run(["taskkill", "/PID", str(server.pid), "/T", "/F"], capture_output=True)
-            else:
+            server.stdin.close()
+            try:
+                server.wait(timeout=10)
+            except subprocess.TimeoutExpired:
                 server.terminate()
-            server.wait()
+                server.wait()
 
 
 if __name__ == "__main__":
