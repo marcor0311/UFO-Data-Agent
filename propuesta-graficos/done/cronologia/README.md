@@ -1,6 +1,6 @@
 # Cronología
 
-**Estado, Implementada** en el Data Agent como vista `timeline` ([#83](https://github.com/marcor0311/UFO-Data-Agent/issues/83)). Captura: [fotos/](../../fotos/).
+**Estado: Implementada** en el Data Agent como vista `timeline` ([#83](https://github.com/marcor0311/UFO-Data-Agent/issues/83)).
 
 Secuencia paginada de ocho tarjetas alternadas con fecha, localidad, forma e ID. Solo entra una fecha con precisión diaria; las marcas abren el inspector.
 

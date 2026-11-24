@@ -1,6 +1,6 @@
 # Comparación de reportes
 
-**Estado, Recuperada**
+**Estado: Recuperada**
 
 Dos fichas y una tabla de trece campos con controles para cambiar ambos reportes y abrirlos por separado. Destaca coincidencias entre valores presentes.
 

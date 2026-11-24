@@ -1,6 +1,6 @@
 # Cambios de composición entre períodos
 
-**Estado, Implementada** en el Data Agent como vista `dumbbell` ([#82](https://github.com/marcor0311/UFO-Data-Agent/issues/82)). Captura: [fotos/](../../fotos/).
+**Estado: Implementada** en el Data Agent como vista `dumbbell` ([#82](https://github.com/marcor0311/UFO-Data-Agent/issues/82)).
 
 Gráfico de puntos unidos que compara las proporciones de cada forma en dos períodos del recorte. La vista viva corta en el año medio.
 
