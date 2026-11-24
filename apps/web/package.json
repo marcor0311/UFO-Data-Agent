@@ -8,7 +8,7 @@
     "build": "next build",
     "start": "next start --hostname 127.0.0.1 --port 3000",
     "typecheck": "next typegen && tsc --noEmit",
-    "test:e2e": "playwright test",
+    "test:e2e": "playwright test --config playwright.e2e.config.ts",
     "test:unit": "playwright test tests/unit"
   },
   "engines": {
