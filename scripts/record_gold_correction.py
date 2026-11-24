@@ -60,8 +60,8 @@ def record(args, root: Path = ROOT) -> dict:
                   "eval_id": eval_id, "fix": args.fix}
     corrections["corrections"].append(correction)
     evals["questions"].append(question)
-    corrections_path.write_text(json.dumps(corrections, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
-    evals_path.write_text(json.dumps(evals, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
+    corrections_path.write_text(json.dumps(corrections, ensure_ascii=False, indent=2) + "\n", encoding="utf-8", newline="\n")
+    evals_path.write_text(json.dumps(evals, ensure_ascii=False, indent=2) + "\n", encoding="utf-8", newline="\n")
     return correction
 
 

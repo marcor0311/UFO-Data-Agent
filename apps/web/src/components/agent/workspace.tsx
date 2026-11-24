@@ -9,6 +9,9 @@ import { CatalogViews } from "./catalog-views";
 import { Composer } from "./composer";
 import { groupResults, ResultPanel, resultTitle } from "./result-panel";
 import { TurnView } from "./turn";
+import { ModelViewer } from "@/components/views/model-viewer";
+import { modelCatalogIntent, type ModelKind } from "@/lib/map-models";
+import { MapAreaContext, type MapArea } from "@/lib/map-area";
 
 const STORAGE = "ufo-agent-conversation";
 const RECOVERED_QUESTION = "ufo-agent-recovered-question";
@@ -63,11 +66,14 @@ export default function AgentWorkspace() {
   const [session, setSession] = useState<Session | null>(null);
   const [models, setModels] = useState<Model[]>([]);
   const [model, setModel] = useState<string>("");
+  const [mapArea, setMapArea] = useState<MapArea | null>(null);
   const [conversations, setConversations] = useState<ConversationSummary[]>([]);
   const [conversationId, setConversationId] = useState<string | null>(null);
   const [turns, setTurns] = useState<Turn[]>([]);
   const [selectedTurn, setSelectedTurn] = useState<number | null>(null);
   const [view, setView] = useState<WorkspaceView>("chat");
+  const [modelsOpen, setModelsOpen] = useState(false);
+  const [modelsInitial, setModelsInitial] = useState<ModelKind | "all">("all");
   const [moreIdeas, setMoreIdeas] = useState(false);
   const [draft, setDraft] = useState("");
   const [pending, setPending] = useState<string | null>(null);
@@ -82,9 +88,12 @@ export default function AgentWorkspace() {
   const input = useRef<HTMLTextAreaElement>(null);
   const chatHeading = useRef<HTMLHeadingElement>(null);
   const resultsBody = useRef<HTMLDivElement>(null);
+  const resultsHeading = useRef<HTMLHeadingElement>(null);
   const authenticated = Boolean(session?.authenticated);
   const busy = pending !== null || restoring;
-  const activeIndex = selectedTurn ?? turns.length - 1;
+  // A turn without new results (visualization_action "retain") keeps the latest results on screen.
+  const latestWithResults = turns.findLastIndex((turn) => turn.visualizations.length > 0);
+  const activeIndex = selectedTurn ?? (latestWithResults >= 0 ? latestWithResults : turns.length - 1);
   const activeTurn = turns[activeIndex];
   const groups = activeTurn ? groupResults(activeTurn.visualizations) : [];
   const pane = PANES[view];
@@ -154,25 +163,34 @@ export default function AgentWorkspace() {
   }, [turns, pending, view, failure, restoring]);
 
   useLayoutEffect(() => {
-    if (resultsBody.current && (selectedTurn === null || pending)) resultsBody.current.scrollTop = 0;
-  }, [activeTurn, pending, selectedTurn]);
+    if (resultsBody.current && selectedTurn === null) resultsBody.current.scrollTop = 0;
+  }, [activeTurn, selectedTurn]);
 
   function appendTurn(turn: Turn) {
+    setModelsOpen(false);
     setTurns((current) => [...current, turn]);
-    setSelectedTurn(null);
     const count = turn.visualizations.length;
     setAnnouncement(`Respuesta recibida con ${count} ${count === 1 ? "resultado" : "resultados"}.`);
   }
 
   async function ask() {
     const question = draft.trim();
-    if (!question || !authenticated || busy) return;
+    if (!question || busy) return;
+    // "ver modelos 3d": show the 3D model catalog inline in Resultados; no model call needed.
+    const catalogKind = modelCatalogIntent(question);
+    if (catalogKind) {
+      setDraft("");
+      setModelsInitial(catalogKind);
+      setModelsOpen(true);
+      return;
+    }
+    if (!authenticated) return;
     followLatest.current = true;
     setPending(question);
     setDraft("");
     setFailure(null);
     try {
-      const result = await api<{ conversation_id: string; turn: Turn }>("agent/chat", { question, conversation_id: conversationId, model: model || null });
+      const result = await api<{ conversation_id: string; turn: Turn }>("agent/chat", { question, conversation_id: conversationId, model: model || null, ...(mapArea ? { area: mapArea.polygon } : {}) });
       setConversationId(result.conversation_id);
       savedConversation.set(result.conversation_id);
       appendTurn(result.turn);
@@ -247,7 +265,9 @@ export default function AgentWorkspace() {
   }
 
   function showResults(index: number) {
+    followLatest.current = false;
     setSelectedTurn(index);
+    setModelsOpen(false);
     const results = turns[index].visualizations;
     const primary = results.find((result) => result.view !== "table") ?? results[0];
     if (primary) setAnnouncement(`Mostrando ${resultTitle(primary, catalog)}, de la respuesta ${index + 1}.`);
@@ -255,9 +275,25 @@ export default function AgentWorkspace() {
     requestAnimationFrame(() => {
       const body = resultsBody.current;
       if (!body) return;
-      if (getComputedStyle(body).overflowY === "visible") body.scrollIntoView({ block: "start", behavior });
-      else body.scrollTo({ top: 0, behavior });
+      resultsHeading.current?.focus({ preventScroll: true });
+      resultsHeading.current?.scrollIntoView({ block: "nearest", behavior });
+      body.scrollTo({ top: 0, behavior });
     });
+  }
+
+  function showLatestResults() {
+    setSelectedTurn(null);
+    setModelsOpen(false);
+    setAnnouncement("Mostrando la respuesta más reciente.");
+    requestAnimationFrame(() => {
+      resultsHeading.current?.focus({ preventScroll: true });
+      resultsHeading.current?.scrollIntoView({ block: "nearest" });
+    });
+  }
+
+  function focusQuestion() {
+    navigate("chat");
+    requestAnimationFrame(() => input.current?.focus());
   }
 
   function reset() {
@@ -280,6 +316,7 @@ export default function AgentWorkspace() {
   };
 
   return (
+    <MapAreaContext.Provider value={{ area: mapArea, setArea: setMapArea }}>
     <div className="workspace">
       <a className="skip-link" href={authenticated && view === "chat" ? "#question" : `#${pane.id}`}>Ir al panel principal</a>
       <header className="top">
@@ -347,7 +384,7 @@ export default function AgentWorkspace() {
                 <h2>{session && !authenticated ? "Conecta tu cuenta para conversar" : "¿Qué quieres saber sobre los informes UFO?"}</h2>
                 <p>{session && !authenticated
                   ? "La conversación usa el modelo de tu cuenta. Puedes probar las consultas públicas en Explorar datos."
-                  : "Gold reúne informes de fenómenos aéreos no identificados. Los recuentos se expresan como rangos por los duplicados pendientes."}</p>
+                  : "Gold reúne informes de fenómenos aéreos no identificados. Los recuentos se expresan como rangos: todos los informes y excluyendo los posibles duplicados pendientes de revisión."}</p>
                 {starters.length ? (
                   <>
                     <h3 id="starter-title">Para empezar</h3>
@@ -371,7 +408,9 @@ export default function AgentWorkspace() {
             {turns.map((turn, index) => (
               <TurnView key={index} turn={turn} index={index} active={index === activeIndex} onShowResults={() => showResults(index)} />
             ))}
-            {pending ? (
+            {modelsOpen && !pending ? (
+              <ModelViewer initial={modelsInitial} onClose={() => setModelsOpen(false)} />
+            ) : pending ? (
               <div className="turn">
                 <p className="turn-question"><span className="sr-only">Pregunta: </span>{pending}</p>
                 <p className="pending" role="status"><span aria-hidden="true" />Consultando los datos…</p>
@@ -383,14 +422,21 @@ export default function AgentWorkspace() {
                 <p>{failure.status === 401 ? "Tu sesión venció. Conecta tu cuenta de nuevo para continuar." : failure.message}</p>
                 {failure.status === 401 ? <button type="button" className="explore-link" onClick={reconnect}>Conectar de nuevo</button>
                   : failure.code === "model_unavailable" ? <p>Cambia el modelo en el selector y vuelve a enviar la pregunta que quedó en el campo.</p>
-                    : failure.code === "step_limit" ? <p>Acota la pregunta en el campo y vuelve a enviarla.</p>
-                      : failure.retry ? <button type="button" className="explore-link" onClick={() => void ask()}>Reintentar pregunta</button> : null}
+                    : failure.retry ? <button type="button" className="explore-link" onClick={() => void ask()}>Reintentar pregunta</button> : null}
               </div>
             ) : null}
           </div>
           {view === "chat" ? (
+            <>
+            {mapArea ? (
+              <div className="area-chip" role="status">
+                <span><strong>Área seleccionada activa</strong> ({mapArea.label}). Las próximas preguntas se limitan a ella.</span>
+                <button type="button" onClick={() => setMapArea(null)}>Quitar área</button>
+              </div>
+            ) : null}
             <Composer inputRef={input} value={draft} onChange={setDraft} onSubmit={ask} busy={busy}
                       pending={pending !== null} authenticated={authenticated} models={models} model={model} onModelChange={setModel} />
+            </>
           ) : view === "explore" ? (
             <div className="explore-panel">
               <h2>Explora los informes UFO</h2>
@@ -398,6 +444,9 @@ export default function AgentWorkspace() {
                 <a className="explore-link" href={PANES.certified.hash} onClick={(event) => navigate("certified", event, true)}>
                   consultas de ejemplo
                 </a>.
+              </p>
+              <p>
+                <button type="button" className="explore-link" onClick={() => { setModelsInitial("all"); setModelsOpen(true); }}>Ver los modelos 3D de las 28 formas</button>
               </p>
               {catalog ? <CatalogViews views={catalog.views} /> : startupError
                 ? <p role="alert">{startupError}</p>
@@ -428,8 +477,21 @@ export default function AgentWorkspace() {
 
         <section className="results-panel" id="resultados" aria-label="Resultados">
           <p className="sr-only" role="status">{announcement}</p>
+          {activeTurn && !modelsOpen ? (
+            <header className="results-head">
+              <h2 ref={resultsHeading} tabIndex={-1}>Respuesta {activeIndex + 1} de {turns.length}</h2>
+              <div className="results-actions">
+                {selectedTurn !== null ? (
+                  <button type="button" className="chat-action" onClick={showLatestResults}>Volver al último resultado</button>
+                ) : null}
+                <button type="button" className="chat-action" onClick={focusQuestion}>Ir a la pregunta</button>
+              </div>
+            </header>
+          ) : null}
           <div className="results-body" ref={resultsBody}>
-            {pending ? (
+            {modelsOpen && !pending ? (
+              <ModelViewer initial={modelsInitial} onClose={() => setModelsOpen(false)} />
+            ) : pending && selectedTurn === null ? (
               <div className="results-loading" role="status" aria-label="Consultando los datos">
                 <div className="skeleton-line" aria-hidden="true" />
                 <div className="skeleton-line skeleton-short" aria-hidden="true" />
@@ -453,5 +515,6 @@ export default function AgentWorkspace() {
         </section>
       </main>
     </div>
+    </MapAreaContext.Provider>
   );
 }

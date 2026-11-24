@@ -10,7 +10,7 @@ import unittest
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
-from gold_fixture import build_fixture, environment, fake_gate, serving_fixture, sha
+from gold_fixture import build_fixture, environment, fake_gate, serving_fixture, sha, write_provenance
 
 import build_gold
 import check_gold_ready
@@ -70,12 +70,125 @@ class GoldBuildTest(unittest.TestCase):
                 self.assertEqual(conn.execute("SELECT SUM(report_count) FROM agg_coverage WHERE aggregate_code=?", (aggregate,)).fetchone()[0], 12)
             self.assertEqual(conn.execute("SELECT COUNT(*) FROM agg_year WHERE report_count_excl_candidates > report_count").fetchone()[0], 0)
 
-    def test_pinned_input_mismatch_is_refused(self):
-        policy, silver, bronze, output = environment(self.folder)
-        policy["inputs"]["silver"]["sha256"] = "0" * 64
-        with self.assertRaises(build_gold.GoldBuildError):
+    def refused(self, policy, silver, bronze, output, problem):
+        with self.assertRaises(build_gold.GoldBuildError) as raised:
             build_gold.build(policy=policy, gate=fake_gate, silver_path=silver, bronze_path=bronze, output=output)
+        self.assertIn(problem, str(raised.exception))
         self.assertFalse(output.exists())
+
+    def test_rebuilt_silver_is_accepted_without_a_fixed_pin(self):
+        policy, silver, bronze, output = environment(self.folder)
+        self.assertNotIn("sha256", policy["inputs"]["silver"])
+        manifest = build_gold.build(policy=policy, gate=fake_gate, silver_path=silver, bronze_path=bronze, output=output)
+        self.assertEqual(manifest["silver"]["sha256"], sha(silver))
+        self.assertEqual(len(manifest["silver_run_id"]), 64)
+
+    def test_silver_modified_after_validation_is_refused(self):
+        policy, silver, bronze, output = environment(self.folder)
+        with closing(sqlite3.connect(silver)) as conn:
+            conn.execute("CREATE TABLE tampered (x)"); conn.commit()
+        self.refused(policy, silver, bronze, output, "modificado o sustituido")
+
+    def test_silver_without_validation_is_refused(self):
+        policy, silver, bronze, output = environment(self.folder)
+        silver.with_suffix(".validation.json").unlink()
+        self.refused(policy, silver, bronze, output, "falta o es ilegible")
+
+    def test_failed_silver_validation_is_refused(self):
+        policy, silver, bronze, output = environment(self.folder)
+        write_provenance(self.folder, policy, silver, bronze, passed=False)
+        self.refused(policy, silver, bronze, output, "no fue aprobada")
+
+    def test_silver_from_another_bronze_is_refused(self):
+        policy, silver, bronze, output = environment(self.folder)
+        lineage = json.loads(silver.with_suffix(".validation.json").read_text())["lineage"]
+        write_provenance(self.folder, policy, silver, bronze, lineage={**lineage, "bronze_sha256": "0" * 64})
+        self.refused(policy, silver, bronze, output, "otra Bronze")
+
+    def test_outdated_silver_is_refused(self):
+        policy, silver, bronze, output = environment(self.folder)
+        lineage = json.loads(silver.with_suffix(".validation.json").read_text())["lineage"]
+        write_provenance(self.folder, policy, silver, bronze, lineage={**lineage, "run_id": "1" * 64})
+        self.refused(policy, silver, bronze, output, "desactualizada")
+
+    def test_unofficial_bronze_is_refused(self):
+        policy, silver, bronze, output = environment(self.folder)
+        Path(policy["inputs"]["bronze"]["manifest"]).write_text(json.dumps({"sha256": "0" * 64, "size_bytes": bronze.stat().st_size}))
+        self.refused(policy, silver, bronze, output, "no es el snapshot oficial")
+
+    # Strict custody: the report must exist, be complete and match exactly.
+    def test_empty_report_is_refused(self):
+        policy, silver, bronze, output = environment(self.folder)
+        silver.with_suffix(".validation.json").write_text("{}")
+        self.refused(policy, silver, bronze, output, "vacío o mal formado")
+
+    def test_malformed_report_is_refused(self):
+        policy, silver, bronze, output = environment(self.folder)
+        for content in ("[]", '"passed"', "{not json"):
+            with self.subTest(content=content):
+                silver.with_suffix(".validation.json").write_text(content)
+                self.refused(policy, silver, bronze, output, "validation.json")
+
+    def test_passed_must_be_exactly_true(self):
+        policy, silver, bronze, output = environment(self.folder)
+        for value in ("true", 1, None):
+            with self.subTest(passed=value):
+                write_provenance(self.folder, policy, silver, bronze, passed=value)
+                self.refused(policy, silver, bronze, output, "no fue aprobada")
+
+    def test_report_without_sha_or_lineage_is_refused(self):
+        policy, silver, bronze, output = environment(self.folder)
+        write_provenance(self.folder, policy, silver, bronze, sha256=None)
+        self.refused(policy, silver, bronze, output, "no registra el SHA-256")
+        write_provenance(self.folder, policy, silver, bronze, lineage=None)
+        self.refused(policy, silver, bronze, output, "no registra el linaje")
+        write_provenance(self.folder, policy, silver, bronze)
+        lineage = json.loads(silver.with_suffix(".validation.json").read_text())["lineage"]
+        incomplete = {k: v for k, v in lineage.items() if k != "code_sha256"}
+        write_provenance(self.folder, policy, silver, bronze, lineage=incomplete)
+        self.refused(policy, silver, bronze, output, "linaje de Silver incompleto")
+
+    def test_wrong_bronze_size_is_refused(self):
+        policy, silver, bronze, output = environment(self.folder)
+        manifest = Path(policy["inputs"]["bronze"]["manifest"])
+        manifest.write_text(json.dumps({"sha256": sha(bronze), "size_bytes": bronze.stat().st_size + 1}))
+        self.refused(policy, silver, bronze, output, "no es el snapshot oficial")
+
+    def test_outdated_recipe_field_is_refused(self):
+        policy, silver, bronze, output = environment(self.folder)
+        lineage = json.loads(silver.with_suffix(".validation.json").read_text())["lineage"]
+        write_provenance(self.folder, policy, silver, bronze,
+                         lineage={**lineage, "code_sha256": {**lineage["code_sha256"], "build_silver.py": "2" * 64}})
+        self.refused(policy, silver, bronze, output, "desactualizada")
+        write_provenance(self.folder, policy, silver, bronze, policy={"version": 0})
+        self.refused(policy, silver, bronze, output, "desactualizada")
+
+    def test_truncated_silver_is_refused(self):
+        policy, silver, bronze, output = environment(self.folder)
+        data = silver.read_bytes()
+        silver.write_bytes(data[:-4096])
+        self.refused(policy, silver, bronze, output, "modificado")
+
+    def test_pending_wal_is_refused_before_reading(self):
+        policy, silver, bronze, output = environment(self.folder)
+        for path in (silver, bronze):
+            with self.subTest(path=path.name):
+                wal = path.with_name(path.name + "-wal")
+                wal.write_bytes(b"\0" * 32)
+                try:
+                    self.refused(policy, silver, bronze, output, "cambios pendientes en WAL")
+                finally:
+                    wal.unlink()
+        silver.with_name(silver.name + "-wal").write_bytes(b"")        # empty WAL: a clean snapshot
+        build_gold.build(policy=policy, gate=fake_gate, silver_path=silver, bronze_path=bronze, output=output)
+
+    def test_existing_valid_report_is_accepted(self):
+        import gold_common
+        policy, silver, bronze, output = environment(self.folder)
+        custody = gold_common.silver_provenance(silver, bronze, Path(policy["inputs"]["bronze"]["manifest"]))
+        self.assertEqual(custody["problems"], [])
+        self.assertTrue(custody["passed"])
+        self.assertEqual(custody["silver_sha256"], sha(silver))
 
     def test_silver_gate_must_approve_exact_snapshot(self):
         policy, silver, bronze, output = environment(self.folder)
@@ -83,14 +196,21 @@ class GoldBuildTest(unittest.TestCase):
         with self.assertRaises(build_gold.GoldBuildError):
             build_gold.build(policy=policy, gate=gate, silver_path=silver, bronze_path=bronze, output=output)
 
-    def test_failed_validation_keeps_previous_output(self):
-        manifest, policy, silver, bronze, output = build_fixture(self.folder)
-        before = sha(output)
+    def test_failed_validation_publishes_nothing(self):
+        policy, silver, bronze, output = environment(self.folder)
         failing = lambda *a: [{"check": "forced", "passed": False, "detail": "test"}]
         with self.assertRaises(build_gold.GoldBuildError):
             build_gold.build(policy=policy, gate=fake_gate, silver_path=silver, bronze_path=bronze, output=output, validate=failing)
-        self.assertEqual(sha(output), before)
+        self.assertFalse(output.exists())
         self.assertFalse(output.with_name(output.name + ".building").exists())
+
+    def test_published_output_is_never_replaced(self):
+        manifest, policy, silver, bronze, output = build_fixture(self.folder)
+        before = sha(output), sha(output.with_name(output.stem + ".manifest.json"))
+        with self.assertRaises(build_gold.GoldBuildError) as raised:
+            build_gold.build(policy=policy, gate=fake_gate, silver_path=silver, bronze_path=bronze, output=output)
+        self.assertIn("Se conserva", str(raised.exception))
+        self.assertEqual((sha(output), sha(output.with_name(output.stem + ".manifest.json"))), before)
 
     def test_silver_changed_during_read_aborts(self):
         manifest, policy, silver, bronze, output = build_fixture(self.folder)
@@ -102,12 +222,13 @@ class GoldBuildTest(unittest.TestCase):
         with self.assertRaises(build_gold.GoldBuildError):
             build_gold.build(policy=policy, gate=fake_gate, silver_path=silver, bronze_path=bronze, output=output, validate=tamper)
 
-    def test_rebuild_archives_previous_output(self):
+    def test_rebuild_goes_to_a_new_version(self):
         manifest, policy, silver, bronze, output = build_fixture(self.folder)
-        second = build_gold.build(policy=policy, gate=fake_gate, silver_path=silver, bronze_path=bronze, output=output)
+        before = sha(output)
+        other = self.folder / "gold-2" / "ufo_gold.db"
+        second = build_gold.build(policy=policy, gate=fake_gate, silver_path=silver, bronze_path=bronze, output=other)
         self.assertEqual(second["load_id"], manifest["load_id"])      # same inputs and definitions → same load
-        archived = Path(policy["outputs"]["history"]) / manifest["gold_sha256"]
-        self.assertTrue((archived / output.name).exists())
+        self.assertEqual(sha(output), before)                          # the first version is untouched
 
     def test_unlabelled_value_stops_build(self):
         from gold_fixture import reports
@@ -175,6 +296,67 @@ class GoldQueryTest(unittest.TestCase):
         self.assertEqual(self.code(dataset="fact_report", group_by=["source_code"]), "metrics_required")
         self.assertEqual(self.code(dataset="fact_report", metrics=["real_ufo_count"]), "metric_unknown")
 
+    def test_month_calendar_contract(self):
+        cal = dict(dataset="agg_month", group_by=["event_year", "event_month"], metrics=["report_count"], view="month_calendar")
+        years = lambda lo, hi: [{"column": "event_year", "op": "gte", "value": lo}, {"column": "event_year", "op": "lte", "value": hi}]
+        self.assertEqual(self.code(**cal), "view_contract")                                   # sin rango de años
+        self.assertEqual(self.code(**cal, filters=years(1950, 2000), limit=500), "view_contract")  # 51 años
+        self.assertEqual(self.code(**cal, filters=years(1990, 1999), limit=100), "limit")      # 120 celdas
+        self.assertEqual(self.code(**{**cal, "group_by": ["event_month", "event_year"]}, filters=years(1997, 1997)), "view_contract")
+        ok = self.q(**cal, filters=[{"column": "event_year", "op": "eq", "value": 1997}], limit=12)
+        months = [r for r in ok["rows"] if r["event_month"] is not None]
+        unknown = [r for r in ok["rows"] if r["event_month"] is None]
+        self.assertEqual([r["event_month"] for r in months], sorted(r["event_month"] for r in months))
+        self.assertEqual(sum(r["report_count"] for r in months), 3)
+        # One “Mes desconocido” row per year: year-level reports minus those with a reliable month.
+        yearly = self.q(dataset="agg_year", filters=[{"column": "event_year", "op": "eq", "value": 1997}], group_by=["event_year"], metrics=["report_count"])
+        year_total = yearly["rows"][0]["report_count"]
+        self.assertEqual([(r["event_year"], r["event_month_label"], r["report_count"]) for r in unknown], [(1997, "Mes desconocido", year_total - 3)])
+        self.assertEqual(ok["calendar_totals"], {"reports": year_total, "with_month": 3, "without_month": year_total - 3})
+        self.assertEqual(ok["rows"][-1]["event_month"], None)                                   # después de diciembre
+        self.assertEqual(ok["limitations"][0]["code"], "unknown_month")
+
+    def test_proposal_view_contracts(self):
+        two = dict(group_by=["decade", "source_code"], metrics=["report_count"])
+        self.assertEqual(self.code(dataset="agg_year", view="stacked", group_by=["decade"], metrics=["report_count"]), "view_contract")
+        self.assertEqual(self.code(dataset="agg_year", view="matrix", group_by=["decade", "source_code"], metrics=["report_count", "pending_candidate_reports"]), "view_contract")
+        self.assertTrue(self.q(dataset="agg_year", view="stacked", **two)["rows"])
+        self.assertTrue(self.q(dataset="agg_year", view="matrix", **two)["rows"])
+        self.assertEqual(self.code(dataset="agg_year", view="dumbbell", **two), "view_contract")              # sin filtro de dos períodos
+        self.assertEqual(self.code(dataset="agg_year", view="dumbbell", filters=[{"column": "decade", "op": "in", "value": [1990, 2000, 2010]}], **two), "view_contract")
+        self.assertEqual(self.code(dataset="agg_year", view="dumbbell", group_by=["source_code", "decade"], metrics=["report_count"],
+                                   filters=[{"column": "source_code", "op": "in", "value": ["UFOCAT", "UPDB"]}]), "view_contract")
+        self.q(dataset="agg_year", view="dumbbell", filters=[{"column": "decade", "op": "in", "value": [1990, 2000]}], **two)
+        self.assertEqual(self.code(dataset="fact_report", view="timeline", limit=5), "eligibility_missing")
+        self.assertEqual(self.code(dataset="fact_report", view="timeline", eligibility=["day"], metrics=["report_count"]), "view_contract")
+        dates = [r["event_date"] for r in self.q(dataset="fact_report", view="timeline", eligibility=["day"], limit=50)["rows"]]
+        self.assertEqual(dates, sorted(dates))
+
+    def test_globe_contract(self):
+        self.assertEqual(self.code(dataset="fact_report", view="globe", group_by=["cell1_lat", "cell1_lng"], metrics=["report_count"], eligibility=["map"]), "view_contract")
+        self.assertEqual(self.code(dataset="fact_report", view="globe", metrics=["report_count"]), "eligibility_missing")
+        self.assertEqual(self.code(dataset="fact_report", view="globe", metrics=["report_count"], eligibility=["map"],
+                                   filters=[{"column": "source_code", "op": "eq", "value": "UFOCAT"}]), "view_contract")  # solo vista global
+        globe = self.q(dataset="fact_report", view="globe", metrics=["report_count"], eligibility=["map"], limit=1)   # el límite no recorta el globo
+        total = self.q(dataset="fact_report", metrics=["report_count"], eligibility=["map"])["rows"][0]["report_count"]
+        self.assertFalse(globe["truncated"])
+        self.assertEqual(sum(r["report_count"] for r in globe["rows"]), total)
+        self.assertEqual(set(globe["rows"][0]), {"lat", "lng", "report_count"})
+
+    def test_duration_distribution(self):
+        # One facet is allowed (a panel per value); two dimensions are not.
+        self.assertEqual(self.code(dataset="fact_report", view="histogram", metrics=["report_count"], group_by=["source_code", "shape_code"]), "view_contract")
+        self.assertEqual(self.code(dataset="fact_report", view="ecdf", metrics=["pending_candidate_reports"]), "view_contract")
+        result = self.q(dataset="fact_report", view="histogram", metrics=["report_count"])
+        d = result["distribution"]
+        total = self.q(dataset="fact_report", metrics=["report_count"])["rows"][0]["report_count"]
+        self.assertEqual(len(d["bins"]), d["max_minutes"])
+        self.assertEqual(sum(b["report_count"] for b in d["bins"]) + d["over_max"], d["with_duration"])
+        self.assertEqual(d["with_duration"] + d["without_duration"], total)                          # nada se pierde ni se imputa
+        self.assertEqual(sum(r["report_count"] for r in result["rows"]), total)
+        self.assertEqual(result["rows"][-1]["duration_bin"], "Sin duración declarada")
+        self.assertEqual(self.q(dataset="fact_report", view="ecdf", metrics=["report_count"])["distribution"], d)
+
     def test_implied_eligibility(self):
         result = self.q(dataset="agg_month", filters=[{"column": "event_year", "op": "eq", "value": 1997}], group_by=["year_month"], metrics=["report_count"])
         self.assertEqual(result["rows"][0]["report_count"], 3)
@@ -187,12 +369,13 @@ class GoldQueryTest(unittest.TestCase):
         self.assertEqual(result["total"]["external_evidence_pct"], round(100 * 2 / 12, 4))
         self.assertNotEqual(result["total"]["external_evidence_pct"], sum(by.values()))
 
-    def test_duplicate_bounds_are_paired_and_coherent(self):
+    def test_report_count_is_a_single_figure(self):
         result = self.q(dataset="agg_source", group_by=["source_code"], metrics=["report_count"])
-        self.assertEqual(result["duplicate_bounds"]["lower"], "report_count_excl_candidates")
+        self.assertNotIn("duplicate_bounds", result)
         for row in result["rows"]:
-            self.assertLessEqual(row["report_count_excl_candidates"], row["report_count"])
-        both = self.q(dataset="fact_report", metrics=["report_count", "pending_candidate_reports"])["rows"][0]
+            self.assertNotIn("report_count_excl_candidates", row)
+        # The quality columns stay in Gold and keep adding up when requested explicitly.
+        both = self.q(dataset="fact_report", metrics=["report_count", "report_count_excl_candidates", "pending_candidate_reports"])["rows"][0]
         self.assertEqual(both["report_count"] - both["report_count_excl_candidates"], both["pending_candidate_reports"])
 
     def test_exclusions_add_up(self):
@@ -233,7 +416,7 @@ class GoldQueryTest(unittest.TestCase):
         self.assertEqual(len(prov["query_sha256"]), 64)
         self.assertIn("País", result["readable_query"]["texto"])
         codes = {l["code"] for l in result["limitations"]}
-        self.assertTrue({"reports_not_facts", "pending_duplicates", "eligibility_country", "external_evidence"} <= codes)
+        self.assertTrue({"reports_not_facts", "eligibility_country", "external_evidence"} <= codes)
         self.assertEqual(result["result_type"], "composed")
         self.assertIn("country_iso2_label", result["rows"][0])
 

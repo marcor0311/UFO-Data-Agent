@@ -19,8 +19,16 @@ export function compact(value: number): string {
   return Math.abs(value) < 10000 ? num(value) : compactFmt.format(value);
 }
 
+/** Plain-language names; each report counts as one unit. Gold's catalog keeps its technical labels. */
+const PLAIN_METRICS: Record<string, string> = {
+  report_count: "Informes",
+  report_count_excl_candidates: "Informes sin coincidencias por revisar",
+  pending_candidate_reports: "Informes con coincidencias por revisar",
+  pending_candidate_pct: "% de informes con coincidencias por revisar",
+};
+
 export function metricLabel(catalog: Catalog | null, code: string): string {
-  return catalog?.metrics[code]?.label ?? code;
+  return PLAIN_METRICS[code] ?? catalog?.metrics[code]?.label ?? code;
 }
 
 export function dimensionLabel(catalog: Catalog | null, code: string): string {
@@ -31,8 +39,10 @@ export function dimensionLabel(catalog: Catalog | null, code: string): string {
 export function cell(row: Row, column: string): string {
   const label = row[column + "_label"];
   if (typeof label === "string") return label;
-  const value = row[column];
-  return value === null || value === undefined ? "sin dato" : typeof value === "number" ? num(value) : String(value);
+  const value = row[column] as unknown;
+  if (Array.isArray(value)) return value.join(", ");
+  // Dimensions are codes, not quantities: a year reads 1996, never “1.996”.
+  return value === null || value === undefined ? "sin dato" : value === "__other__" ? "Otras" : String(value);
 }
 
 export function isMetric(catalog: Catalog | null, column: string): boolean {

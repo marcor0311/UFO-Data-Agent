@@ -7,6 +7,16 @@ de trazabilidad y vistas de eventos canónicos. Bronze permanece intacta.
 
 ## Construcción y revisión
 
+El pipeline (`python3 scripts/build_all.py --desde silver`) construye cada
+Silver en una versión nueva, `data/silver/versions/<versión>/`, con su base,
+`ufo.validation.json`, `ufo.readiness.json`, `ufo.review.json` y
+`release.json`. Promueve el par Silver + informe en `data/releases.sqlite3`
+solo después de pasar la custodia, la aceptación y la revisión. Gold lee
+únicamente la versión aprobada. `check_silver_ready.py` y `review_silver.py`
+revisan por defecto esa versión. Ver [operación local](../../docs/pipeline-local.md).
+
+Los CLI siguen disponibles para construir o revisar una copia concreta:
+
 ```bash
 python3 scripts/build_silver.py
 python3 scripts/build_silver.py --verify-only

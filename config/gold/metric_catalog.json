@@ -1,53 +1,69 @@
 {
   "description": "Métricas de Gold. Las expresiones son tipos cerrados que el motor convierte en SQL con identificadores validados: count, sum, count_distinct, avg, min, max. Ningún catálogo contiene SQL libre.",
-  "types": {
-    "additive": "Se puede sumar entre grupos y reagregar desde agregados.",
-    "ratio": "Se recalcula como suma del numerador / suma del denominador en cada grupo; nunca se suman ni promedian porcentajes.",
-    "non_additive": "No se puede sumar entre grupos; se calcula sobre las filas de origen de cada grupo."
-  },
+  "types": {"additive": "Se puede sumar entre grupos y reagregar desde agregados.", "ratio": "Se recalcula como suma del numerador / suma del denominador en cada grupo; nunca se suman ni promedian porcentajes.", "non_additive": "No se puede sumar entre grupos; se calcula sobre las filas de origen de cada grupo."},
   "metrics": {
     "report_count": {
-      "label": "Informes (cota superior)",
+      "label": "Informes",
       "definition": "Número de informes que cumplen filtros y elegibilidad, incluidos los que tienen pares candidatos pendientes de deduplicación.",
-      "unit": "informes", "type": "additive", "grain": "informe",
-      "duplicate_bound": {"role": "upper", "pair": "report_count_excl_candidates"},
+      "unit": "informes",
+      "type": "additive",
+      "grain": "informe",
       "requires": [],
       "datasets": {
-        "fact_report": {"op": "count"}, "report_model_output": {"op": "count"},
-        "agg_year": {"op": "sum", "column": "report_count"}, "agg_month": {"op": "sum", "column": "report_count"},
-        "agg_weekday_hour": {"op": "sum", "column": "report_count"}, "agg_country": {"op": "sum", "column": "report_count"},
-        "agg_shape": {"op": "sum", "column": "report_count"}, "agg_source": {"op": "sum", "column": "report_count"},
-        "agg_spatial_cell": {"op": "sum", "column": "report_count"}, "agg_nuclear_band": {"op": "sum", "column": "report_count"},
-        "agg_coverage": {"op": "sum", "column": "report_count"}
+        "fact_report": {"op": "count"},
+        "report_model_output": {"op": "count"},
+        "agg_year": {"op": "sum", "column": "report_count"},
+        "agg_month": {"op": "sum", "column": "report_count"},
+        "agg_weekday_hour": {"op": "sum", "column": "report_count"},
+        "agg_country": {"op": "sum", "column": "report_count"},
+        "agg_shape": {"op": "sum", "column": "report_count"},
+        "agg_source": {"op": "sum", "column": "report_count"},
+        "agg_spatial_cell": {"op": "sum", "column": "report_count"},
+        "agg_nuclear_band": {"op": "sum", "column": "report_count"},
+        "agg_coverage": {"op": "sum", "column": "report_count"},
+        "report_behavior_tag": {"op": "count_distinct", "column": "report_id"},
+        "report_hoax_flag": {"op": "count_distinct", "column": "report_id"}
       },
-      "warnings": ["Cuenta informes, no avistamientos ni eventos.", "Incluye informes que podrían ser duplicados pendientes: es una cota superior."]
+      "warnings": ["Cuenta informes, no avistamientos ni eventos.", "Cada informe es una unidad; las coincidencias por revisar no se restan."]
     },
     "report_count_excl_candidates": {
-      "label": "Informes sin candidatos pendientes (cota inferior)",
+      "label": "Informes sin coincidencias por revisar",
       "definition": "Informes que cumplen filtros y elegibilidad y no participan en ningún par candidato pendiente (has_pending_candidate=0). La diferencia con report_count es exactamente pending_candidate_reports.",
-      "unit": "informes", "type": "additive", "grain": "informe",
-      "duplicate_bound": {"role": "lower", "pair": "report_count"},
+      "unit": "informes",
+      "type": "additive",
+      "grain": "informe",
       "requires": [],
       "datasets": {
         "fact_report": {"op": "sum", "column": "has_pending_candidate", "negate_flag": true},
-        "agg_year": {"op": "sum", "column": "report_count_excl_candidates"}, "agg_month": {"op": "sum", "column": "report_count_excl_candidates"},
-        "agg_weekday_hour": {"op": "sum", "column": "report_count_excl_candidates"}, "agg_country": {"op": "sum", "column": "report_count_excl_candidates"},
-        "agg_shape": {"op": "sum", "column": "report_count_excl_candidates"}, "agg_source": {"op": "sum", "column": "report_count_excl_candidates"},
-        "agg_spatial_cell": {"op": "sum", "column": "report_count_excl_candidates"}, "agg_nuclear_band": {"op": "sum", "column": "report_count_excl_candidates"},
+        "agg_year": {"op": "sum", "column": "report_count_excl_candidates"},
+        "agg_month": {"op": "sum", "column": "report_count_excl_candidates"},
+        "agg_weekday_hour": {"op": "sum", "column": "report_count_excl_candidates"},
+        "agg_country": {"op": "sum", "column": "report_count_excl_candidates"},
+        "agg_shape": {"op": "sum", "column": "report_count_excl_candidates"},
+        "agg_source": {"op": "sum", "column": "report_count_excl_candidates"},
+        "agg_spatial_cell": {"op": "sum", "column": "report_count_excl_candidates"},
+        "agg_nuclear_band": {"op": "sum", "column": "report_count_excl_candidates"},
         "agg_coverage": {"op": "sum", "column": "report_count_excl_candidates"}
       },
-      "warnings": ["Retira todos los informes con un par pendiente, aunque al menos uno de cada par sea un informe distinto; no es un conteo de eventos."]
+      "warnings": ["Métrica de calidad: retira todos los informes con un par pendiente, aunque al menos uno de cada par sea distinto. No es la cifra de informes ni un conteo de eventos."]
     },
     "pending_candidate_reports": {
       "label": "Informes con par candidato pendiente",
       "definition": "Informes que participan en al menos un par de duplicate_candidate con decisión needs_review.",
-      "unit": "informes", "type": "additive", "grain": "informe", "requires": [],
+      "unit": "informes",
+      "type": "additive",
+      "grain": "informe",
+      "requires": [],
       "datasets": {
         "fact_report": {"op": "sum", "column": "has_pending_candidate"},
-        "agg_year": {"op": "sum", "column": "pending_candidate_reports"}, "agg_month": {"op": "sum", "column": "pending_candidate_reports"},
-        "agg_weekday_hour": {"op": "sum", "column": "pending_candidate_reports"}, "agg_country": {"op": "sum", "column": "pending_candidate_reports"},
-        "agg_shape": {"op": "sum", "column": "pending_candidate_reports"}, "agg_source": {"op": "sum", "column": "pending_candidate_reports"},
-        "agg_spatial_cell": {"op": "sum", "column": "pending_candidate_reports"}, "agg_nuclear_band": {"op": "sum", "column": "pending_candidate_reports"},
+        "agg_year": {"op": "sum", "column": "pending_candidate_reports"},
+        "agg_month": {"op": "sum", "column": "pending_candidate_reports"},
+        "agg_weekday_hour": {"op": "sum", "column": "pending_candidate_reports"},
+        "agg_country": {"op": "sum", "column": "pending_candidate_reports"},
+        "agg_shape": {"op": "sum", "column": "pending_candidate_reports"},
+        "agg_source": {"op": "sum", "column": "pending_candidate_reports"},
+        "agg_spatial_cell": {"op": "sum", "column": "pending_candidate_reports"},
+        "agg_nuclear_band": {"op": "sum", "column": "pending_candidate_reports"},
         "agg_coverage": {"op": "sum", "column": "pending_candidate_reports"}
       },
       "warnings": ["Un par pendiente no prueba que los informes sean duplicados ni que sean distintos."]
@@ -55,13 +71,20 @@
     "external_evidence_reports": {
       "label": "Informes con evidencia externa",
       "definition": "Informes cuya coordenada, país u hora procede del catálogo fijado de UFO-search y no de Bronze (uses_external_evidence=1).",
-      "unit": "informes", "type": "additive", "grain": "informe", "requires": [],
+      "unit": "informes",
+      "type": "additive",
+      "grain": "informe",
+      "requires": [],
       "datasets": {
         "fact_report": {"op": "sum", "column": "uses_external_evidence"},
-        "agg_year": {"op": "sum", "column": "external_evidence_reports"}, "agg_month": {"op": "sum", "column": "external_evidence_reports"},
-        "agg_weekday_hour": {"op": "sum", "column": "external_evidence_reports"}, "agg_country": {"op": "sum", "column": "external_evidence_reports"},
-        "agg_shape": {"op": "sum", "column": "external_evidence_reports"}, "agg_source": {"op": "sum", "column": "external_evidence_reports"},
-        "agg_spatial_cell": {"op": "sum", "column": "external_evidence_reports"}, "agg_nuclear_band": {"op": "sum", "column": "external_evidence_reports"},
+        "agg_year": {"op": "sum", "column": "external_evidence_reports"},
+        "agg_month": {"op": "sum", "column": "external_evidence_reports"},
+        "agg_weekday_hour": {"op": "sum", "column": "external_evidence_reports"},
+        "agg_country": {"op": "sum", "column": "external_evidence_reports"},
+        "agg_shape": {"op": "sum", "column": "external_evidence_reports"},
+        "agg_source": {"op": "sum", "column": "external_evidence_reports"},
+        "agg_spatial_cell": {"op": "sum", "column": "external_evidence_reports"},
+        "agg_nuclear_band": {"op": "sum", "column": "external_evidence_reports"},
         "agg_coverage": {"op": "sum", "column": "external_evidence_reports"}
       },
       "warnings": ["Bronze no puede confirmar los valores externos."]
@@ -69,124 +92,1230 @@
     "confirmed_group_reports": {
       "label": "Informes en grupos confirmados",
       "definition": "Informes que pertenecen a un grupo de duplicados confirmado por coincidencia exacta (representantes y miembros).",
-      "unit": "informes", "type": "additive", "grain": "informe", "requires": [],
-      "datasets": {"fact_report": {"op": "sum", "column": "in_confirmed_group"}},
+      "unit": "informes",
+      "type": "additive",
+      "grain": "informe",
+      "requires": [],
+      "datasets": {
+        "fact_report": {"op": "sum", "column": "in_confirmed_group"}
+      },
       "warnings": []
     },
     "canonical_representative_reports": {
       "label": "Representantes canónicos",
       "definition": "Informes con is_canonical=1: un representante por grupo confirmado más cada informe sin grupo. Aplica la política de representantes de Silver.",
-      "unit": "informes", "type": "additive", "grain": "informe", "requires": [],
-      "datasets": {"fact_report": {"op": "sum", "column": "is_canonical"}},
+      "unit": "informes",
+      "type": "additive",
+      "grain": "informe",
+      "requires": [],
+      "datasets": {
+        "fact_report": {"op": "sum", "column": "is_canonical"}
+      },
       "warnings": ["No es el número de eventos reales: los candidatos pendientes pueden ser el mismo evento."]
     },
     "media_reports": {
       "label": "Informes que mencionan medios",
       "definition": "Informes con has_media=1 (foto o video mencionados o adjuntos en el origen). No prueba que el medio exista ni que sea auténtico.",
-      "unit": "informes", "type": "additive", "grain": "informe", "requires": [],
-      "datasets": {"fact_report": {"op": "sum", "column": "has_media"}},
+      "unit": "informes",
+      "type": "additive",
+      "grain": "informe",
+      "requires": [],
+      "datasets": {
+        "fact_report": {"op": "sum", "column": "has_media"}
+      },
       "warnings": ["Mencionar un medio no lo autentica."]
     },
     "event_count": {
       "label": "Eventos confirmados",
       "definition": "Grupos de duplicados confirmados por coincidencia exacta de fecha, hora, coordenadas, forma y descriptores.",
-      "unit": "eventos", "type": "additive", "grain": "evento confirmado", "requires": [],
-      "datasets": {"fact_event": {"op": "count"}},
+      "unit": "eventos",
+      "type": "additive",
+      "grain": "evento confirmado",
+      "requires": [],
+      "datasets": {
+        "fact_event": {"op": "count"}
+      },
       "warnings": ["Solo existen eventos para grupos confirmados; los informes únicos y los candidatos pendientes no son eventos."]
     },
     "event_member_reports": {
       "label": "Informes miembros de eventos confirmados",
       "definition": "Suma de member_count de los grupos confirmados.",
-      "unit": "informes", "type": "additive", "grain": "evento confirmado", "requires": [],
-      "datasets": {"fact_event": {"op": "sum", "column": "member_count"}, "event_report": {"op": "count"}},
+      "unit": "informes",
+      "type": "additive",
+      "grain": "evento confirmado",
+      "requires": [],
+      "datasets": {
+        "fact_event": {"op": "sum", "column": "member_count"},
+        "event_report": {"op": "count"}
+      },
       "warnings": []
     },
     "external_evidence_pct": {
       "label": "% de informes con evidencia externa",
       "definition": "100 × external_evidence_reports / report_count, recalculado en cada grupo.",
-      "unit": "%", "type": "ratio", "numerator": "external_evidence_reports", "denominator": "report_count", "factor": 100,
+      "unit": "%",
+      "type": "ratio",
+      "numerator": "external_evidence_reports",
+      "denominator": "report_count",
+      "factor": 100,
       "requires": [],
-      "datasets": {"fact_report": {}, "agg_year": {}, "agg_month": {}, "agg_weekday_hour": {}, "agg_country": {}, "agg_shape": {}, "agg_source": {}, "agg_spatial_cell": {}, "agg_nuclear_band": {}},
+      "datasets": {
+        "fact_report": {},
+        "agg_year": {},
+        "agg_month": {},
+        "agg_weekday_hour": {},
+        "agg_country": {},
+        "agg_shape": {},
+        "agg_source": {},
+        "agg_spatial_cell": {},
+        "agg_nuclear_band": {}
+      },
       "warnings": ["No se suman porcentajes entre grupos."]
     },
     "pending_candidate_pct": {
       "label": "% de informes con candidato pendiente",
       "definition": "100 × pending_candidate_reports / report_count, recalculado en cada grupo.",
-      "unit": "%", "type": "ratio", "numerator": "pending_candidate_reports", "denominator": "report_count", "factor": 100,
+      "unit": "%",
+      "type": "ratio",
+      "numerator": "pending_candidate_reports",
+      "denominator": "report_count",
+      "factor": 100,
       "requires": [],
-      "datasets": {"fact_report": {}, "agg_year": {}, "agg_month": {}, "agg_weekday_hour": {}, "agg_country": {}, "agg_shape": {}, "agg_source": {}, "agg_spatial_cell": {}, "agg_nuclear_band": {}},
+      "datasets": {
+        "fact_report": {},
+        "agg_year": {},
+        "agg_month": {},
+        "agg_weekday_hour": {},
+        "agg_country": {},
+        "agg_shape": {},
+        "agg_source": {},
+        "agg_spatial_cell": {},
+        "agg_nuclear_band": {}
+      },
       "warnings": ["No se suman porcentajes entre grupos."]
     },
     "media_pct": {
       "label": "% de informes que mencionan medios",
       "definition": "100 × media_reports / report_count, recalculado en cada grupo.",
-      "unit": "%", "type": "ratio", "numerator": "media_reports", "denominator": "report_count", "factor": 100,
+      "unit": "%",
+      "type": "ratio",
+      "numerator": "media_reports",
+      "denominator": "report_count",
+      "factor": 100,
       "requires": [],
-      "datasets": {"fact_report": {}},
+      "datasets": {
+        "fact_report": {}
+      },
       "warnings": ["No se suman porcentajes entre grupos."]
     },
     "distinct_country_count": {
       "label": "Países distintos",
       "definition": "Número de códigos ISO2 distintos entre los informes aptos para país del grupo.",
-      "unit": "países", "type": "non_additive", "requires": ["country"],
-      "datasets": {"fact_report": {"op": "count_distinct", "column": "country_iso2"}, "agg_country": {"op": "count_distinct", "column": "country_iso2"}},
+      "unit": "países",
+      "type": "non_additive",
+      "requires": ["country"],
+      "datasets": {
+        "fact_report": {"op": "count_distinct", "column": "country_iso2"},
+        "agg_country": {"op": "count_distinct", "column": "country_iso2"}
+      },
       "warnings": ["No se suma entre grupos: un país puede aparecer en varios."]
     },
     "first_year": {
       "label": "Primer año con informes",
       "definition": "Año mínimo entre los informes aptos para calendario del grupo.",
-      "unit": "año", "type": "non_additive", "requires": ["calendar"],
-      "datasets": {"fact_report": {"op": "min", "column": "event_year"}, "agg_year": {"op": "min", "column": "event_year"}, "agg_month": {"op": "min", "column": "event_year"}},
+      "unit": "año",
+      "type": "non_additive",
+      "requires": ["calendar"],
+      "datasets": {
+        "fact_report": {"op": "min", "column": "event_year"},
+        "agg_year": {"op": "min", "column": "event_year"},
+        "agg_month": {"op": "min", "column": "event_year"}
+      },
       "warnings": ["Los años muy antiguos proceden de compilaciones históricas; no prueban un fenómeno."]
     },
     "last_year": {
       "label": "Último año con informes",
       "definition": "Año máximo entre los informes aptos para calendario del grupo.",
-      "unit": "año", "type": "non_additive", "requires": ["calendar"],
-      "datasets": {"fact_report": {"op": "max", "column": "event_year"}, "agg_year": {"op": "max", "column": "event_year"}, "agg_month": {"op": "max", "column": "event_year"}},
+      "unit": "año",
+      "type": "non_additive",
+      "requires": ["calendar"],
+      "datasets": {
+        "fact_report": {"op": "max", "column": "event_year"},
+        "agg_year": {"op": "max", "column": "event_year"},
+        "agg_month": {"op": "max", "column": "event_year"}
+      },
       "warnings": []
     },
     "avg_nuclear_distance_km": {
       "label": "Distancia media a la instalación del catálogo más cercana",
       "definition": "Media de nuclear_distance_km (Haversine, radio 6371 km, catálogo local de instalaciones) entre los informes aptos para proximidad.",
-      "unit": "km", "type": "non_additive", "requires": ["nuclear_proximity"],
-      "datasets": {"fact_report": {"op": "avg", "column": "nuclear_distance_km"}},
+      "unit": "km",
+      "type": "non_additive",
+      "requires": ["nuclear_proximity"],
+      "datasets": {
+        "fact_report": {"op": "avg", "column": "nuclear_distance_km"}
+      },
       "warnings": ["La distancia es relativa al catálogo local de instalaciones de Silver (dim_nuclear_facility), no a todas las del mundo.", "Proximidad no implica relación causal."]
     },
     "scored_reports": {
       "label": "Informes con puntuación de riesgo de engaño",
       "definition": "Informes con hoax_likelihood no nulo.",
-      "unit": "informes", "type": "additive", "requires": [], "model_output": true,
-      "datasets": {"report_model_output": {"op": "count", "column": "hoax_likelihood"}},
+      "unit": "informes",
+      "type": "additive",
+      "requires": [],
+      "model_output": true,
+      "datasets": {
+        "report_model_output": {"op": "count", "column": "hoax_likelihood"}
+      },
       "warnings": ["Salida de un modelo heredado del origen, no un hecho."]
     },
     "avg_hoax_likelihood": {
       "label": "Probabilidad media de engaño (modelo)",
       "definition": "Media de hoax_likelihood heredado del origen (0–1).",
-      "unit": "probabilidad del modelo", "type": "non_additive", "requires": [], "model_output": true,
-      "datasets": {"report_model_output": {"op": "avg", "column": "hoax_likelihood"}},
+      "unit": "probabilidad del modelo",
+      "type": "non_additive",
+      "requires": [],
+      "model_output": true,
+      "datasets": {
+        "report_model_output": {"op": "avg", "column": "hoax_likelihood"}
+      },
       "warnings": ["Salida de un modelo heredado del origen sin calibración documentada; no prueba engaño ni veracidad."]
     },
     "avg_quality_score": {
       "label": "Puntuación media de riqueza del origen",
       "definition": "Media de quality_score heredado (0–100, heurística de riqueza de campos del origen). No es el cumplimiento del contrato Silver.",
-      "unit": "puntos del origen", "type": "non_additive", "requires": [], "model_output": true,
-      "datasets": {"report_model_output": {"op": "avg", "column": "quality_score"}},
+      "unit": "puntos del origen",
+      "type": "non_additive",
+      "requires": [],
+      "model_output": true,
+      "datasets": {
+        "report_model_output": {"op": "avg", "column": "quality_score"}
+      },
       "warnings": ["Heurística del origen; no mide veracidad."]
     },
     "avg_vader_compound": {
       "label": "Sentimiento medio VADER (modelo)",
       "definition": "Media de vader_compound (−1 a 1) sobre el texto del origen.",
-      "unit": "puntuación del modelo", "type": "non_additive", "requires": [], "model_output": true,
-      "datasets": {"report_model_output": {"op": "avg", "column": "vader_compound"}},
+      "unit": "puntuación del modelo",
+      "type": "non_additive",
+      "requires": [],
+      "model_output": true,
+      "datasets": {
+        "report_model_output": {"op": "avg", "column": "vader_compound"}
+      },
       "warnings": ["Salida de modelo; mide el tono del texto, no lo ocurrido."]
     },
     "avg_roberta_sentiment": {
       "label": "Sentimiento medio RoBERTa (modelo)",
       "definition": "Media de roberta_sentiment (−1 a 1) sobre el texto del origen.",
-      "unit": "puntuación del modelo", "type": "non_additive", "requires": [], "model_output": true,
-      "datasets": {"report_model_output": {"op": "avg", "column": "roberta_sentiment"}},
+      "unit": "puntuación del modelo",
+      "type": "non_additive",
+      "requires": [],
+      "model_output": true,
+      "datasets": {
+        "report_model_output": {"op": "avg", "column": "roberta_sentiment"}
+      },
       "warnings": ["Salida de modelo; mide el tono del texto, no lo ocurrido."]
+    },
+    "core_fields_reports": {
+      "label": "Informes con país, día y coordenadas",
+      "definition": "Informes aptos a la vez para país, día y mapa.",
+      "unit": "informes",
+      "type": "additive",
+      "grain": "informe",
+      "requires": [],
+      "datasets": {
+        "fact_report": {"op": "sum", "column": "has_core_fields"}
+      },
+      "warnings": []
+    },
+    "core_fields_pct": {
+      "label": "% con país, día y coordenadas",
+      "definition": "100 × informes aptos a la vez para país, día y mapa / informes.",
+      "unit": "%",
+      "type": "ratio",
+      "requires": [],
+      "numerator": "core_fields_reports",
+      "denominator": "report_count",
+      "factor": 100,
+      "datasets": {
+        "fact_report": {}
+      },
+      "warnings": ["No se suman porcentajes entre grupos."]
+    },
+    "map_usable_reports": {
+      "label": "Informes con coordenadas aptas",
+      "definition": "Informes con coordenadas aptas para mapa (usable_for_map=1).",
+      "unit": "informes",
+      "type": "additive",
+      "grain": "informe",
+      "requires": [],
+      "datasets": {
+        "fact_report": {"op": "sum", "column": "usable_for_map"}
+      },
+      "warnings": []
+    },
+    "map_usable_pct": {
+      "label": "% con coordenadas aptas",
+      "definition": "100 × informes con coordenadas aptas / informes del grupo.",
+      "unit": "%",
+      "type": "ratio",
+      "requires": [],
+      "numerator": "map_usable_reports",
+      "denominator": "report_count",
+      "factor": 100,
+      "datasets": {
+        "fact_report": {}
+      },
+      "warnings": ["No se suman porcentajes entre grupos."]
+    },
+    "country_usable_reports": {
+      "label": "Informes con país apto",
+      "definition": "Informes con país canónico consistente.",
+      "unit": "informes",
+      "type": "additive",
+      "grain": "informe",
+      "requires": [],
+      "datasets": {
+        "fact_report": {"op": "sum", "column": "usable_for_country"}
+      },
+      "warnings": []
+    },
+    "country_usable_pct": {
+      "label": "% con país apto",
+      "definition": "100 × informes con país apto / informes.",
+      "unit": "%",
+      "type": "ratio",
+      "requires": [],
+      "numerator": "country_usable_reports",
+      "denominator": "report_count",
+      "factor": 100,
+      "datasets": {
+        "fact_report": {}
+      },
+      "warnings": ["No se suman porcentajes entre grupos."]
+    },
+    "day_usable_reports": {
+      "label": "Informes con día fiable",
+      "definition": "Informes con día fiable (usable_for_day_analysis=1).",
+      "unit": "informes",
+      "type": "additive",
+      "grain": "informe",
+      "requires": [],
+      "datasets": {
+        "fact_report": {"op": "sum", "column": "usable_for_day_analysis"}
+      },
+      "warnings": []
+    },
+    "day_usable_pct": {
+      "label": "% con día fiable",
+      "definition": "100 × informes con día fiable / informes.",
+      "unit": "%",
+      "type": "ratio",
+      "requires": [],
+      "numerator": "day_usable_reports",
+      "denominator": "report_count",
+      "factor": 100,
+      "datasets": {
+        "fact_report": {}
+      },
+      "warnings": ["No se suman porcentajes entre grupos."]
+    },
+    "hour_usable_reports": {
+      "label": "Informes con hora consignada fiable",
+      "definition": "Informes con hora de minuto o mejor.",
+      "unit": "informes",
+      "type": "additive",
+      "grain": "informe",
+      "requires": [],
+      "datasets": {
+        "fact_report": {"op": "sum", "column": "usable_for_hour_analysis"}
+      },
+      "warnings": []
+    },
+    "hour_usable_pct": {
+      "label": "% con hora fiable",
+      "definition": "100 × informes con hora fiable / informes.",
+      "unit": "%",
+      "type": "ratio",
+      "requires": [],
+      "numerator": "hour_usable_reports",
+      "denominator": "report_count",
+      "factor": 100,
+      "datasets": {
+        "fact_report": {}
+      },
+      "warnings": ["No se suman porcentajes entre grupos."]
+    },
+    "map_without_country_reports": {
+      "label": "Informes con coordenadas pero sin país apto",
+      "definition": "Coordenadas aptas y país no apto.",
+      "unit": "informes",
+      "type": "additive",
+      "grain": "informe",
+      "requires": [],
+      "datasets": {
+        "fact_report": {"op": "sum", "column": "map_without_country"}
+      },
+      "warnings": []
+    },
+    "map_without_country_pct": {
+      "label": "% con coordenadas pero sin país",
+      "definition": "100 × coordenadas aptas sin país apto / informes.",
+      "unit": "%",
+      "type": "ratio",
+      "requires": [],
+      "numerator": "map_without_country_reports",
+      "denominator": "report_count",
+      "factor": 100,
+      "datasets": {
+        "fact_report": {}
+      },
+      "warnings": ["No se suman porcentajes entre grupos."]
+    },
+    "placeholder_risk_reports": {
+      "label": "Informes con marcador de día o mes",
+      "definition": "Informes con riesgo de marcador de día o de mes de su fuente.",
+      "unit": "informes",
+      "type": "additive",
+      "grain": "informe",
+      "requires": [],
+      "datasets": {
+        "fact_report": {"op": "sum", "column": "has_placeholder_risk"}
+      },
+      "warnings": []
+    },
+    "placeholder_risk_pct": {
+      "label": "% con marcador de día o mes",
+      "definition": "100 × informes con marcador / informes.",
+      "unit": "%",
+      "type": "ratio",
+      "requires": [],
+      "numerator": "placeholder_risk_reports",
+      "denominator": "report_count",
+      "factor": 100,
+      "datasets": {
+        "fact_report": {}
+      },
+      "warnings": ["No se suman porcentajes entre grupos."]
+    },
+    "description_reports": {
+      "label": "Informes con descripción",
+      "definition": "Informes cuya fuente consigna una descripción (has_description=1).",
+      "unit": "informes",
+      "type": "additive",
+      "grain": "informe",
+      "requires": [],
+      "datasets": {
+        "fact_report": {"op": "sum", "column": "has_description"}
+      },
+      "warnings": []
+    },
+    "description_pct": {
+      "label": "% con descripción",
+      "definition": "100 × informes con descripción / informes.",
+      "unit": "%",
+      "type": "ratio",
+      "requires": [],
+      "numerator": "description_reports",
+      "denominator": "report_count",
+      "factor": 100,
+      "datasets": {
+        "fact_report": {}
+      },
+      "warnings": ["No se suman porcentajes entre grupos."]
+    },
+    "description_and_media_reports": {
+      "label": "Informes con descripción y medios",
+      "definition": "Informes con descripción y mención de medios.",
+      "unit": "informes",
+      "type": "additive",
+      "grain": "informe",
+      "requires": [],
+      "datasets": {
+        "fact_report": {"op": "sum", "column": "has_description_and_media"}
+      },
+      "warnings": []
+    },
+    "description_and_media_pct": {
+      "label": "% con descripción y medios",
+      "definition": "100 × descripción y medios / informes.",
+      "unit": "%",
+      "type": "ratio",
+      "requires": [],
+      "numerator": "description_and_media_reports",
+      "denominator": "report_count",
+      "factor": 100,
+      "datasets": {
+        "fact_report": {}
+      },
+      "warnings": ["No se suman porcentajes entre grupos."]
+    },
+    "known_shape_reports": {
+      "label": "Informes con forma conocida",
+      "definition": "Informes con forma estandarizada distinta de Unknown.",
+      "unit": "informes",
+      "type": "additive",
+      "grain": "informe",
+      "requires": [],
+      "datasets": {
+        "fact_report": {"op": "sum", "column": "has_known_shape"}
+      },
+      "warnings": []
+    },
+    "known_shape_pct": {
+      "label": "% con forma conocida",
+      "definition": "100 × informes con forma conocida / informes.",
+      "unit": "%",
+      "type": "ratio",
+      "requires": [],
+      "numerator": "known_shape_reports",
+      "denominator": "report_count",
+      "factor": 100,
+      "datasets": {
+        "fact_report": {}
+      },
+      "warnings": ["No se suman porcentajes entre grupos."]
+    },
+    "positive_duration_reports": {
+      "label": "Informes con duración positiva",
+      "definition": "Informes con duración declarada mayor que cero.",
+      "unit": "informes",
+      "type": "additive",
+      "grain": "informe",
+      "requires": [],
+      "datasets": {
+        "fact_report": {"op": "sum", "column": "has_positive_duration"}
+      },
+      "warnings": []
+    },
+    "long_duration_reports": {
+      "label": "Informes de más de una hora",
+      "definition": "Informes con duración declarada mayor que 3.600 s.",
+      "unit": "informes",
+      "type": "additive",
+      "grain": "informe",
+      "requires": [],
+      "datasets": {
+        "fact_report": {"op": "sum", "column": "is_long_duration"}
+      },
+      "warnings": []
+    },
+    "long_duration_pct": {
+      "label": "% de más de una hora (entre duraciones positivas)",
+      "definition": "100 × duraciones de más de una hora / duraciones positivas.",
+      "unit": "%",
+      "type": "ratio",
+      "requires": [],
+      "numerator": "long_duration_reports",
+      "denominator": "positive_duration_reports",
+      "factor": 100,
+      "datasets": {
+        "fact_report": {}
+      },
+      "warnings": ["No se suman porcentajes entre grupos."]
+    },
+    "witnessed_reports": {
+      "label": "Informes con testigos consignados",
+      "definition": "Informes con número de testigos mayor que cero.",
+      "unit": "informes",
+      "type": "additive",
+      "grain": "informe",
+      "requires": [],
+      "datasets": {
+        "fact_report": {"op": "sum", "column": "has_witnesses"}
+      },
+      "warnings": []
+    },
+    "witnessed_pct": {
+      "label": "% con testigos consignados",
+      "definition": "100 × informes con testigos / informes.",
+      "unit": "%",
+      "type": "ratio",
+      "requires": [],
+      "numerator": "witnessed_reports",
+      "denominator": "report_count",
+      "factor": 100,
+      "datasets": {
+        "fact_report": {}
+      },
+      "warnings": ["No se suman porcentajes entre grupos."]
+    },
+    "proximity_reports": {
+      "label": "Informes aptos para proximidad",
+      "definition": "Informes con distancia a la instalación más cercana.",
+      "unit": "informes",
+      "type": "additive",
+      "grain": "informe",
+      "requires": [],
+      "datasets": {
+        "fact_report": {"op": "sum", "column": "usable_for_nuclear_proximity"}
+      },
+      "warnings": []
+    },
+    "within_10km_reports": {
+      "label": "Informes a menos de 10 km",
+      "definition": "Informes a menos de 10 km de la instalación del catálogo más cercana.",
+      "unit": "informes",
+      "type": "additive",
+      "grain": "informe",
+      "requires": [],
+      "datasets": {
+        "fact_report": {"op": "sum", "column": "within_10km"}
+      },
+      "warnings": []
+    },
+    "within_10km_pct": {
+      "label": "% a menos de 10 km",
+      "definition": "100 × informes a menos de 10 km / informes aptos para proximidad.",
+      "unit": "%",
+      "type": "ratio",
+      "requires": [],
+      "numerator": "within_10km_reports",
+      "denominator": "proximity_reports",
+      "factor": 100,
+      "datasets": {
+        "fact_report": {}
+      },
+      "warnings": ["No se suman porcentajes entre grupos.", "Proximidad no implica relación causal."]
+    },
+    "within_50km_reports": {
+      "label": "Informes a menos de 50 km",
+      "definition": "Informes a menos de 50 km de la instalación del catálogo más cercana.",
+      "unit": "informes",
+      "type": "additive",
+      "grain": "informe",
+      "requires": [],
+      "datasets": {
+        "fact_report": {"op": "sum", "column": "within_50km"}
+      },
+      "warnings": []
+    },
+    "within_50km_pct": {
+      "label": "% a menos de 50 km",
+      "definition": "100 × informes a menos de 50 km / informes aptos para proximidad.",
+      "unit": "%",
+      "type": "ratio",
+      "requires": [],
+      "numerator": "within_50km_reports",
+      "denominator": "proximity_reports",
+      "factor": 100,
+      "datasets": {
+        "fact_report": {}
+      },
+      "warnings": ["No se suman porcentajes entre grupos.", "Proximidad no implica relación causal."]
+    },
+    "confirmed_group_pct": {
+      "label": "% en grupos confirmados",
+      "definition": "100 × informes en grupos confirmados / informes.",
+      "unit": "%",
+      "type": "ratio",
+      "requires": [],
+      "numerator": "confirmed_group_reports",
+      "denominator": "report_count",
+      "factor": 100,
+      "datasets": {
+        "fact_report": {}
+      },
+      "warnings": ["No se suman porcentajes entre grupos."]
+    },
+    "reused_id_reports": {
+      "label": "Informes con ID de origen repetido",
+      "definition": "Informes cuyo source_record_id aparece más de una vez en su fuente.",
+      "unit": "informes",
+      "type": "additive",
+      "grain": "informe",
+      "requires": [],
+      "datasets": {
+        "fact_report": {"op": "sum", "column": "source_record_reused"}
+      },
+      "warnings": []
+    },
+    "reused_id_pct": {
+      "label": "% con ID de origen repetido",
+      "definition": "100 × informes con ID repetido / informes.",
+      "unit": "%",
+      "type": "ratio",
+      "requires": [],
+      "numerator": "reused_id_reports",
+      "denominator": "report_count",
+      "factor": 100,
+      "datasets": {
+        "fact_report": {}
+      },
+      "warnings": ["No se suman porcentajes entre grupos."]
+    },
+    "distinct_source_count": {
+      "label": "Fuentes distintas",
+      "definition": "Número de fuentes distintas entre los informes del grupo.",
+      "unit": "fuentes",
+      "type": "non_additive",
+      "requires": [],
+      "datasets": {
+        "fact_report": {"op": "count_distinct", "column": "source_code"}
+      },
+      "warnings": ["No se suma entre grupos."]
+    },
+    "median_duration_min": {
+      "label": "Mediana de duración (min)",
+      "definition": "Cuantil por rango más cercano sobre los valores no nulos del grupo: duración declarada positiva, en minutos.",
+      "unit": "min",
+      "type": "non_additive",
+      "requires": [],
+      "datasets": {
+        "fact_report": {"op": "quantile", "column": "duration_seconds", "q": 0.5, "positive_only": true, "scale": 0.016666666666666666}
+      },
+      "warnings": ["Duración declarada por el testigo o la fuente, no medida."]
+    },
+    "p25_duration_min": {
+      "label": "Percentil 25 de duración (min)",
+      "definition": "Cuantil por rango más cercano sobre los valores no nulos del grupo: duración declarada positiva, en minutos.",
+      "unit": "min",
+      "type": "non_additive",
+      "requires": [],
+      "datasets": {
+        "fact_report": {"op": "quantile", "column": "duration_seconds", "q": 0.25, "positive_only": true, "scale": 0.016666666666666666}
+      },
+      "warnings": ["Duración declarada por el testigo o la fuente, no medida."]
+    },
+    "p75_duration_min": {
+      "label": "Percentil 75 de duración (min)",
+      "definition": "Cuantil por rango más cercano sobre los valores no nulos del grupo: duración declarada positiva, en minutos.",
+      "unit": "min",
+      "type": "non_additive",
+      "requires": [],
+      "datasets": {
+        "fact_report": {"op": "quantile", "column": "duration_seconds", "q": 0.75, "positive_only": true, "scale": 0.016666666666666666}
+      },
+      "warnings": ["Duración declarada por el testigo o la fuente, no medida."]
+    },
+    "median_witnesses": {
+      "label": "Mediana de testigos",
+      "definition": "Cuantil por rango más cercano sobre los valores no nulos del grupo: testigos consignados mayores que cero.",
+      "unit": "testigos",
+      "type": "non_additive",
+      "requires": [],
+      "datasets": {
+        "fact_report": {"op": "quantile", "column": "num_witnesses", "q": 0.5, "positive_only": true}
+      },
+      "warnings": []
+    },
+    "median_nuclear_distance_km": {
+      "label": "Mediana de distancia a la instalación más cercana",
+      "definition": "Cuantil por rango más cercano sobre los valores no nulos del grupo: distancia en km.",
+      "unit": "km",
+      "type": "non_additive",
+      "requires": ["nuclear_proximity"],
+      "datasets": {
+        "fact_report": {"op": "quantile", "column": "nuclear_distance_km", "q": 0.5}
+      },
+      "warnings": ["Proximidad no implica relación causal."]
+    },
+    "avg_sentiment_score": {
+      "label": "Sentimiento medio heredado (modelo)",
+      "definition": "Media de sentiment_score heredado del origen.",
+      "unit": "puntuación del modelo",
+      "type": "non_additive",
+      "requires": [],
+      "model_output": true,
+      "datasets": {
+        "report_model_output": {"op": "avg", "column": "sentiment_score"}
+      },
+      "warnings": ["Salida de modelo; mide el tono del texto, no lo ocurrido."]
+    },
+    "median_sentiment_score": {
+      "label": "Mediana de sentimiento heredado (modelo)",
+      "definition": "Cuantil por rango más cercano sobre los valores no nulos del grupo: sentiment_score.",
+      "unit": "puntuación del modelo",
+      "type": "non_additive",
+      "requires": [],
+      "model_output": true,
+      "datasets": {
+        "report_model_output": {"op": "quantile", "column": "sentiment_score", "q": 0.5}
+      },
+      "warnings": []
+    },
+    "avg_richness_score": {
+      "label": "Riqueza media del relato (heurística)",
+      "definition": "Media de richness_score heredado del origen.",
+      "unit": "puntos del origen",
+      "type": "non_additive",
+      "requires": [],
+      "model_output": true,
+      "datasets": {
+        "report_model_output": {"op": "avg", "column": "richness_score"}
+      },
+      "warnings": ["Heurística del origen; no mide veracidad."]
+    },
+    "median_richness_score": {
+      "label": "Mediana de riqueza del relato (heurística)",
+      "definition": "Cuantil por rango más cercano sobre los valores no nulos del grupo: richness_score.",
+      "unit": "puntos del origen",
+      "type": "non_additive",
+      "requires": [],
+      "model_output": true,
+      "datasets": {
+        "report_model_output": {"op": "quantile", "column": "richness_score", "q": 0.5}
+      },
+      "warnings": []
+    },
+    "avg_nrc_joy": {
+      "label": "NRC medio de alegría (léxico)",
+      "definition": "Media de nrc_joy: proporción de palabras del léxico NRC asociadas a alegría.",
+      "unit": "puntuación del léxico",
+      "type": "non_additive",
+      "requires": [],
+      "model_output": true,
+      "datasets": {
+        "report_model_output": {"op": "avg", "column": "nrc_joy"}
+      },
+      "warnings": ["Léxico aplicado al texto del origen; no describe lo que sintió el testigo."]
+    },
+    "avg_nrc_fear": {
+      "label": "NRC medio de miedo (léxico)",
+      "definition": "Media de nrc_fear: proporción de palabras del léxico NRC asociadas a miedo.",
+      "unit": "puntuación del léxico",
+      "type": "non_additive",
+      "requires": [],
+      "model_output": true,
+      "datasets": {
+        "report_model_output": {"op": "avg", "column": "nrc_fear"}
+      },
+      "warnings": ["Léxico aplicado al texto del origen; no describe lo que sintió el testigo."]
+    },
+    "avg_nrc_anger": {
+      "label": "NRC medio de ira (léxico)",
+      "definition": "Media de nrc_anger: proporción de palabras del léxico NRC asociadas a ira.",
+      "unit": "puntuación del léxico",
+      "type": "non_additive",
+      "requires": [],
+      "model_output": true,
+      "datasets": {
+        "report_model_output": {"op": "avg", "column": "nrc_anger"}
+      },
+      "warnings": ["Léxico aplicado al texto del origen; no describe lo que sintió el testigo."]
+    },
+    "avg_nrc_sadness": {
+      "label": "NRC medio de tristeza (léxico)",
+      "definition": "Media de nrc_sadness: proporción de palabras del léxico NRC asociadas a tristeza.",
+      "unit": "puntuación del léxico",
+      "type": "non_additive",
+      "requires": [],
+      "model_output": true,
+      "datasets": {
+        "report_model_output": {"op": "avg", "column": "nrc_sadness"}
+      },
+      "warnings": ["Léxico aplicado al texto del origen; no describe lo que sintió el testigo."]
+    },
+    "avg_nrc_surprise": {
+      "label": "NRC medio de sorpresa (léxico)",
+      "definition": "Media de nrc_surprise: proporción de palabras del léxico NRC asociadas a sorpresa.",
+      "unit": "puntuación del léxico",
+      "type": "non_additive",
+      "requires": [],
+      "model_output": true,
+      "datasets": {
+        "report_model_output": {"op": "avg", "column": "nrc_surprise"}
+      },
+      "warnings": ["Léxico aplicado al texto del origen; no describe lo que sintió el testigo."]
+    },
+    "avg_nrc_disgust": {
+      "label": "NRC medio de asco (léxico)",
+      "definition": "Media de nrc_disgust: proporción de palabras del léxico NRC asociadas a asco.",
+      "unit": "puntuación del léxico",
+      "type": "non_additive",
+      "requires": [],
+      "model_output": true,
+      "datasets": {
+        "report_model_output": {"op": "avg", "column": "nrc_disgust"}
+      },
+      "warnings": ["Léxico aplicado al texto del origen; no describe lo que sintió el testigo."]
+    },
+    "avg_nrc_trust": {
+      "label": "NRC medio de confianza (léxico)",
+      "definition": "Media de nrc_trust: proporción de palabras del léxico NRC asociadas a confianza.",
+      "unit": "puntuación del léxico",
+      "type": "non_additive",
+      "requires": [],
+      "model_output": true,
+      "datasets": {
+        "report_model_output": {"op": "avg", "column": "nrc_trust"}
+      },
+      "warnings": ["Léxico aplicado al texto del origen; no describe lo que sintió el testigo."]
+    },
+    "avg_nrc_anticipation": {
+      "label": "NRC medio de anticipación (léxico)",
+      "definition": "Media de nrc_anticipation: proporción de palabras del léxico NRC asociadas a anticipación.",
+      "unit": "puntuación del léxico",
+      "type": "non_additive",
+      "requires": [],
+      "model_output": true,
+      "datasets": {
+        "report_model_output": {"op": "avg", "column": "nrc_anticipation"}
+      },
+      "warnings": ["Léxico aplicado al texto del origen; no describe lo que sintió el testigo."]
+    },
+    "avg_emotion_7_surprise": {
+      "label": "Probabilidad media de sorpresa (modelo de 7 clases)",
+      "definition": "Media de emotion_7_surprise.",
+      "unit": "probabilidad del modelo",
+      "type": "non_additive",
+      "requires": [],
+      "model_output": true,
+      "datasets": {
+        "report_model_output": {"op": "avg", "column": "emotion_7_surprise"}
+      },
+      "warnings": ["Salida de modelo; no describe lo que sintió el testigo."]
+    },
+    "avg_emotion_7_fear": {
+      "label": "Probabilidad media de miedo (modelo de 7 clases)",
+      "definition": "Media de emotion_7_fear.",
+      "unit": "probabilidad del modelo",
+      "type": "non_additive",
+      "requires": [],
+      "model_output": true,
+      "datasets": {
+        "report_model_output": {"op": "avg", "column": "emotion_7_fear"}
+      },
+      "warnings": ["Salida de modelo; no describe lo que sintió el testigo."]
+    },
+    "avg_emotion_7_neutral": {
+      "label": "Probabilidad media de neutral (modelo de 7 clases)",
+      "definition": "Media de emotion_7_neutral.",
+      "unit": "probabilidad del modelo",
+      "type": "non_additive",
+      "requires": [],
+      "model_output": true,
+      "datasets": {
+        "report_model_output": {"op": "avg", "column": "emotion_7_neutral"}
+      },
+      "warnings": ["Salida de modelo; no describe lo que sintió el testigo."]
+    },
+    "avg_emotion_7_anger": {
+      "label": "Probabilidad media de ira (modelo de 7 clases)",
+      "definition": "Media de emotion_7_anger.",
+      "unit": "probabilidad del modelo",
+      "type": "non_additive",
+      "requires": [],
+      "model_output": true,
+      "datasets": {
+        "report_model_output": {"op": "avg", "column": "emotion_7_anger"}
+      },
+      "warnings": ["Salida de modelo; no describe lo que sintió el testigo."]
+    },
+    "avg_emotion_7_disgust": {
+      "label": "Probabilidad media de asco (modelo de 7 clases)",
+      "definition": "Media de emotion_7_disgust.",
+      "unit": "probabilidad del modelo",
+      "type": "non_additive",
+      "requires": [],
+      "model_output": true,
+      "datasets": {
+        "report_model_output": {"op": "avg", "column": "emotion_7_disgust"}
+      },
+      "warnings": ["Salida de modelo; no describe lo que sintió el testigo."]
+    },
+    "avg_emotion_7_sadness": {
+      "label": "Probabilidad media de tristeza (modelo de 7 clases)",
+      "definition": "Media de emotion_7_sadness.",
+      "unit": "probabilidad del modelo",
+      "type": "non_additive",
+      "requires": [],
+      "model_output": true,
+      "datasets": {
+        "report_model_output": {"op": "avg", "column": "emotion_7_sadness"}
+      },
+      "warnings": ["Salida de modelo; no describe lo que sintió el testigo."]
+    },
+    "avg_emotion_7_joy": {
+      "label": "Probabilidad media de alegría (modelo de 7 clases)",
+      "definition": "Media de emotion_7_joy.",
+      "unit": "probabilidad del modelo",
+      "type": "non_additive",
+      "requires": [],
+      "model_output": true,
+      "datasets": {
+        "report_model_output": {"op": "avg", "column": "emotion_7_joy"}
+      },
+      "warnings": ["Salida de modelo; no describe lo que sintió el testigo."]
+    },
+    "sentiment_scored_reports": {
+      "label": "Informes con sentimiento puntuado",
+      "definition": "Informes con sentiment_score no nulo.",
+      "unit": "informes",
+      "type": "additive",
+      "grain": "informe",
+      "requires": [],
+      "model_output": true,
+      "datasets": {
+        "report_model_output": {"op": "count", "column": "sentiment_score"}
+      },
+      "warnings": []
+    },
+    "sentiment_scored_pct": {
+      "label": "% con sentimiento puntuado",
+      "definition": "100 × informes con sentiment_score no nulo / informes.",
+      "unit": "%",
+      "type": "ratio",
+      "requires": [],
+      "numerator": "sentiment_scored_reports",
+      "denominator": "report_count",
+      "factor": 100,
+      "model_output": true,
+      "datasets": {
+        "report_model_output": {}
+      },
+      "warnings": ["No se suman porcentajes entre grupos."]
+    },
+    "vader_scored_reports": {
+      "label": "Informes con VADER puntuado",
+      "definition": "Informes con vader_compound no nulo.",
+      "unit": "informes",
+      "type": "additive",
+      "grain": "informe",
+      "requires": [],
+      "model_output": true,
+      "datasets": {
+        "report_model_output": {"op": "count", "column": "vader_compound"}
+      },
+      "warnings": []
+    },
+    "vader_scored_pct": {
+      "label": "% con VADER puntuado",
+      "definition": "100 × informes con vader_compound no nulo / informes.",
+      "unit": "%",
+      "type": "ratio",
+      "requires": [],
+      "numerator": "vader_scored_reports",
+      "denominator": "report_count",
+      "factor": 100,
+      "model_output": true,
+      "datasets": {
+        "report_model_output": {}
+      },
+      "warnings": ["No se suman porcentajes entre grupos."]
+    },
+    "roberta_scored_reports": {
+      "label": "Informes con RoBERTa puntuado",
+      "definition": "Informes con roberta_sentiment no nulo.",
+      "unit": "informes",
+      "type": "additive",
+      "grain": "informe",
+      "requires": [],
+      "model_output": true,
+      "datasets": {
+        "report_model_output": {"op": "count", "column": "roberta_sentiment"}
+      },
+      "warnings": []
+    },
+    "roberta_scored_pct": {
+      "label": "% con RoBERTa puntuado",
+      "definition": "100 × informes con roberta_sentiment no nulo / informes.",
+      "unit": "%",
+      "type": "ratio",
+      "requires": [],
+      "numerator": "roberta_scored_reports",
+      "denominator": "report_count",
+      "factor": 100,
+      "model_output": true,
+      "datasets": {
+        "report_model_output": {}
+      },
+      "warnings": ["No se suman porcentajes entre grupos."]
+    },
+    "emotion_scored_reports": {
+      "label": "Informes con emoción de 7 clases puntuado",
+      "definition": "Informes con emotion_7_dominant no nulo.",
+      "unit": "informes",
+      "type": "additive",
+      "grain": "informe",
+      "requires": [],
+      "model_output": true,
+      "datasets": {
+        "report_model_output": {"op": "count", "column": "emotion_7_dominant"}
+      },
+      "warnings": []
+    },
+    "emotion_scored_pct": {
+      "label": "% con emoción de 7 clases puntuado",
+      "definition": "100 × informes con emotion_7_dominant no nulo / informes.",
+      "unit": "%",
+      "type": "ratio",
+      "requires": [],
+      "numerator": "emotion_scored_reports",
+      "denominator": "report_count",
+      "factor": 100,
+      "model_output": true,
+      "datasets": {
+        "report_model_output": {}
+      },
+      "warnings": ["No se suman porcentajes entre grupos."]
+    },
+    "quality_scored_reports": {
+      "label": "Informes con calidad documental puntuado",
+      "definition": "Informes con quality_score no nulo.",
+      "unit": "informes",
+      "type": "additive",
+      "grain": "informe",
+      "requires": [],
+      "model_output": true,
+      "datasets": {
+        "report_model_output": {"op": "count", "column": "quality_score"}
+      },
+      "warnings": []
+    },
+    "quality_scored_pct": {
+      "label": "% con calidad documental puntuado",
+      "definition": "100 × informes con quality_score no nulo / informes.",
+      "unit": "%",
+      "type": "ratio",
+      "requires": [],
+      "numerator": "quality_scored_reports",
+      "denominator": "report_count",
+      "factor": 100,
+      "model_output": true,
+      "datasets": {
+        "report_model_output": {}
+      },
+      "warnings": ["No se suman porcentajes entre grupos."]
+    },
+    "richness_scored_reports": {
+      "label": "Informes con riqueza puntuado",
+      "definition": "Informes con richness_score no nulo.",
+      "unit": "informes",
+      "type": "additive",
+      "grain": "informe",
+      "requires": [],
+      "model_output": true,
+      "datasets": {
+        "report_model_output": {"op": "count", "column": "richness_score"}
+      },
+      "warnings": []
+    },
+    "richness_scored_pct": {
+      "label": "% con riqueza puntuado",
+      "definition": "100 × informes con richness_score no nulo / informes.",
+      "unit": "%",
+      "type": "ratio",
+      "requires": [],
+      "numerator": "richness_scored_reports",
+      "denominator": "report_count",
+      "factor": 100,
+      "model_output": true,
+      "datasets": {
+        "report_model_output": {}
+      },
+      "warnings": ["No se suman porcentajes entre grupos."]
+    },
+    "members_with_pending_reports": {
+      "label": "Miembros con coincidencia por revisar",
+      "definition": "Miembros de grupos confirmados que además tienen un par pendiente.",
+      "unit": "informes",
+      "type": "additive",
+      "grain": "informe",
+      "requires": [],
+      "datasets": {
+        "fact_event": {"op": "sum", "column": "members_with_pending_candidate"}
+      },
+      "warnings": []
+    },
+    "members_with_pending_pct": {
+      "label": "% de miembros con coincidencia por revisar",
+      "definition": "100 × miembros con par pendiente / miembros.",
+      "unit": "%",
+      "type": "ratio",
+      "requires": [],
+      "numerator": "members_with_pending_reports",
+      "denominator": "event_member_reports",
+      "factor": 100,
+      "datasets": {
+        "fact_event": {}
+      },
+      "warnings": ["No se suman porcentajes entre grupos."]
+    },
+    "pair_count": {
+      "label": "Pares candidatos",
+      "definition": "Número de pares candidatos a duplicado.",
+      "unit": "pares",
+      "type": "additive",
+      "grain": "informe",
+      "requires": [],
+      "datasets": {
+        "candidate_pair": {"op": "count"}
+      },
+      "warnings": ["Un par por revisar no prueba que los informes sean el mismo evento."]
+    },
+    "avg_similarity": {
+      "label": "Similitud media del par",
+      "definition": "Media de similarity_score de los pares.",
+      "unit": "similitud",
+      "type": "non_additive",
+      "requires": [],
+      "datasets": {
+        "candidate_pair": {"op": "avg", "column": "similarity_score"}
+      },
+      "warnings": []
+    },
+    "issue_count": {
+      "label": "Incidencias de calidad",
+      "definition": "Incidencias registradas por las reglas de calidad de Silver.",
+      "unit": "incidencias",
+      "type": "additive",
+      "grain": "informe",
+      "requires": [],
+      "datasets": {
+        "quality_issue_summary": {"op": "sum", "column": "issue_count"}
+      },
+      "warnings": []
+    },
+    "change_count": {
+      "label": "Cambios de Silver",
+      "definition": "Valores que Silver cambió respecto de Bronze.",
+      "unit": "cambios",
+      "type": "additive",
+      "grain": "informe",
+      "requires": [],
+      "datasets": {
+        "silver_change_summary": {"op": "sum", "column": "change_count"}
+      },
+      "warnings": []
+    },
+    "case_count": {
+      "label": "Casos del registro",
+      "definition": "Casos del registro especial.",
+      "unit": "casos",
+      "type": "additive",
+      "grain": "informe",
+      "requires": [],
+      "datasets": {
+        "fact_crash_retrieval": {"op": "count"},
+        "fact_nuclear_encounter": {"op": "count"}
+      },
+      "warnings": ["Registro de relatos compilados; no son hechos verificados."]
+    },
+    "missiles_affected_total": {
+      "label": "Misiles afectados (según el registro)",
+      "definition": "Suma de missiles_affected de los casos.",
+      "unit": "misiles",
+      "type": "additive",
+      "grain": "informe",
+      "requires": [],
+      "datasets": {
+        "fact_nuclear_encounter": {"op": "sum", "column": "missiles_affected"}
+      },
+      "warnings": ["Cifra del relato compilado; no verificada."]
+    },
+    "facility_count": {
+      "label": "Instalaciones",
+      "definition": "Filas del catálogo de instalaciones.",
+      "unit": "instalaciones",
+      "type": "additive",
+      "grain": "informe",
+      "requires": [],
+      "datasets": {
+        "facility_catalog": {"op": "count"}
+      },
+      "warnings": []
     }
   }
 }

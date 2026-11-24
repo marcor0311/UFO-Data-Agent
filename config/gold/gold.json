@@ -3,24 +3,22 @@
   "scope": "Modelo Gold de UFO-Data-Agent: hechos por informe, eventos confirmados, dimensiones en español y agregados con elegibilidad explícita, construidos solo por lectura sobre Silver v6.",
   "inputs": {
     "silver": {
-      "path": "data/silver/ufo.db",
-      "sha256": "72ada3670f79568025bc4f1c0184e4ae3b3c0236ece6f9f4a2483544a92aa25e",
+      "source": "versión Silver aprobada en <datos>/releases.sqlite3",
       "policy_version": 6
     },
     "bronze": {
-      "path": "data/bronze/ufo.db",
-      "sha256": "0200337eb1eadabd337ac4f479fceceb5a810eec8ab072cd7a206523703820e0"
+      "path": "bronze/ufo.db",
+      "manifest": "config/bronze.json"
     }
   },
   "outputs": {
-    "database": "data/gold/ufo_gold.db",
-    "manifest": "data/gold/ufo_gold.manifest.json",
-    "silver_readiness": "data/gold/silver.readiness.json",
-    "history": "data/gold/.history"
+    "versions": "gold/versions",
+    "layout": "Cada carga es un directorio inmutable <datos>/gold/versions/<versión>/ con ufo_gold.db, su manifiesto, serving/, certificaciones, evaluaciones y release.json (scripts/releases.py)."
   },
   "definitions": [
     "scripts/gold_common.py",
     "scripts/build_gold.py",
+    "scripts/gold_descriptors.py",
     "config/gold/gold.json",
     "config/gold/dataset_catalog.json",
     "config/gold/metric_catalog.json",
@@ -61,8 +59,6 @@
     "lower_bound": "report_count_excl_candidates cuenta los informes sin ningún par candidato pendiente (has_pending_candidate=0); report_count cuenta todos."
   },
   "serving": {
-    "database": "data/gold/serving/ufo_gold_serving.db",
-    "manifest": "data/gold/serving/ufo_gold_serving.manifest.json",
     "cache_version": 1
   },
   "query": {

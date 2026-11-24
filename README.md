@@ -1,127 +1,124 @@
 # UFO Data Agent
 
-## Ejecutar la aplicación local
+Integra UFOCAT, UPDB, UFO-search y Capella / PhenomAInon en un data agent.
 
-Desde la raíz del repositorio, prepara la API y la web una vez:
+## Inicio rápido
+
+Ejecuta los comandos desde la raíz del repositorio.
+
+### Demo con datos sintéticos
+
+| Entorno | Comando |
+| --- | --- |
+| Windows o Windows Sandbox x64 | `.\install_demo_windows.cmd` |
+| Debian o Ubuntu (x64 o ARM64) | `bash scripts/install_demo_linux.sh` |
+
+Los instaladores preparan Python y Node.js y llaman a `scripts/run_demo.py`.
+En Windows, el `.cmd` abre PowerShell y ejecuta `scripts/install_demo_windows.ps1`.
+El lanzador instala las dependencias de la app, genera o reutiliza la muestra en
+`data/demo/` y levanta la API y la web. Cuando aparezca **API y ejemplo verificados**,
+abre el enlace que imprime y selecciona **Informes por fuente**. La consulta de
+ejemplo se puede abrir sin iniciar sesión. [Guía de la demo](docs/arranque-muestra-gold.md).
+
+Si ya tienes los requisitos del sistema, puedes iniciar directamente con
+`python scripts/run_demo.py` en Windows o `python3 scripts/run_demo.py` en Linux.
+
+### Carga completa con datos reales
+
+Detén la demo con `Ctrl+C`. En Windows, con las dependencias de la app instaladas:
+
+```powershell
+.\run_full_windows.cmd
+```
+
+El `.cmd` ejecuta `scripts/build_all.py` con el Python del entorno de la API.
+Si el pipeline termina correctamente, ejecuta `npm.cmd --prefix apps/web run dev`.
+La app usa la carga Gold aprobada en el catálogo de versiones. El script descarta
+las variables que seleccionan la muestra para ese arranque.
+
+En Windows también puedes ejecutar los dos pasos manualmente:
+
+```powershell
+python scripts/build_all.py
+```
+
+Cuando el pipeline termine correctamente, arranca la API y la web:
+
+```powershell
+npm.cmd --prefix apps/web run dev
+```
+
+En Linux o macOS, usa `python3 scripts/build_all.py` y luego
+`npm --prefix apps/web run dev`. Si configuraste manualmente
+`AGENT_GOLD_SERVING` o `AGENT_CERTIFIED_QUERIES`, quítalas de la sesión antes
+del arranque manual con Gold completa.
+
+## 1. Construir los datos (un solo comando)
+
+Requisitos: Python 3.11+ con SQLite, `curl` solo para la primera descarga de
+Bronze y ~4 GB libres. Guía completa, con Windows y la recuperación tras un
+fallo: [docs/pipeline-local.md](docs/pipeline-local.md).
+
+```bash
+python3 scripts/build_all.py          # macOS / Linux
+py -3.12 scripts\build_all.py         # Windows (PowerShell)
+```
+
+`build_all.py` llama a las funciones de estos módulos en orden:
+
+| Etapa | Módulo | Resultado |
+| --- | --- | --- |
+| Bronze | `scripts/build_bronze.py` | Descarga o reutiliza y valida la base original. |
+| Silver | `scripts/build_silver.py` | Construye y valida la capa normalizada desde Bronze. |
+| Gold | `scripts/build_gold.py` | Construye la base analítica desde Silver aprobada. |
+| Caché de servicio | `scripts/discover_gold.py` | Prepara los artefactos de consulta que usa la API. |
+
+El pipeline también verifica y certifica Gold antes de aprobar la carga. Para
+el flujo completo, basta con ejecutar `build_all.py`.
+
+Construye Bronze → Silver → Gold → `ready_for_agent` y se detiene en el primer
+paso que falle. Cada capa se construye en una versión nueva bajo
+`data/<capa>/versions/` y se promueve con una sola transacción en
+`data/releases.sqlite3`, después de pasar todos sus controles. Hasta entonces
+sigue vigente la versión aprobada anterior, aunque el proceso falle o se
+interrumpa. Solo un build publica a la vez. Si Bronze ya está en el disco, no
+hace falta Internet.
+
+```bash
+python3 scripts/build_all.py --desde silver   # Silver y Gold (Bronze se reutiliza)
+python3 scripts/build_all.py --desde gold     # solo Gold, sobre la Silver aprobada
+python3 scripts/build_all.py --estado         # versiones aprobadas
+python3 scripts/build_all.py --actualizar-referencias   # copiar certificaciones y evaluaciones a config/ y docs/
+```
+
+Gold solo acepta una Silver con un informe válido (`passed: true`), sin cambios
+después de validarla, construida desde la Bronze oficial (tamaño y SHA-256) y
+al día con la política y el código actuales. Si no, indica el motivo y pide
+regenerar con `--desde silver`. El build no reescribe las referencias
+versionadas: los resultados de cada carga se guardan en su versión.
+
+## 2. Ejecutar la aplicación
+
+Para probar la web y la API desde un clon limpio con datos sintéticos, sigue la
+[guía de arranque con una muestra Gold](docs/arranque-muestra-gold.md).
 
 ```bash
 python3.14 -m venv apps/api/.venv
 apps/api/.venv/bin/python -m pip install -e apps/api
 npm --prefix apps/web ci
+npm --prefix apps/web run dev        # web + API (solo web: run dev:web)
 ```
 
-`npm --prefix apps/web run dev` inicia la web y la API. Abre `http://127.0.0.1:3000`
-para que el navegador conserve la cookie al volver de ChatGPT. El catálogo
-requiere la caché de servicio generada al construir Gold. Si ya tienes una API
-en ejecución, puedes iniciar solo la web con `npm --prefix apps/web run dev:web`.
+Abre `http://127.0.0.1:3000` (no `localhost`, para conservar la cookie de ChatGPT).
+La API sirve la carga Gold aprobada en el catálogo. Una carga nueva se activa al
+reiniciarla, y `/api/health` muestra su `load_id`.
 
-## Fuentes de datos
+## Documentación
 
-La base integra datos de:
+- Producto y diseño: [PRODUCT.md](PRODUCT.md), [DESIGN.md](DESIGN.md)
+- Silver: [contrato](data/silver/README.md), [contrato analítico](docs/silver-contract.md), [revisión](docs/silver-review.md)
+- Pipeline local: [operación en macOS y Windows](docs/pipeline-local.md)
+- Gold: [contrato](docs/gold-contract.md), [catálogo](docs/GOLD_CATALOG.md), [guía de dominio](docs/gold-domain-guide.md), [verificación](docs/gold-verification.md)
 
-- UFOCAT
-- UPDB
-- UFO-search
-- Capella / PhenomAInon
-
-## Construir Bronze
-
-Requisitos: Python 3.10+, `curl`, conexión a Internet y aproximadamente 1 GB libre.
-
-Desde la raíz del repositorio:
-
-```bash
-python3 scripts/build_bronze.py
-```
-
-Descarga Bronze desde Releases de este mismo proyecto y verifica la base en
-`data/bronze/ufo.db`. Silver y Gold se generarán a partir de esta base mediante
-los scripts de transformación del repositorio.
-
-## Construir Silver
-
-Con Bronze disponible localmente, SQLite con funciones JSON habilitadas y
-aproximadamente 3 GB adicionales libres para construcción, temporales e historial:
-
-```bash
-python3 scripts/build_silver.py
-```
-
-Genera `data/silver/ufo.db` con las reglas de `config/silver.json`: omite las 41
-columnas vacías aprobadas, normaliza fechas, geografía, texto y tipos, registra
-incidencias y agrupa duplicados con evidencia estricta. Conserva las 10 tablas
-originales, todas sus filas e identificadores; añade trazabilidad y vistas para
-análisis. Bronze permanece intacta. El resultado se acompaña de
-`data/silver/ufo.validation.json`.
-
-Para revisar la base o actualizar una salida validada guardando la anterior:
-
-```bash
-python3 scripts/build_silver.py --verify-only
-python3 scripts/build_silver.py --replace
-```
-
-Las versiones anteriores quedan en `data/silver/.history/`. Para generar otra copia:
-
-```bash
-python3 scripts/build_silver.py --database /tmp/ufo-silver.db
-```
-
-Ver el [contrato de Silver](data/silver/README.md) para las reglas, tablas,
-vistas, tratamiento de incertidumbre y validaciones.
-
-Para diagnosticar los casos pendientes con consultas reproducibles:
-
-```bash
-python3 scripts/review_silver.py
-```
-
-Consulta la [revisión de Silver](docs/silver-review.md) para los hallazgos,
-correcciones y límites de interpretación de la política v3.
-
-El [contrato analítico de Silver v4](docs/silver-contract.md) define el grano,
-las recuperaciones de precisión temporal, los intervalos, las vistas por informe,
-los valores rescatados y los controles de aceptación de la capa.
-
-## Construir Gold
-
-Gold es la capa analítica y semántica del data agent propio. Se construye solo
-por lectura sobre Silver v6 y Bronze, cuyos SHA-256 están fijados en
-`config/gold/gold.json`. Requiere Python 3.11+; en macOS se usa `python3.14`,
-porque el `python3` del sistema (3.9) no interpreta fechas ISO con fracciones.
-Necesita unos 1,5 GB libres. En orden:
-
-```bash
-python3.14 scripts/build_gold.py                                   # modelo Gold (ejecuta la puerta de Silver)
-python3.14 scripts/discover_gold.py                                # perfil, catálogo y caché de servicio
-python3.14 scripts/gold_query.py certify                           # resultados esperados de las consultas certificadas
-python3.14 scripts/verify_gold_independent.py --write-references   # verificación independiente desde Silver
-python3.14 scripts/run_gold_evals.py                               # set de evaluación por load_id
-python3.14 scripts/check_gold_ready.py                             # puerta: ready_for_agent
-```
-
-`fact_report` tiene un informe por ID de Bronze (702.572). Los eventos existen
-solo para los 6.959 grupos de duplicados confirmados. Toda cifra de informes es
-un rango: entre 390.944 y 702.572, por los pares candidatos pendientes. Los
-análisis por año, mes, día, hora, mapa, país y proximidad aplican su elegibilidad
-y declaran cuántos informes quedaron fuera.
-
-El agente nunca escribe SQL: usa `scripts/gold_query.py`, que ofrece un
-contrato tipado, consultas certificadas, vistas, procedencia y limitaciones.
-
-- [Contrato Gold](docs/gold-contract.md)
-- [Catálogo generado](docs/GOLD_CATALOG.md) y [entidades](docs/GOLD_ENTITIES.json)
-- [Guía de dominio para el agente](docs/gold-domain-guide.md)
-- [Verificación y evaluación](docs/gold-verification.md)
-- [Consultas certificadas](config/gold/certified_queries.json),
-  [set de evaluación](docs/GOLD_EVALS.json) y
-  [registro de correcciones](config/gold/corrections.json)
-
-Límites: un informe no es un hecho verificado, y coincidir con Bronze no prueba
-que sea verdad. Además:
-
-- hay duplicados pendientes;
-- hay sesgos por fuente y época;
-- los marcadores de día reducen la precisión de algunas fechas;
-- parte de los valores procede de evidencia externa;
-- las puntuaciones de modelo no son hechos.
+Límites: un informe no es un hecho verificado; hay duplicados pendientes, sesgos
+por fuente y época, y parte de los valores procede de evidencia externa.

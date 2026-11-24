@@ -14,14 +14,10 @@ export function metricsOf(result: GoldResult, catalog: Catalog | null): string[]
   return [...result.query.metrics.filter((m) => present.includes(m)), ...present.filter((m) => !result.query.metrics.includes(m))];
 }
 
-/** Metrics drawn as their own panel: the lower duplicate bound rides inside its upper bound. */
-export function panelMetrics(result: GoldResult, catalog: Catalog | null): string[] {
-  const lower = result.duplicate_bounds?.lower;
-  return metricsOf(result, catalog).filter((m) => m !== lower || !metricsOf(result, catalog).includes("report_count"));
-}
-
-export function lowerBound(result: GoldResult, metric: string): string | null {
-  return metric === result.duplicate_bounds?.upper && result.duplicate_bounds.lower ? result.duplicate_bounds.lower : null;
+/** Metrics drawn as panels: an analysis draws only the ones it asks for; the rest stay in the exact data. */
+export function chartMetrics(result: GoldResult, catalog: Catalog | null): string[] {
+  const all = metricsOf(result, catalog);
+  return result.query.analysis ? all.filter((m) => result.query.metrics.includes(m)) : all;
 }
 
 export function value(row: Row, metric: string): number | null {
@@ -31,19 +27,12 @@ export function value(row: Row, metric: string): number | null {
 
 export function formatMetric(v: number | null, metric: string, catalog: Catalog | null): string {
   if (v === null) return "—";
+  if (catalog?.metrics[metric]?.unit === "año") return String(v);  // a year reads 1965, never “1.965”
   return num(v) + (percent(metric, catalog) ? " %" : "");
 }
 
-/** "390.944 – 702.572" for a bounded report count, or the plain value. */
-export function rangeText(row: Row, metric: string, result: GoldResult, catalog: Catalog | null): string {
-  const lower = lowerBound(result, metric);
-  const upper = value(row, metric);
-  if (lower && typeof row[lower] === "number") return `${num(row[lower])} – ${num(upper)}`;
-  return formatMetric(upper, metric, catalog);
-}
-
 export function groupLabel(row: Row, groups: string[]): string {
-  return groups.map((g) => cell(row, g)).join(" · ") || "Total";
+  return groups.map((g) => cell(row, g)).join(", ") || "Total";
 }
 
 export function niceMax(max: number): number {
@@ -73,9 +62,27 @@ export function rampLegend(max: number, scale: "log" | "linear" = "log"): { colo
   }));
 }
 
-/** Caption of a metric panel: a bounded report count is a range, not the upper bound alone. */
-export function panelTitle(result: GoldResult, metric: string, catalog: Catalog | null): string {
-  return lowerBound(result, metric) ? "Informes (rango por duplicados pendientes)" : metricLabel(catalog, metric);
+/** Diverging fill: blue below the centre, orange above, stronger with the distance. */
+export function divergingColor(v: number, spread: number): string {
+  // Square root: one extreme cell must not wash out every other one.
+  const share = Math.sqrt(Math.min(1, Math.abs(v) / Math.max(spread, 1e-9)));
+  const strength = Math.round(12 + share * 78);
+  if (Math.abs(v) < 1e-12) return "var(--empty-cell)";
+  return `color-mix(in srgb, ${v < 0 ? "var(--series-1)" : "var(--series-2)"} ${strength}%, var(--surface))`;
+}
+
+export function DivergingLegend({ spread, ratio = false, unit = "" }: { spread: number; ratio?: boolean; unit?: string }) {
+  const fmt = (x: number) => (ratio ? `×${(Math.round(x * 100) / 100).toLocaleString("es-ES")}` : `${x > 0 ? "+" : ""}${(Math.round(x * 100) / 100).toLocaleString("es-ES")}${unit}`);
+  const low = ratio ? 1 / spread : -spread, high = ratio ? spread : spread;
+  return (
+    <div className="viz-legend diverging" aria-label="Escala divergente">
+      <span>{fmt(low)}</span>
+      <span className="diverging-bar" aria-hidden="true"
+            style={{ background: "linear-gradient(90deg, color-mix(in srgb, var(--series-1) 90%, var(--surface)), var(--empty-cell), color-mix(in srgb, var(--series-2) 90%, var(--surface)))" }} />
+      <span>{fmt(high)}</span>
+      <span className="viz-legend-note">{ratio ? "×1 = lo esperado; azul, menos; naranja, más" : "0 = sin cambio; azul, menos; naranja, más"}</span>
+    </div>
+  );
 }
 
 /** Round, evenly spaced year ticks. */
@@ -125,24 +132,41 @@ export function useTooltip(fallbackWidth = 720) {
   return { ref, show, hide, layer, width };
 }
 
-export function BoundLegend({ result, metric }: { result: GoldResult; metric: string }) {
-  if (!lowerBound(result, metric)) return null;
-  return (
-    <div className="viz-legend" aria-label="Leyenda">
-      <span><i className="swatch" style={{ background: "var(--bound-upper)" }} />Todos los informes (cota superior)</span>
-      <span><i className="swatch" style={{ background: "var(--series-1)" }} />Sin candidatos de duplicado pendientes (cota inferior)</span>
-    </div>
-  );
-}
-
 export function DataTable({ result, catalog, caption }: { result: GoldResult; catalog: Catalog | null; caption?: string }) {
-  const groups = result.query.group_by.length ? result.query.group_by
-    : result.rows[0] ? Object.keys(result.rows[0]).filter((k) => !k.endsWith("_label") && !metricsOf(result, catalog).includes(k)) : [];
+  const first = result.rows[0] as Record<string, unknown> | undefined;
+  // Nested values (a box of quantiles, the counts of each cluster) stay out of the table; lists read as text.
+  const scalar = (k: string) => !first || first[k] === null || typeof first[k] !== "object" || Array.isArray(first[k]);
+  const groups = result.query.group_by.length && !result.query.analysis ? result.query.group_by
+    : first ? Object.keys(first).filter((k) => !k.endsWith("_label") && !metricsOf(result, catalog).includes(k) && scalar(k)) : [];
   const metrics = metricsOf(result, catalog);
+  const percentages = metrics.filter((metric) => percent(metric, catalog));
+  const denominators = result.total ? metrics.flatMap((metric) => {
+    const denominator = catalog?.metrics[metric]?.denominator;
+    if (!denominator) return [];
+    // Gold counts the full filtered report population in matched_source_rows,
+    // including when report_count was not requested as a separate metric.
+    const count = result.total?.[denominator] ?? (denominator === "report_count" ? result.matched_source_rows : null);
+    return typeof count === "number" ? [{ metric, denominator, count }] : [];
+  }) : [];
   return (
     <div className="viz-table-wrap">
       <table className="viz-table">
-        {caption ? <caption>{caption}</caption> : null}
+        {caption || result.total || result.truncated ? (
+          <caption>
+            {caption ? <p>{caption}</p> : null}
+            <p>
+              Se {result.rows.length === 1 ? "muestra" : "muestran"} {num(result.rows.length)} {result.rows.length === 1 ? "fila" : "filas"} de datos;
+              {result.truncated ? " hay más filas no mostradas." : " resultado completo."}
+            </p>
+            {result.total ? (
+              <p>El total abarca todos los grupos que cumplen los filtros y la elegibilidad de la consulta{result.truncated ? ", incluidos los no mostrados" : ""}.</p>
+            ) : null}
+            {result.total && percentages.length ? <p>Los porcentajes del total se recalculan sobre esa población; no se suman ni se promedian los porcentajes de las filas.</p> : null}
+            {denominators.map(({ metric, denominator, count }) => (
+              <p key={metric}>Denominador de “{metricLabel(catalog, metric)}”: {num(count)} {metricLabel(catalog, denominator).toLowerCase()}.</p>
+            ))}
+          </caption>
+        ) : null}
         <thead>
           <tr>
             {groups.map((g) => <th key={g} scope="col">{dimensionLabel(catalog, g)}</th>)}
@@ -158,7 +182,7 @@ export function DataTable({ result, catalog, caption }: { result: GoldResult; ca
           ))}
           {result.total ? (
             <tr className="total">
-              {groups.map((g, i) => <td key={g}>{i === 0 ? "Total (recalculado)" : ""}</td>)}
+              {groups.length ? <th scope="row" colSpan={groups.length}>Total del universo consultado</th> : null}
               {metrics.map((m) => <td key={m} className="num">{formatMetric(value(result.total as Row, m), m, catalog)}</td>)}
             </tr>
           ) : null}

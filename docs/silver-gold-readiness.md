@@ -31,14 +31,14 @@ v6 los corrige así:
 | Hallazgo de la auditoría | Corrección en v6 |
 |---|---|
 | 1.818 días `01` de Capella certificados como `source` sin aparecer en el texto (`07/52 → 1952-07-01`) | Fuera de la gramática, cada componente canónico debe aparecer en `date_event_raw`. Se retiran día o mes sintéticos (`07/52 → 1952-07`, `coarsened`). Si el año no aparece (`20 Feb`) o el texto da un año imposible (`GIUGNO 3003`), la fecha queda `qualified` (`unsupported`). |
-| 573 fechas con «about», «~», «or», «?» como `source` | Calificadores ampliados (aproximación, alternativas, intervalos, fechas relativas, de reporte o publicación). El formato italiano de Capella se reconoce: sus calificadores posteriores a la fecha afectan a la hora. |
+| 573 fechas con “about”, “~”, “or”, “?” como `source` | Calificadores ampliados (aproximación, alternativas, intervalos, fechas relativas, de reporte o publicación). El formato italiano de Capella se reconoce: sus calificadores posteriores a la fecha afectan a la hora. |
 | Exceso de días `01` en UPDB sin señalar | `temporal_placeholder_profile` mide por fuente los días `01`, `15` y `01-01`. Los patrones con exceso de 1,25× o más marcan `day_placeholder_risk`/`month_placeholder_risk` y bajan `calendar_precision`. |
 | 23 fechas en revisión con etiqueta de precisión | Una fecha sin valor tiene precisión `unknown`. |
 | `1975 (as listed on website cover page)` y `1938 (September)` | El primero queda calificado (fecha de publicación). El segundo conserva `1938-09`. |
 | `~30 (99 ft, per Scully)` y `component-only…` | `silver_rescued_value` incluye las anotaciones de medidas aproximadas y deja de listar cadenas vacías. |
 | 7.208 pares válidos de Bronze sustituidos por el catálogo, 2.289 desplazados más de 1.000 km; 1.385 cuarentenas esquivadas; 2.455 países contradictorios | El catálogo solo rellena lo que Bronze no tiene o lo corrobora. Si discrepa (más de 50 km o país incompatible), ninguna versión se publica y ambas se conservan. Una cuarentena de Bronze nunca se levanta. |
 | Datos externos no declarados por informe | `coordinate_basis`, `country_basis`, `time_basis`, `clock_basis` y `uses_external_evidence` en `sighting_analytical`. |
-| «10.963 informes agrupados» | Hay **17.920 informes en grupos**; **10.961** no son representantes. |
+| “10.963 informes agrupados” | Hay **17.920 informes en grupos**; **10.961** no son representantes. |
 
 Las expresiones reconocidas y sus límites están en `scripts/silver_analytics.py`
 y en las pruebas de `tests/`. Los años de dos cifras pueden corroborar el
@@ -51,7 +51,7 @@ Por eso la fecha se conserva y solo se limita la precisión apta para análisis.
 El [manual oficial UFOCAT 2023](https://cufos.org/PDFs/UFOCAT%20Codebook%202023.pdf),
 páginas 16–18, permite interpretar los códigos `196.`, `196E`, `196M` y `196L`
 como incertidumbre dentro de los años 1960–1969. Se conserva toda la década,
-sin elegir un año ni acotar arbitrariamente «principio», «mitad» o «final».
+sin elegir un año ni acotar arbitrariamente “principio”, “mitad” o “final”.
 La interpretación es específica de UFOCAT. Los códigos de estación conservan
 solo el año o mes explícito. Las horas incompletas o corruptas que el importador
 había aceptado por prefijo pierden su precisión de minuto; la fecha válida se
@@ -146,7 +146,7 @@ revisar también el esquema y actualizar el contrato cuando corresponda.
 | Medir incidencias | `quality_summary` por regla y `duplicate_review` por par. |
 
 Los representantes no prueban que los candidatos pendientes correspondan a
-eventos distintos. Gold debe llamar «informes» a los conteos por informe y
+eventos distintos. Gold debe llamar “informes” a los conteos por informe y
 documentar la política si utiliza representantes. La suma de incidencias de
 reglas distintas puede contar el mismo informe varias veces.
 

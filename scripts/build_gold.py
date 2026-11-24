@@ -1,10 +1,16 @@
 #!/usr/bin/env python3
-"""Build the Gold model from the pinned, accepted Silver snapshot (read-only).
+"""Build the Gold model from the approved, accepted Silver snapshot (read-only).
 
-The build never writes to Silver or Bronze. It checks the pinned SHA-256 of
-both inputs, runs the Silver acceptance gate on that exact snapshot, writes a
-``*.building`` database, validates it and only then publishes it, archiving the
-previous output. If either input changes while it is read, the build aborts.
+The build never writes to Silver or Bronze and never replaces a published
+file. It checks the chain of custody Bronze → Silver, runs the Silver
+acceptance gate on that exact snapshot (once per run, shared with the other
+steps), writes a ``*.building`` database inside a fresh version directory,
+validates it and renames it in place. Publishing that version as the current
+load is a separate, transactional step (``scripts/build_all.py``). If either
+input changes while it is read, the build aborts.
+
+    build_gold.py                 build a new, unpromoted candidate and print its path
+    build_gold.py --version DIR   build into an empty version directory
 """
 from __future__ import annotations
 
@@ -13,16 +19,22 @@ from contextlib import closing
 from datetime import date, datetime, timezone
 import json
 import math
+import os
 from pathlib import Path
 import re
-import shutil
 import sqlite3
 import sys
 
 if __package__:
-    from .gold_common import ROOT, definitions_digest, digest, load_catalogs, load_id_for, load_policy, normalize
+    from .gold_common import ROOT, definitions_digest, digest, silver_provenance, load_catalogs, load_id_for, load_policy, normalize
+    from .pipeline_context import silver_acceptance, write_text
+    from . import releases
+    from . import gold_descriptors as descriptors
 else:
-    from gold_common import ROOT, definitions_digest, digest, load_catalogs, load_id_for, load_policy, normalize
+    from gold_common import ROOT, definitions_digest, digest, silver_provenance, load_catalogs, load_id_for, load_policy, normalize
+    from pipeline_context import silver_acceptance, write_text
+    import releases
+    import gold_descriptors as descriptors
 
 AGG_MEASURES = ("report_count INTEGER NOT NULL, report_count_excl_candidates INTEGER NOT NULL, "
                 "pending_candidate_reports INTEGER NOT NULL, external_evidence_reports INTEGER NOT NULL")
@@ -73,6 +85,18 @@ FACT_COLUMNS = [
     ("is_canonical", "INTEGER NOT NULL"), ("in_confirmed_group", "INTEGER NOT NULL"),
     ("duplicate_status", "TEXT NOT NULL"), ("has_pending_candidate", "INTEGER NOT NULL"),
     ("pending_pair_count", "INTEGER NOT NULL"),
+    # Bands and flags derived from the columns above: closed codes so they can be grouped,
+    # and 0/1 flags whose sums are the numerators of the conditional ratios.
+    ("witness_band", "TEXT"), ("pending_pair_band", "TEXT NOT NULL"), ("source_record_reused", "INTEGER NOT NULL"),
+    ("has_core_fields", "INTEGER NOT NULL"), ("map_without_country", "INTEGER NOT NULL"),
+    ("has_placeholder_risk", "INTEGER NOT NULL"), ("has_known_shape", "INTEGER NOT NULL"),
+    ("has_positive_duration", "INTEGER NOT NULL"), ("is_long_duration", "INTEGER NOT NULL"),
+    ("has_witnesses", "INTEGER NOT NULL"), ("has_description_and_media", "INTEGER NOT NULL"),
+    ("within_10km", "INTEGER NOT NULL"), ("within_50km", "INTEGER NOT NULL"),
+    # Silver descriptors published as closed vocabularies (scripts/gold_descriptors.py).
+    ("region_code", "TEXT"), ("city_name", "TEXT"), ("sound_type", "TEXT"), ("direction_code", "TEXT"),
+    ("weather_type", "TEXT"), ("terrain_type", "TEXT"), ("vallee_code", "TEXT"), ("event_type_code", "TEXT"),
+    ("date_raw", "TEXT"), ("time_raw", "TEXT"),
 ]
 MODEL_COLUMNS = [
     ("report_id", "INTEGER PRIMARY KEY REFERENCES fact_report(report_id)"), ("source_code", "TEXT NOT NULL"),
@@ -81,7 +105,14 @@ MODEL_COLUMNS = [
     ("sentiment_score", "REAL"), ("vader_compound", "REAL"), ("roberta_sentiment", "REAL"),
     ("emotion_7_dominant", "TEXT"), ("emotion_28_dominant", "TEXT"), ("emotion_28_group", "TEXT"),
     ("hoax_likelihood", "REAL"), ("quality_score", "INTEGER"), ("richness_score", "INTEGER"),
+    ("nrc_joy", "REAL"), ("nrc_fear", "REAL"), ("nrc_anger", "REAL"), ("nrc_sadness", "REAL"), ("nrc_surprise", "REAL"),
+    ("nrc_disgust", "REAL"), ("nrc_trust", "REAL"), ("nrc_anticipation", "REAL"),
+    ("emotion_7_surprise", "REAL"), ("emotion_7_fear", "REAL"), ("emotion_7_neutral", "REAL"), ("emotion_7_anger", "REAL"),
+    ("emotion_7_disgust", "REAL"), ("emotion_7_sadness", "REAL"), ("emotion_7_joy", "REAL"),
 ]
+NRC = ("nrc_joy", "nrc_fear", "nrc_anger", "nrc_sadness", "nrc_surprise", "nrc_disgust", "nrc_trust", "nrc_anticipation")
+EMOTION_7 = ("emotion_7_surprise", "emotion_7_fear", "emotion_7_neutral", "emotion_7_anger", "emotion_7_disgust",
+             "emotion_7_sadness", "emotion_7_joy")
 
 SILVER_QUERY = """
 SELECT a.id, a.source_name, sc.name AS collection_name, o.name AS origin_name, a.source_record_id,
@@ -95,8 +126,15 @@ SELECT a.id, a.source_name, sc.name AS collection_name, o.name AS origin_name, a
        a.distance_to_nearest_nuclear_site_km, a.usable_for_nuclear_proximity, a.uses_external_evidence,
        a.canonical_event_id, a.is_canonical, m.match_status, COALESCE(p.pairs, 0) AS pending_pairs,
        a.sentiment_score, a.vader_compound, a.roberta_sentiment, a.emotion_7_dominant, a.emotion_28_dominant,
-       a.emotion_28_group, a.hoax_likelihood, a.quality_score, a.richness_score
+       a.emotion_28_group, a.hoax_likelihood, a.quality_score, a.richness_score,
+       s.sound, s.direction, s.weather, s.terrain, s.vallee, s.event_type, s.date_event_raw, s.time_raw,
+       s.nrc_joy, s.nrc_fear, s.nrc_anger, s.nrc_sadness, s.nrc_surprise, s.nrc_disgust, s.nrc_trust, s.nrc_anticipation,
+       s.emotion_7_surprise, s.emotion_7_fear, s.emotion_7_neutral, s.emotion_7_anger, s.emotion_7_disgust,
+       s.emotion_7_sadness, s.emotion_7_joy, l.state AS location_state, l.city AS location_city,
+       l.country_iso2 AS location_country_iso2
 FROM silver.sighting_analytical a
+JOIN silver.sighting s ON s.id = a.id
+LEFT JOIN silver.location l ON l.id = s.location_id
 JOIN silver.source_database sd ON sd.id = a.source_db_id
 JOIN silver.source_collection sc ON sc.id = sd.collection_id
 JOIN silver.event_membership m ON m.sighting_id = a.id
@@ -126,15 +164,27 @@ def band_for(distance: float, bands: list) -> str:
     raise GoldBuildError(f"Distancia sin banda: {distance}")
 
 
-def silver_gate(silver_path: Path, bronze_path: Path, output: Path) -> dict:
-    """Run the official Silver acceptance on the exact snapshot (read-only)."""
+def official_acceptance(silver_path: Path, bronze_path: Path) -> dict:
+    """The Silver acceptance gate (check_silver_ready.readiness) on one snapshot."""
     sys.path.insert(0, str(ROOT / "scripts"))
     import build_silver
     import check_silver_ready
-    result = check_silver_ready.readiness(bronze_path, silver_path, json.loads(build_silver.MANIFEST.read_text()),
-                                          json.loads(build_silver.POLICY.read_text()))
-    output.parent.mkdir(parents=True, exist_ok=True)
-    output.write_text(json.dumps(result, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
+    return check_silver_ready.readiness(bronze_path, silver_path,
+                                        json.loads(build_silver.MANIFEST.read_text(encoding="utf-8")),
+                                        json.loads(build_silver.POLICY.read_text(encoding="utf-8")))
+
+
+def silver_gate(silver_path: Path, bronze_path: Path, output: Path | None = None) -> dict:
+    """Run the official Silver acceptance on the exact snapshot (read-only).
+
+    The result is shared through the run context: within one invocation the
+    full acceptance runs once per exact (Silver, Bronze) pair, however many
+    steps ask for it. ``output`` receives a copy of the report.
+    """
+    result = silver_acceptance(silver_path, bronze_path, official_acceptance)
+    if output is not None:
+        Path(output).parent.mkdir(parents=True, exist_ok=True)
+        write_text(output, json.dumps(result, ensure_ascii=False, indent=2) + "\n")
     return result
 
 
@@ -256,13 +306,42 @@ def derive(r: dict, policy: dict, labels: dict, facilities: dict) -> tuple[dict,
                                else "pending_candidate" if out["has_pending_candidate"] else "unique")
     if not confirmed and not out["is_canonical"]:
         raise GoldBuildError(f"Informe {r['id']}: no canónico fuera de un grupo confirmado")
+    derived(out, r)
     model = {"report_id": r["id"], "source_code": out["source_code"], "event_year": out["event_year"],
              "country_iso2": out["country_iso2"], "shape_code": out["shape_code"],
              "usable_for_calendar": out["usable_for_calendar"], "usable_for_country": out["usable_for_country"],
              **{k: r[k] for k in ("sentiment_score", "vader_compound", "roberta_sentiment", "emotion_7_dominant",
                                   "emotion_28_dominant", "emotion_28_group", "hoax_likelihood", "quality_score",
-                                  "richness_score")}}
+                                  "richness_score", *NRC, *EMOTION_7)}}
     return out, model
+
+
+def derived(out: dict, r: dict) -> None:
+    """Bands, flags and descriptor codes of one report (all from Silver values already read)."""
+    duration, witnesses = out["duration_seconds"], out["num_witnesses"]
+    proximity = out["usable_for_nuclear_proximity"]
+    out.update(
+        witness_band=descriptors.witness_band(witnesses), pending_pair_band=descriptors.pending_pair_band(out["pending_pair_count"]),
+        source_record_reused=0,  # set after every report is loaded (needs the whole source)
+        has_core_fields=int(bool(out["usable_for_country"] and out["usable_for_day_analysis"] and out["usable_for_map"])),
+        map_without_country=int(bool(out["usable_for_map"] and not out["usable_for_country"])),
+        has_placeholder_risk=int(bool(out["day_placeholder_risk"] or out["month_placeholder_risk"])),
+        has_known_shape=int(out["shape_code"] not in (None, "Unknown")),
+        has_positive_duration=int(bool(duration and duration > 0)),
+        is_long_duration=int(bool(duration and duration > 3600)),
+        has_witnesses=int(bool(witnesses and witnesses > 0)),
+        has_description_and_media=int(bool(out["has_description"] and out["has_media"])),
+        within_10km=int(bool(proximity and out["nuclear_distance_km"] < 10)),
+        within_50km=int(bool(proximity and out["nuclear_distance_km"] < 50)),
+        sound_type=descriptors.sound_type(r.get("sound")), direction_code=descriptors.direction_code(r.get("direction")),
+        weather_type=descriptors.weather_type(r.get("weather")), terrain_type=descriptors.terrain_type(r.get("terrain")),
+        vallee_code=descriptors.vallee_code(r.get("vallee")), event_type_code=descriptors.event_type_code(r.get("event_type")),
+        date_raw=r.get("date_event_raw"), time_raw=r.get("time_raw"), region_code=None, city_name=None)
+    # Place names only where the report's country is the canonical one: a city of a
+    # contradictory location would put the report in the wrong country.
+    if out["usable_for_country"] and r.get("location_country_iso2") in (None, out["country_iso2"]):
+        out["region_code"] = descriptors.region_code(r.get("location_state"), out["country_iso2"])
+        out["city_name"] = descriptors.city_name(r.get("location_city"))
 
 
 def create_table(conn, name, columns):
@@ -415,6 +494,73 @@ def build_aggregates(conn, policy):
                          FROM fact_report WHERE {included} GROUP BY source_code ORDER BY source_code""", (name, label))
 
 
+def build_extras(conn, policy) -> None:
+    """Silver tables that answer questions the report grain cannot: lists per report
+    (behaviour tags, hoax flags), candidate pairs, the quality and change logs, the two
+    special case registers and the whole facility catalogue."""
+    conn.create_function("similarity_band", 1, descriptors.similarity_band, deterministic=True)
+    report_keys = ("source_code TEXT NOT NULL, event_year INTEGER, decade INTEGER, country_iso2 TEXT, shape_code TEXT, "
+                   "usable_for_calendar INTEGER NOT NULL, usable_for_country INTEGER NOT NULL")
+    report_cols = "f.source_code, f.event_year, f.decade, f.country_iso2, f.shape_code, f.usable_for_calendar, f.usable_for_country"
+    for table, column, field in (("report_behavior_tag", "behavior_tag", "behavior_tags"), ("report_hoax_flag", "hoax_flag", "hoax_flags")):
+        conn.execute(f"""CREATE TABLE {table} (report_id INTEGER NOT NULL REFERENCES fact_report(report_id), {column} TEXT NOT NULL,
+            {report_keys}, PRIMARY KEY (report_id, {column}))""")
+        conn.execute(f"""INSERT INTO {table} SELECT DISTINCT f.report_id, j.value, {report_cols}
+            FROM silver.sighting_analysis sa JOIN fact_report f ON f.report_id = sa.sighting_id, json_each(sa.{field}) j
+            WHERE json_valid(sa.{field}) AND j.type = 'text' AND TRIM(j.value) != '' ORDER BY 1, 2""")
+    conn.execute("""CREATE TABLE candidate_pair (pair_id INTEGER PRIMARY KEY, report_id_a INTEGER NOT NULL REFERENCES fact_report(report_id),
+        report_id_b INTEGER NOT NULL REFERENCES fact_report(report_id), source_code_a TEXT NOT NULL, source_code_b TEXT NOT NULL,
+        source_pair TEXT NOT NULL, same_source INTEGER NOT NULL, match_method TEXT, similarity_score REAL, similarity_band TEXT,
+        decision TEXT NOT NULL)""")
+    conn.execute("""INSERT INTO candidate_pair SELECT c.id, c.sighting_id_a, c.sighting_id_b, a.source_code, b.source_code,
+            CASE WHEN a.source_code <= b.source_code THEN a.source_code || ' + ' || b.source_code ELSE b.source_code || ' + ' || a.source_code END,
+            a.source_code = b.source_code, c.match_method, c.similarity_score, similarity_band(c.similarity_score), r.decision
+        FROM silver.duplicate_candidate c JOIN silver.duplicate_resolution r ON r.candidate_id = c.id
+        JOIN fact_report a ON a.report_id = c.sighting_id_a JOIN fact_report b ON b.report_id = c.sighting_id_b ORDER BY c.id""")
+    conn.execute("""CREATE TABLE quality_issue_summary (table_name TEXT NOT NULL, column_name TEXT, rule_id TEXT NOT NULL,
+        action TEXT NOT NULL, severity TEXT, source_code TEXT, issue_count INTEGER NOT NULL)""")
+    conn.execute("""INSERT INTO quality_issue_summary SELECT q.table_name, q.column_name, q.rule_id, q.action, r.severity,
+            f.source_code, COUNT(*) FROM silver.quality_issue q LEFT JOIN silver.quality_rule r ON r.rule_id = q.rule_id
+        LEFT JOIN fact_report f ON q.table_name = 'sighting' AND f.report_id = CAST(q.record_id AS INTEGER)
+        GROUP BY 1, 2, 3, 4, 5, 6 ORDER BY 1, 2, 3, 4, 6""")
+    conn.execute("""CREATE TABLE silver_change_summary (table_name TEXT NOT NULL, column_name TEXT NOT NULL, rule_id TEXT NOT NULL,
+        source_code TEXT, change_count INTEGER NOT NULL)""")
+    conn.execute("""INSERT INTO silver_change_summary SELECT c.table_name, c.column_name, c.rule_id, f.source_code, COUNT(*)
+        FROM silver.silver_change c LEFT JOIN fact_report f ON c.table_name = 'sighting' AND f.report_id = CAST(c.record_id AS INTEGER)
+        GROUP BY 1, 2, 3, 4 ORDER BY 1, 2, 3, 4""")
+    date_key = """CASE WHEN x.date_status = 'valid' AND x.date_event IS NOT NULL THEN
+        substr(x.date_event, 1, CASE x.date_precision WHEN 'day' THEN 10 WHEN 'month' THEN 7 ELSE 4 END) END"""
+    place = """CASE WHEN x.country_status = 'valid' THEN x.country_iso2 END, x.region, x.city,
+        CASE WHEN x.coordinate_status = 'valid' THEN x.latitude END, CASE WHEN x.coordinate_status = 'valid' THEN x.longitude END,
+        x.coordinate_status = 'valid', x.date_status = 'valid', x.country_status = 'valid'"""
+    conn.execute("""CREATE TABLE fact_crash_retrieval (case_id TEXT PRIMARY KEY, title TEXT NOT NULL, event_year INTEGER, date_key TEXT,
+        country_iso2 TEXT, region_text TEXT, city_text TEXT, lat REAL, lng REAL, usable_for_map INTEGER NOT NULL,
+        usable_for_calendar INTEGER NOT NULL, usable_for_country INTEGER NOT NULL, craft_type TEXT, craft_size_m REAL, recovery_status TEXT, has_biologics INTEGER, crew_count TEXT, summary TEXT)""")
+    conn.execute(f"""INSERT INTO fact_crash_retrieval SELECT x.id, x.page_name, CASE WHEN x.date_status = 'valid' THEN x.event_year END,
+            {date_key}, {place}, x.craft_type, CASE WHEN typeof(x.craft_size_m) IN ('integer', 'real') THEN x.craft_size_m END, x.recovery_status, x.has_biologics,
+            NULLIF(CAST(x.crew_count AS TEXT), ''), x.short_summary
+        FROM silver.crash_retrieval x ORDER BY x.id""")
+    conn.execute("""CREATE TABLE fact_nuclear_encounter (case_id INTEGER PRIMARY KEY, title TEXT NOT NULL, event_year INTEGER, date_key TEXT,
+        country_iso2 TEXT, region_text TEXT, city_text TEXT, lat REAL, lng REAL, usable_for_map INTEGER NOT NULL,
+        usable_for_calendar INTEGER NOT NULL, usable_for_country INTEGER NOT NULL, base TEXT,
+        weapon_system TEXT, incident_type TEXT, missiles_affected INTEGER, sensor_confirmation TEXT, witness_credibility TEXT,
+        evidence_quality TEXT, source_confidence TEXT, summary TEXT)""")
+    conn.execute(f"""INSERT INTO fact_nuclear_encounter SELECT x.id, x.page_name, CASE WHEN x.date_status = 'valid' THEN x.event_year END,
+            {date_key}, {place}, x.base, x.weapon_system, x.incident_type, x.missiles_affected, x.sensor_confirmation,
+            x.witness_credibility, x.evidence_quality, x.source_confidence, x.summary
+        FROM silver.nuclear_encounter x ORDER BY x.id""")
+    types = policy["nuclear_facility_types"]
+    conn.create_function("facility_slug", 1, slug, deterministic=True)
+    conn.execute("""CREATE TABLE facility_catalog (facility_id INTEGER PRIMARY KEY, name TEXT NOT NULL, facility_type TEXT NOT NULL,
+        lat REAL, lng REAL, source TEXT, coordinate_status TEXT, admitted INTEGER NOT NULL, nearest_facility_key TEXT)""")
+    conn.execute(f"""INSERT INTO facility_catalog SELECT id, name, facility_type, latitude, longitude, source, coordinate_status,
+            facility_type IN ({",".join("?" for _ in types)}),
+            CASE WHEN facility_type IN ({",".join("?" for _ in types)}) THEN facility_slug(name) END
+        FROM silver.facility ORDER BY id""", [*types, *types])
+    for table, column in (("report_behavior_tag", "behavior_tag"), ("report_hoax_flag", "hoax_flag"), ("candidate_pair", "match_method")):
+        conn.execute(f'CREATE INDEX "idx_{table}_{column}" ON {table} ("{column}")')
+
+
 def coverage_plan() -> dict:
     plan = {name: spec[0] for name, spec in AGGREGATES.items()}
     plan[SPATIAL[0]] = SPATIAL[1]
@@ -460,11 +606,14 @@ def populate(conn, policy, catalogs):
         insert_rows(conn, "fact_report", FACT_COLUMNS, facts)
         insert_rows(conn, "report_model_output", MODEL_COLUMNS, models)
         facts.clear(); models.clear()
+    conn.execute("""UPDATE fact_report SET source_record_reused=1 WHERE source_record_id IS NOT NULL AND
+        (source_code, source_record_id) IN (SELECT source_code, source_record_id FROM fact_report
+                                            WHERE source_record_id IS NOT NULL GROUP BY 1, 2 HAVING COUNT(*) > 1)""")
     return facilities
 
 
 def build_database(path: Path, silver_path: Path, policy: dict, catalogs: dict) -> None:
-    with closing(sqlite3.connect(path)) as conn:
+    with closing(sqlite3.connect(path.resolve().as_uri(), uri=True)) as conn:
         conn.execute("PRAGMA journal_mode=OFF")
         conn.execute("PRAGMA synchronous=OFF")
         conn.execute("ATTACH DATABASE ? AS silver", (silver_path.resolve().as_uri() + "?mode=ro&immutable=1",))
@@ -474,38 +623,48 @@ def build_database(path: Path, silver_path: Path, policy: dict, catalogs: dict) 
         build_dimensions(conn, policy, catalogs, facilities)
         build_events(conn)
         build_aggregates(conn, policy)
+        build_extras(conn, policy)
         conn.commit()
         conn.execute("DETACH DATABASE silver")
 
 
-def archive_previous(output: Path, manifest_path: Path, history: Path) -> Path | None:
-    if not output.exists():
-        return None
-    previous = json.loads(manifest_path.read_text()) if manifest_path.exists() else {}
-    folder = history / (previous.get("gold_sha256") or digest(output))
-    folder.mkdir(parents=True, exist_ok=True)
-    shutil.copy2(output, folder / output.name)
-    if manifest_path.exists():
-        shutil.copy2(manifest_path, folder / manifest_path.name)
-    return folder
+def stored_path(path: Path, data: Path) -> str:
+    try:
+        return releases.relative(data, path)
+    except ValueError:
+        return str(Path(path).resolve())
 
 
 def build(root: Path = ROOT, policy: dict | None = None, gate=silver_gate, silver_path: Path | None = None,
-          bronze_path: Path | None = None, output: Path | None = None, validate=None) -> dict:
+          bronze_path: Path | None = None, output: Path | None = None, validate=None,
+          provenance=silver_provenance, readiness_path: Path | None = None, data: Path | None = None,
+          bronze_manifest: Path | None = None) -> dict:
+    """Build Gold into ``output``, which must not exist (default: a new candidate)."""
     policy = policy or load_policy(root)
     catalogs = load_catalogs(root)
-    silver_path = silver_path or root / policy["inputs"]["silver"]["path"]
-    bronze_path = bronze_path or root / policy["inputs"]["bronze"]["path"]
-    output = output or root / policy["outputs"]["database"]
+    data = Path(data or releases.data_root(root))
+    if silver_path is None:
+        current = releases.layout(data, "silver")
+        if current is None:
+            raise GoldBuildError("No hay una Silver aprobada en el catálogo. Ejecuta `python scripts/build_all.py --desde silver`.")
+        silver_path = current.database
+    bronze_path = Path(bronze_path or data / policy["inputs"]["bronze"]["path"])
+    bronze_manifest = Path(bronze_manifest or root / policy["inputs"]["bronze"]["manifest"])
+    output = Path(output or releases.GoldLayout(releases.new_candidate(data, "gold")).database)
     manifest_path = output.with_name(output.stem + ".manifest.json")
-    readiness_path = root / policy["outputs"]["silver_readiness"]
-    silver_sha, bronze_sha = digest(silver_path), digest(bronze_path)
-    if silver_sha != policy["inputs"]["silver"]["sha256"]:
-        raise GoldBuildError(f"Silver no coincide con el SHA fijado: {silver_sha}")
-    if bronze_sha != policy["inputs"]["bronze"]["sha256"]:
-        raise GoldBuildError(f"Bronze no coincide con el SHA fijado: {bronze_sha}")
+    readiness_path = Path(readiness_path or output.with_name("silver.readiness.json"))
+    building = output.with_name(output.name + ".building")
+    for existing in (output, manifest_path):
+        if existing.exists():
+            raise GoldBuildError(f"Se conserva {existing}: Gold se construye siempre en una versión nueva, "
+                                 "nunca sobre una base publicada que pueda tener lectores.")
+    custody = provenance(silver_path, bronze_path, bronze_manifest)
+    if not custody["passed"]:
+        raise GoldBuildError("Silver no es apta para Gold: " + "; ".join(custody["problems"])
+                             + ". Ejecuta `python scripts/build_all.py` (o `--desde silver`).")
+    silver_sha, bronze_sha = custody["silver_sha256"], custody["bronze_sha256"]
     readiness = gate(silver_path, bronze_path, readiness_path)
-    with closing(sqlite3.connect(silver_path.resolve().as_uri() + "?mode=ro&immutable=1", uri=True)) as conn:
+    with closing(sqlite3.connect(Path(silver_path).resolve().as_uri() + "?mode=ro&immutable=1", uri=True)) as conn:
         runs = [json.loads(m) for (m,) in conn.execute("SELECT metadata FROM silver_run").fetchall()]
     silver_reference_date = runs[0].get("reference_date") if len(runs) == 1 else None
     if not readiness.get("ready_for_gold") or readiness.get("silver_sha256") != silver_sha or readiness.get("bronze_sha256") != bronze_sha:
@@ -513,10 +672,9 @@ def build(root: Path = ROOT, policy: dict | None = None, gate=silver_gate, silve
     definitions_sha, definition_files = definitions_digest(policy, root)
     load_id = load_id_for(policy, silver_sha, bronze_sha, definitions_sha)
     output.parent.mkdir(parents=True, exist_ok=True)
-    building = output.with_name(output.name + ".building")
     building.unlink(missing_ok=True)
     try:
-        build_database(building, silver_path, policy, catalogs)
+        build_database(building, Path(silver_path), policy, catalogs)
         if validate is None:
             if __package__:
                 from .check_gold_ready import model_checks
@@ -537,40 +695,46 @@ def build(root: Path = ROOT, policy: dict | None = None, gate=silver_gate, silve
                               conn.execute("""SELECT COUNT(*), SUM(has_pending_candidate=0), SUM(has_pending_candidate),
                                   SUM(uses_external_evidence), (SELECT COUNT(*) FROM fact_event), SUM(in_confirmed_group)
                                   FROM fact_report""").fetchone()))
-        archived = archive_previous(output, manifest_path, root / policy["outputs"]["history"])
-        building.replace(output)
+        if output.exists():
+            raise GoldBuildError(f"Otro proceso escribió {output} durante la construcción")
+        os.replace(building, output)
     except BaseException:
         building.unlink(missing_ok=True)
         raise
     manifest = {
         "gold_version": policy["gold_version"], "load_id": load_id,
         "built_at": datetime.now(timezone.utc).replace(microsecond=0).isoformat(),
-        "silver": {"path": policy["inputs"]["silver"]["path"], "sha256": silver_sha,
+        "silver": {"path": stored_path(silver_path, data), "sha256": silver_sha,
                    "policy_version": readiness.get("policy_version"), "reference_date": silver_reference_date,
                    "run_id": readiness.get("verification", {}).get("run_id"),
                    "readiness": {"ready_for_gold": readiness["ready_for_gold"],
                                  "checks": readiness.get("verification", {}).get("checks"),
-                                 "report": policy["outputs"]["silver_readiness"]}},
-        "bronze": {"path": policy["inputs"]["bronze"]["path"], "sha256": bronze_sha},
+                                 "report": readiness_path.name}},
+        "bronze": {"path": stored_path(bronze_path, data), "sha256": bronze_sha},
+        "silver_run_id": custody["silver_run_id"],
         "definitions_sha256": definitions_sha, "definitions": definition_files,
         "gold_sha256": digest(output), "tables": tables, "totals": totals,
         "validation": {"checks": len(checks), "passed": True},
-        "archived_previous": (str(archived.relative_to(root)) if archived.is_relative_to(root) else str(archived)) if archived else None,
     }
-    manifest_path.write_text(json.dumps(manifest, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
+    write_text(manifest_path, json.dumps(manifest, ensure_ascii=False, indent=2) + "\n")
     return manifest
 
 
 def main() -> int:
-    parser = argparse.ArgumentParser(description=__doc__)
-    parser.parse_args()
+    parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
+    parser.add_argument("--version", type=Path, help="Directorio de versión vacío (por defecto, un candidato nuevo)")
+    args = parser.parse_args()
     try:
-        manifest = build()
+        output = None
+        if args.version:
+            args.version.mkdir(parents=True, exist_ok=True)
+            output = releases.GoldLayout(args.version).database
+        manifest = build(output=output)
     except (OSError, ValueError, sqlite3.Error, GoldBuildError) as exc:
-        print(f"GOLD NO PUBLICADA: {exc}", file=sys.stderr)
+        print(f"GOLD NO CONSTRUIDA: {exc}", file=sys.stderr)
         return 1
-    print(f"Gold publicada: load_id {manifest['load_id']}; {manifest['totals']['reports']} informes; "
-          f"{manifest['validation']['checks']} controles")
+    print(f"Gold construida (candidato sin promover): load_id {manifest['load_id']}; {manifest['totals']['reports']} informes; "
+          f"{manifest['validation']['checks']} controles. Para publicarla usa `python scripts/build_all.py --desde gold`.")
     return 0
 
 

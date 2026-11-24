@@ -7,8 +7,11 @@ For each question:
             its rows equal the independent reference answer;
   reject  → the attempted query is refused with the expected error code;
   clarify → entity resolution is ambiguous or empty, as expected.
-Results go to data/gold/evals/<load_id>.json. Answers whose result hash
-changed with respect to earlier loads are reported as drift.
+The questions and their reference answers come from the load's own copy
+(<versión>/GOLD_EVALS.json, written by the independent verification), else
+docs/GOLD_EVALS.json. The build writes results to <versión>/evals/<load_id>.json;
+the CLI to <datos>/gold/evals/<load_id>.json. Answers whose result hash changed
+with respect to earlier loads are reported as drift.
 """
 from __future__ import annotations
 
@@ -20,9 +23,13 @@ import sys
 if __package__:
     from .gold_common import ROOT, load_json, text_digest
     from .gold_query import Analytics, QueryError, query_digest
+    from .pipeline_context import write_text
+    from . import releases
 else:
     from gold_common import ROOT, load_json, text_digest
     from gold_query import Analytics, QueryError, query_digest
+    from pipeline_context import write_text
+    import releases
 
 
 def strip(rows):
@@ -83,9 +90,17 @@ def evaluate(analytics: Analytics, item: dict) -> dict:
             "passed": all(checks.values()), "checks": checks, "result_sha256": result_sha}
 
 
-def run(root: Path = ROOT, analytics: Analytics | None = None, evals_path: Path | None = None, write: bool = True) -> dict:
+def evals_for(analytics: Analytics, root: Path = ROOT) -> Path:
+    """The load's evaluation set (with its references), else the versioned one."""
+    layout = analytics.layout
+    return layout.evals_spec if layout and layout.evals_spec.exists() else root / "docs/GOLD_EVALS.json"
+
+
+def run(root: Path = ROOT, analytics: Analytics | None = None, evals_path: Path | None = None, write: bool = True,
+        folder: Path | None = None, previous=None) -> dict:
+    """Evaluate one load. ``previous``: folders with results of earlier loads (drift)."""
     analytics = analytics or Analytics(root=root)
-    evals = load_json(evals_path or root / "docs/GOLD_EVALS.json")
+    evals = load_json(evals_path or evals_for(analytics, root))
     results = []
     for item in evals["questions"]:
         try:
@@ -93,15 +108,17 @@ def run(root: Path = ROOT, analytics: Analytics | None = None, evals_path: Path 
         except (QueryError, KeyError, ValueError) as exc:
             results.append({"id": item["id"], "category": item["category"], "expected_behavior": item["expected_behavior"],
                             "passed": False, "checks": {"error": str(exc)}, "result_sha256": None})
-    folder = root / "data/gold/evals"
+    folder = Path(folder or releases.data_root(root) / "gold" / "evals")
     drift = []
-    if folder.exists():
-        for other in sorted(folder.glob("*.json")):
-            previous = json.loads(other.read_text())
-            if previous.get("load_id") == analytics.load_id:
+    for source in [folder, *(previous or [])]:
+        if not Path(source).exists():
+            continue
+        for other in sorted(Path(source).glob("*.json")):
+            report = json.loads(other.read_text(encoding="utf-8"))
+            if report.get("load_id") == analytics.load_id:
                 continue
-            before = {r["id"]: r["result_sha256"] for r in previous.get("results", [])}
-            drift += [{"id": r["id"], "previous_load_id": previous["load_id"]} for r in results
+            before = {r["id"]: r["result_sha256"] for r in report.get("results", [])}
+            drift += [{"id": r["id"], "previous_load_id": report["load_id"]} for r in results
                       if r["id"] in before and before[r["id"]] != r["result_sha256"]]
     reference_ok = (evals.get("reference_load") or {}).get("load_id") == analytics.load_id
     summary = {"questions": len(results), "passed": sum(r["passed"] for r in results),
@@ -111,7 +128,7 @@ def run(root: Path = ROOT, analytics: Analytics | None = None, evals_path: Path 
               "summary": summary, "drift": drift, "results": results}
     if write:
         folder.mkdir(parents=True, exist_ok=True)
-        (folder / f"{analytics.load_id}.json").write_text(json.dumps(report, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
+        write_text(folder / f"{analytics.load_id}.json", json.dumps(report, ensure_ascii=False, indent=2) + "\n")
     return report
 
 

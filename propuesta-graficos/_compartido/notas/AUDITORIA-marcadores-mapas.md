@@ -1,15 +1,15 @@
-# Auditoría del mapa · 19 de octubre de 2026
+# Auditoría del mapa, 19 de octubre de 2026
 
 Alcance inicial: código actual, contratos de dibujo y documentación del motor. No es una inspección visual del navegador: la automatización de `file://` fue rechazada y no se eludió. `view_image` permite inspeccionar imágenes guardadas, pero no capturar esa pestaña.
 
 ## Hallazgos antes de corregir
 
-- **P1 · Marcadores ocultos.** ScatterplotLayer no configura billboard ni una política de visibilidad analítica. En la integración intercalada comparte profundidad con el terreno/edificios. Dos metros sobre una elevación consultada no garantizan visibilidad; un disco horizontal tampoco mantiene su legibilidad al inclinar la cámara.
-- **P1 · Elevaciones tardías.** La consulta devuelve null mientras llegan teselas; el código lo convierte a cero. Solo invalida las posiciones cuando `sourcedata.isSourceLoaded` es verdadero para toda la fuente. Un tile disponible puede no actualizar los marcadores durante la carga global.
-- **P1 · Área incompleta en el chat.** Existían límites de navegación y selección por ratón, pero faltaba una instrucción de área que filtrara registros y preservara el alcance al cambiar la representación.
-- **P1 · Representación no implementada.** El prompt no ofrecía elegir puntos o modelos con volumen. Los puntos solo codificaban posiciones, sin representar las formas del archivo.
-- **P2 · Cambio 2D/3D dentro del caso.** El control cartográfico no sincronizaba la etapa de la historia; otro render podía restaurar la etapa anterior.
-- **P2 · Controles.** La barra puede saturarse en pantallas estrechas. La nueva elección de representación debe ocupar un solo control y mantener acceso al ratón y teclado.
+- **P1, Marcadores ocultos.** ScatterplotLayer no configura billboard ni una política de visibilidad analítica. En la integración intercalada comparte profundidad con el terreno/edificios. Dos metros sobre una elevación consultada no garantizan visibilidad; un disco horizontal tampoco mantiene su legibilidad al inclinar la cámara.
+- **P1, Elevaciones tardías.** La consulta devuelve null mientras llegan teselas; el código lo convierte a cero. Solo invalida las posiciones cuando `sourcedata.isSourceLoaded` es verdadero para toda la fuente. Un tile disponible puede no actualizar los marcadores durante la carga global.
+- **P1, Área incompleta en el chat.** Existían límites de navegación y selección por ratón, pero faltaba una instrucción de área que filtrara registros y preservara el alcance al cambiar la representación.
+- **P1, Representación no implementada.** El prompt no ofrecía elegir puntos o modelos con volumen. Los puntos solo codificaban posiciones, sin representar las formas del archivo.
+- **P2, Cambio 2D/3D dentro del caso.** El control cartográfico no sincronizaba la etapa de la historia; otro render podía restaurar la etapa anterior.
+- **P2, Controles.** La barra puede saturarse en pantallas estrechas. La nueva elección de representación debe ocupar un solo control y mantener acceso al ratón y teclado.
 
 ## Dirección de reparación
 

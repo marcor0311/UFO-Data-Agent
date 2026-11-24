@@ -4,6 +4,7 @@ import { useId, useState } from "react";
 import type { Catalog, GoldResult } from "@/lib/contracts";
 import { num } from "@/lib/format";
 import { DataTable } from "../views/shared";
+import { withResultMetrics } from "../views/registry";
 
 const short = (sha: string) => sha.slice(0, 12) + "…";
 
@@ -11,6 +12,7 @@ export function Evidence({ result, catalog }: { result: GoldResult; catalog: Cat
   const [open, setOpen] = useState<"data" | "source" | null>(null);
   const id = useId();
   const ex = result.exclusions;
+  const reportCount = result.total?.report_count ?? (result.rows.length === 1 ? result.rows[0].report_count : undefined);
   const dataset = catalog?.datasets[result.provenance.dataset]?.label ?? result.provenance.dataset;
   const toggle = (panel: "data" | "source") => setOpen((current) => current === panel ? null : panel);
   return (
@@ -24,7 +26,7 @@ export function Evidence({ result, catalog }: { result: GoldResult; catalog: Cat
       </div>
       {result.rows.length ? (
         <div id={`${id}-data`} className="evidence-body" hidden={open !== "data"}>
-          {open === "data" ? <DataTable result={result} catalog={catalog} /> : null}
+          {open === "data" ? <DataTable result={result} catalog={withResultMetrics(catalog, result)} /> : null}
         </div>
       ) : null}
       <div id={`${id}-source`} className="evidence-body" hidden={open !== "source"}>
@@ -37,15 +39,21 @@ export function Evidence({ result, catalog }: { result: GoldResult; catalog: Cat
           <dt>SHA de Silver</dt><dd><code title={result.provenance.silver_sha256}>{short(result.provenance.silver_sha256)}</code></dd>
           <dt>Definiciones</dt><dd><code title={result.provenance.definitions_sha256}>{short(result.provenance.definitions_sha256)}</code></dd>
           <dt>Consulta</dt><dd><code title={result.provenance.query_sha256}>{short(result.provenance.query_sha256)}</code></dd>
-          <dt>Filas de origen</dt><dd>{num(result.matched_source_rows)}{result.truncated ? " · resultado truncado" : ""}</dd>
+          <dt>Filas de origen</dt><dd>{num(result.matched_source_rows)}{result.truncated ? ", resultado truncado" : ""}</dd>
         </dl>
-        {result.duplicate_bounds ? <p>{result.duplicate_bounds.text}</p> : null}
         {ex ? (
-          <p>
-            Elegibilidad aplicada: {result.eligibility_applied.map((e) => e.label + (e.implied ? " (implícita)" : "")).join(", ")}.{" "}
-            Entran {num(ex.eligible_reports)} de {num(ex.base_reports)} informes y quedan fuera {num(ex.excluded_reports)}
-            {ex.excluded_by_reason.length ? " (" + ex.excluded_by_reason.slice(0, 4).map((r) => `${r.label.toLowerCase()} (${num(r.reports)})`).join(", ") + ")" : ""}.
-          </p>
+          <>
+            {typeof reportCount === "number" ? <p><strong>Informes del corte consultado:</strong> {num(reportCount)}.</p> : null}
+            <p>
+              Elegibilidad aplicada: {result.eligibility_applied.map((e) => e.label + (e.implied ? " (implícita)" : "")).join(", ")}.
+            </p>
+            <p>
+              <strong>Población evaluada para elegibilidad:</strong> {ex.scope}.{" "}
+              Base: {num(ex.base_reports)} informes; elegibles: {num(ex.eligible_reports)}; excluidos: {num(ex.excluded_reports)}
+              {ex.excluded_by_reason.length ? " (" + ex.excluded_by_reason.slice(0, 4).map((r) => `${r.label.toLowerCase()} (${num(r.reports)})`).join(", ") + ")" : ""}.
+              {" "}Estos conteos corresponden al alcance indicado y pueden abarcar una población mayor que el corte consultado.
+            </p>
+          </>
         ) : null}
         {result.external_evidence_reports ? (
           <p>{num(result.external_evidence_reports)} informes usan coordenadas, país u hora del catálogo externo de UFO-search.</p>

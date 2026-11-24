@@ -11,7 +11,10 @@ Unlike run_gold_evals.py (tools and data only), this measures the agent:
 Results go to data/agent/evals/<load_id>__<model>.json. Requires a signed-in
 ChatGPT account stored by the API (root .env), selected with --account.
 
-  python3.14 scripts/run_agent_evals.py --model <slug> [--ids E001 E021] [--account <id>]
+  python3.14 scripts/run_agent_evals.py --model gpt-6.1-sol [--ids E001 E021] [--account <id>]
+
+The report also counts answers whose figures match the reference with another shape
+(figures_correct, informative) and keeps each turn's trace with arguments and errors.
 """
 from __future__ import annotations
 
@@ -28,7 +31,7 @@ sys.path.insert(0, str(ROOT / "apps/api/src"))
 
 from gold_common import normalize, text_digest  # noqa: E402
 from gold_query import query_digest  # noqa: E402
-from run_gold_evals import rows_equal  # noqa: E402
+from run_gold_evals import close, rows_equal  # noqa: E402
 
 
 def forbidden_hits(text: str, phrases: list[str]) -> list[str]:
@@ -39,6 +42,27 @@ def forbidden_hits(text: str, phrases: list[str]) -> list[str]:
         if re.search(pattern, plain):
             hits.append(phrase)
     return hits
+
+
+def _key(row: dict, columns: list[str]) -> tuple:
+    return tuple((c, round(row[c], 2) if isinstance(row[c], float) else row[c]) for c in columns)
+
+
+def figures_match(reference: list[dict], rows: list[dict]) -> bool:
+    """The reference figures reappear in ``rows`` even when the result is shaped differently.
+
+    On the reference columns, the two row sets coincide in any order or one contains the
+    other (a top 15 against a top 10, one NUFORC row against the breakdown by origin); or
+    ``rows`` is a single total equal to the sum of a reference metric. Informative only:
+    the strict ``reference_rows`` check still decides ``passed``."""
+    if not reference or not rows:
+        return False
+    columns = sorted(reference[0])
+    if all(set(columns) <= set(r) for r in rows):
+        expected, actual = {_key(r, columns) for r in reference}, {_key(r, columns) for r in rows}
+        return expected <= actual or actual <= expected
+    metrics = [c for c in columns if isinstance(reference[0][c], (int, float)) and not isinstance(reference[0][c], bool)]
+    return len(rows) == 1 and any(m in rows[0] and close(sum(r[m] or 0 for r in reference), rows[0][m]) for m in metrics)
 
 
 def grade(item: dict, turn: dict, limits: dict) -> dict:
@@ -65,10 +89,14 @@ def grade(item: dict, turn: dict, limits: dict) -> dict:
     else:
         checks["no_visualization"] = not visuals
         checks["resolved_entities"] = "find_entities" in tools
+    figures = None
+    if item["expected_behavior"] == "answer":
+        reference = (item.get("reference_answer") or {}).get("rows", [])
+        figures = checks.get("reference_rows") or any(figures_match(reference, v["rows"]) for v in visuals)
     return {"id": item["id"], "category": item["category"], "expected_behavior": item["expected_behavior"],
-            "passed": all(checks.values()), "checks": checks, "answer": turn["answer"],
-            "tools": [t["tool"] for t in turn["trace"]], "visualization_queries": [v["query"] for v in visuals],
-            "answer_sha256": text_digest(turn["answer"])}
+            "passed": all(checks.values()), "checks": checks, "figures_match": figures, "answer": turn["answer"],
+            "tools": [t["tool"] for t in turn["trace"]], "trace": turn["trace"],
+            "visualization_queries": [v["query"] for v in visuals], "answer_sha256": text_digest(turn["answer"])}
 
 
 def run(agent, account: dict, model: str, questions: list[dict], limits: dict, load_id: str) -> dict:
@@ -82,7 +110,11 @@ def run(agent, account: dict, model: str, questions: list[dict], limits: dict, l
                             "passed": False, "checks": {"error": f"{type(exc).__name__}: {getattr(exc, 'detail', exc)}"}})
     return {"load_id": load_id, "model": model, "run_at": datetime.now(timezone.utc).replace(microsecond=0).isoformat(),
             "passed": all(r["passed"] for r in results),
-            "summary": {"questions": len(results), "passed": sum(r["passed"] for r in results)}, "results": results}
+            "summary": {"questions": len(results), "passed": sum(r["passed"] for r in results),
+                        # Correct figures although shaped differently (order, limit, extra columns), forbidden phrases aside.
+                        "figures_correct": sum(bool(r["passed"] or (r.get("figures_match") and r["checks"].get("no_forbidden_phrases")))
+                                               for r in results)},
+            "results": results}
 
 
 def main() -> int:
@@ -101,15 +133,19 @@ def main() -> int:
         print("No hay una cuenta con sesión. Inicia sesión en /agent primero.", file=sys.stderr)
         return 1
     _, account = auth.account_by_key(key)
-    questions = json.loads((ROOT / "docs/GOLD_EVALS.json").read_text())["questions"]
+    # The load's own evaluation set carries reference answers for that load.
+    layout = getattr(analytics, "layout", None)
+    evals_path = layout.evals_spec if layout and layout.evals_spec.exists() else ROOT / "docs/GOLD_EVALS.json"
+    questions = json.loads(evals_path.read_text(encoding="utf-8"))["questions"]
     if args.ids:
         questions = [q for q in questions if q["id"] in set(args.ids)]
     report = run(DataAgent(analytics), account, args.model, questions, analytics.limits, analytics.load_id)
     out = ROOT / "data/agent/evals" / f"{analytics.load_id}__{re.sub(r'[^A-Za-z0-9._-]', '_', args.model)}.json"
     out.parent.mkdir(parents=True, exist_ok=True)
-    out.write_text(json.dumps(report, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
+    out.write_text(json.dumps(report, ensure_ascii=False, indent=2) + "\n", encoding="utf-8", newline="\n")
     s = report["summary"]
-    print(f"Evaluación del agente ({args.model}): {s['passed']}/{s['questions']} aprobadas → {out}")
+    print(f"Evaluación del agente ({args.model}): {s['passed']}/{s['questions']} aprobadas, "
+          f"{s['figures_correct']}/{s['questions']} con cifras correctas → {out}")
     return 0 if report["passed"] else 1
 
 

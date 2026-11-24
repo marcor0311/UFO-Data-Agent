@@ -5,6 +5,7 @@ import Link from "next/link";
 import cierre from "../../public/archivo-uap/cierre.webp";
 import ArchiveBriefing from "./archive-briefing";
 import ArchiveGallery from "./archive-gallery";
+import ArchiveStat from "./archive-stat";
 import LandingHero from "./landing-hero";
 import styles from "./landing.module.css";
 
@@ -23,27 +24,17 @@ const bodyFont = localFont({
 
 export const metadata: Metadata = {
   title: "UFO Data Agent | Archivo UAP",
-  description: "Analítica de datos conversacional para explorar informes sobre fenómenos aéreos no identificados.",
+  description: "Analítica de datos conversacional para explorar informes sobre fenómenos aéreos no identificados",
 };
 
 export default function Home() {
   return (
     <div className={`${styles.landing} ${displayFont.variable} ${bodyFont.variable}`}>
       <a className={styles.skip} href="#contenido">Saltar al contenido</a>
-      <header className={styles.header}>
-        <a className={styles.brand} href="#portada" aria-label="UFO Data Agent, portada">
-          <span className={styles.mark} aria-hidden="true" />
-          <span>UFO <span>DATA AGENT</span></span>
-        </a>
-        <nav aria-label="Navegación principal">
-          <a className={styles.archiveLink} href="#archivo">El archivo</a>
-          <a className={styles.archiveLink} href="#metodo">El agente</a>
-          <Link className={styles.headerButton} href="/agent">Entrar al Data Agent</Link>
-        </nav>
-      </header>
       <main id="contenido">
         <LandingHero />
         <ArchiveGallery />
+        <ArchiveStat />
         <ArchiveBriefing />
       </main>
       <footer className={styles.entrance}>
