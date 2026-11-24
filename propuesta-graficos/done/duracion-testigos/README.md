@@ -1,6 +1,6 @@
 # Duración de testigos
 
-**Estado: Experimental**
+**Estado: Implementada** en el Data Agent como vista `scatter` con `measure: duration_witnesses` (dispersión agregada en escalas logarítmicas). Los testigos también se agrupan por `witness_band`.
 
 Dispersión de duración reportada y número de testigos. Los pares de valores idénticos se dibujan juntos y permiten abrir las filas mediante un punto o un rectángulo.
 

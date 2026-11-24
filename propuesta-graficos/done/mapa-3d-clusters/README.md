@@ -1,6 +1,6 @@
 # Mapa 3D de clusters
 
-**Estado: Recuperada**
+**Estado: Implementada** en el Data Agent como análisis `clusters`: la misma vista se abre en el mapa 3D con relieve (botón Mapa 3D).
 
 La misma capa de grupos de M1 sobre mapa inclinado a 60°, con terreno y ajuste de posición al cargar teselas. Conserva ruido, IDs, radio y ventana.
 

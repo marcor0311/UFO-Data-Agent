@@ -1,6 +1,6 @@
 # Mapa 2D de clusters
 
-**Estado: Recuperada**
+**Estado: Implementada** en el Data Agent como análisis `clusters` (vista `clusters`): cada agrupación es un punto en el mapa 2D que crece con sus informes.
 
 Mapa plano de concentraciones espacio-temporales, con controles de radio y ventana, lista de grupos, registros fuera de grupo e inspector por selección.
 

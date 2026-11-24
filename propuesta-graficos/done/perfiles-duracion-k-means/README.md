@@ -1,6 +1,6 @@
 # Perfiles de duración y K-means
 
-**Estado: Solo idea**
+**Estado: Implementada** en el Data Agent como análisis `kmeans_profiles` (vista `scatter` coloreada por perfil, con la estabilidad frente a otras dos semillas).
 
 ## Concepto
 
