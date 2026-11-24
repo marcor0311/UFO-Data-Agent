@@ -1,6 +1,6 @@
 # Reportes por año
 
-**Estado: Recuperada**
+**Estado: Implementada** en el Data Agent como vista `timeseries` por año, mes o día. Elegir un año para abrir sus informes sigue pendiente en [#48](https://github.com/marcor0311/UFO-Data-Agent/issues/48).
 
 Barras con eje desde cero y selección de un año para inspeccionar sus reportes. Se recuperó D1 y la variante temporal compartida que admite año, mes y series por fuente.
 

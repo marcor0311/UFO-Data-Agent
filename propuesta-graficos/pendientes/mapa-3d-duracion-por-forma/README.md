@@ -1,6 +1,6 @@
 # Mapa 3D de duración por forma
 
-**Estado: Recuperada** (parcial, piezas originales localizadas)
+**Estado: Parcial.** Los modelos 3D por forma y el mapa con relieve ya funcionan en la vista `points`; faltan las cajas de duración por forma.
 
 Propuesta de combinar cartografía con relieve y una comparación de las duraciones por forma normalizada. Se recuperó el diagrama de cajas D4 como referencia cuantitativa y los componentes originales de terreno, símbolos y selección.
 

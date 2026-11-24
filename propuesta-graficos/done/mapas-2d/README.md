@@ -1,6 +1,6 @@
 # Mapas 2D
 
-**Estado: Recuperada**
+**Estado: Implementada** en el Data Agent como vista `points`: mapa 2D y 3D con relieve, Mover, Rectángulo y Lazo, y selección con recuento e IDs ([#63](https://github.com/marcor0311/UFO-Data-Agent/issues/63), [#90](https://github.com/marcor0311/UFO-Data-Agent/pull/90)). Faltan la búsqueda y la lista paginada.
 
 Mapa detallado por puntos con controles de movimiento, rectángulo y lazo, búsqueda, lista paginada y ficha. Conserva el encuadre y los IDs de la selección. Incluye el respaldo regional Canvas como fuente para el host original.
 

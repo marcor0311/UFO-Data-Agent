@@ -1,6 +1,6 @@
 # Formas reportadas
 
-**Estado: Recuperada**
+**Estado: Implementada** en el Data Agent como vista `bars` agrupada por `shape_code`. Faltan la búsqueda y la paginación de la lámina original.
 
 Barras horizontales de las formas normalizadas, con recuento, proporción, búsqueda, paginación y acceso a los informes de una categoría. Incluye “Sin clasificar”.
 
