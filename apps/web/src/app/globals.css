@@ -3,7 +3,7 @@
   color-scheme: light;
   --page: #f9f9f7; --surface: #fcfcfb; --surface-2: #f3f2ee; --ink: #0b0b0b; --ink-2: #52514e; --muted: #898781;
   --grid: #e1e0d9; --axis: #c3c2b7; --border: rgba(11, 11, 11, 0.10);
-  --series-1: #2a78d6; --series-2: #eb6834; --bound-upper: #b7d3f6; --empty-cell: #f0efec;
+  --series-1: #2a78d6; --series-2: #eb6834; --empty-cell: #f0efec;
   --seq-100: #cde2fb; --seq-200: #9ec5f4; --seq-300: #6da7ec; --seq-400: #3987e5; --seq-500: #256abf; --seq-600: #184f95; --seq-700: #0d366b;
   --accent: #2a78d6; --accent-ink: #ffffff; --critical: #d03b3b;
   --font: system-ui, -apple-system, "Segoe UI", sans-serif;

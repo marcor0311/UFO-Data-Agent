@@ -187,7 +187,7 @@ def schemas(analytics: Analytics) -> list[dict]:
         {"type": "function", "strict": False, "name": "query_gold",
          "description": "Ejecuta una consulta validada sobre Gold y devuelve una visualización lista. Sin SQL. "
                         "Declara eligibility cuando uses año, mes, día, hora, mapa, país o proximidad en fact_report. "
-                        "Los ratios se recalculan; los porcentajes no se suman. report_count llega siempre con su cota inferior.",
+                        "Los ratios se recalculan; los porcentajes no se suman. report_count cuenta cada informe como una unidad.",
          "parameters": query_schema(analytics)},
         fn("find_entities", "Resuelve el ID real de fuentes, orígenes, colecciones, países, formas, colores o instalaciones nucleares por su nombre o alias.",
            {"text": {"type": "string", "maxLength": 120}, "kind": {"type": ["string", "null"], "enum": [*KINDS, None]}}, ["text", "kind"]),
@@ -204,7 +204,6 @@ def compact(result: dict) -> dict:
         "view": result["view"], "title": result.get("title"), "rows": result["rows"][:MODEL_ROWS],
         "rows_shown_to_model": min(len(result["rows"]), MODEL_ROWS), "row_count": result["row_count"],
         "truncated": result["truncated"], "matched_source_rows": result["matched_source_rows"], "total": result.get("total"),
-        "duplicate_bounds": result.get("duplicate_bounds"),
         "eligibility_applied": [e["code"] for e in result.get("eligibility_applied", [])],
         "exclusions": None if not exclusions else {
             "base_reports": exclusions["base_reports"], "eligible_reports": exclusions["eligible_reports"],

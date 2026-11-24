@@ -21,7 +21,6 @@ export type GoldResult = {
   certification: CertificationStatus | null;
   view: ViewCode; view_label: string; title: string | null;
   rows: Row[]; total: Row | null; truncated: boolean; row_count: number; matched_source_rows: number; empty: boolean;
-  duplicate_bounds: { upper: string; lower: string | null; text: string } | null;
   eligibility_applied: { code: string; label: string; flag: string; implied: boolean }[];
   exclusions: Exclusions | null;
   external_evidence_reports: number | null;

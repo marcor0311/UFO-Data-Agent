@@ -32,7 +32,7 @@ cifras corresponden a la carga Gold construida sobre Silver v6
 | **Evento** | Solo existe para un **grupo de duplicados confirmado** (`fact_event`): informes con fecha, hora, coordenadas, forma y descriptores idénticos. Hay 6.959 eventos con 17.920 informes. |
 | **Representante** | El informe de menor ID de un grupo confirmado (`is_canonical=1`). Los informes sin grupo también son su propio representante. Contarlos aplica una política, no da el número real de eventos. |
 | **Candidato pendiente** | Informe que participa en algún par de `duplicate_candidate` sin evidencia suficiente (`needs_review`). Hay 243.318 pares y 311.628 informes con al menos un par. No se sabe si son duplicados o informes distintos. |
-| **Rango de informes** | `report_count` (cota superior: todos los informes) y `report_count_excl_candidates` (cota inferior: sin los informes con pares pendientes). Para el total: entre 390.944 y 702.572 informes. |
+| **Coincidencia por revisar** | `has_pending_candidate`: marca de calidad, no un duplicado. El informe cuenta como un informe más; no se resta de ninguna cifra. |
 | **Precisión de fecha** | `calendar_precision`: la precisión más fina que es segura (`day`, `month` o `year`). Una fecha puede tener día en la fuente y precisión segura de mes. |
 | **Marcador de día** | Día `01`, `15` o fecha `01-01` que algunas fuentes usan cuando desconocen el día; se detecta por exceso estadístico en cada fuente. Esas fechas conservan el año (y el mes si corresponde), pero no entran en análisis por día. |
 | **Fecha calificada** | Fecha con «about», «~», «or», «?», estaciones o fechas de publicación: se conserva en Silver, pero queda fuera del calendario. |
@@ -58,7 +58,7 @@ Sesgos generales que el agente debe mencionar cuando apliquen:
   informes: UFO-search concentra oleadas históricas (mediana 1967) y UPDB es
   sobre todo reciente (76 % desde 1995).
 - **Solapamiento:** NUFORC aparece en UFOCAT y en UPDB; sumar fuentes puede
-  contar el mismo relato dos veces. Por eso se publica el rango.
+  contar el mismo relato dos veces; se menciona como sesgo, sin restar informes.
 - **Campos parciales:** las formas solo provienen de UFOCAT y Capella, y las
   horas casi solo de UFOCAT y UFO-search.
 
@@ -66,7 +66,7 @@ Sesgos generales que el agente debe mencionar cuando apliquen:
 
 | Pregunta | Herramienta y consulta | Cómo redactar |
 |---|---|---|
-| **¿Cuántos…?** | `CQ01_REPORTS_BY_SOURCE` o `query` con `report_count` (añade la cota inferior sola). | «Hay entre X e Y **informes**…». Nunca «hubo X avistamientos». Si preguntan por eventos, usar `CQ13_CONFIRMED_EVENTS` y explicar que solo hay eventos confirmados. |
+| **¿Cuántos…?** | `CQ01_REPORTS_BY_SOURCE` o `query` con `report_count`. | «Hay X **informes**…», una sola cifra. Nunca «hubo X avistamientos». Si preguntan por eventos, usar `CQ13_CONFIRMED_EVENTS` y explicar que solo hay eventos confirmados. |
 | **¿Dónde…?** | País: `CQ07`/`CQ08`. Mapa: `CQ10` (densidad 5°) o `query` con `view: points` y `eligibility: ["map"]`. | Decir cuántos informes quedaron fuera del mapa o del país y que no se normaliza por población. Mencionar la evidencia externa si el resultado la cuenta. |
 | **¿Cuándo…?** | Año: `CQ02`/`CQ03`. Mes: `CQ04`. Día de la semana y hora: `CQ05`/`CQ06`. Día concreto: `fact_report` con `eligibility: ["day"]`. | Indicar la elegibilidad aplicada y los excluidos (marcadores de día, fechas calificadas). La hora es local y sin zona horaria. |
 | **¿Qué formas…?** | `CQ09_TOP_SHAPES`, o `fact_report` agrupando por `shape_code`. | Señalar que la mayoría de los informes no tiene forma y que UPDB y UFO-search no la aportan. |
@@ -78,7 +78,7 @@ Sesgos generales que el agente debe mencionar cuando apliquen:
 
 - «Hubo X avistamientos», «se vieron X ovnis», «X ovnis reales». Decir «X informes».
 - «Está comprobado», «se demuestra», «prueba que», «es verdad que».
-- «Eventos únicos», «sin duplicados hay X eventos». Decir el rango de informes y los eventos confirmados.
+- «Eventos únicos», «sin duplicados hay X eventos». Decir el número de informes y, si preguntan, los eventos confirmados.
 - «Es un engaño», «es falso», «es auténtico» a partir de `hoax_likelihood` u otra puntuación.
 - «Los ovnis prefieren…», «aparecen cerca de bases porque…» o cualquier relación causal.
 - «En todo el mundo» o «la frecuencia real» cuando el resultado depende de la cobertura de las fuentes.
@@ -89,7 +89,7 @@ Sesgos generales que el agente debe mencionar cuando apliquen:
   (`Congo` → CD y CG; `Corea` → KR y KP). Preguntar cuál.
 - **Entidad inexistente:** `find_entities` no devuelve nada (p. ej., «Narnia»).
   Decirlo y no sustituirla por otra.
-- **«Eventos» o «avistamientos» sin más:** confirmar si se quiere el rango de
+- **«Eventos» o «avistamientos» sin más:** confirmar si se quiere el número de
   informes o los eventos confirmados.
 - **Unidad subnacional** (estados, ciudades): Gold no publica regiones ni
   estados. Ofrecer el país o una celda espacial.

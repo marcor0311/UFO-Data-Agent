@@ -14,16 +14,6 @@ export function metricsOf(result: GoldResult, catalog: Catalog | null): string[]
   return [...result.query.metrics.filter((m) => present.includes(m)), ...present.filter((m) => !result.query.metrics.includes(m))];
 }
 
-/** Metrics drawn as their own panel: the lower duplicate bound rides inside its upper bound. */
-export function panelMetrics(result: GoldResult, catalog: Catalog | null): string[] {
-  const lower = result.duplicate_bounds?.lower;
-  return metricsOf(result, catalog).filter((m) => m !== lower || !metricsOf(result, catalog).includes("report_count"));
-}
-
-export function lowerBound(result: GoldResult, metric: string): string | null {
-  return metric === result.duplicate_bounds?.upper && result.duplicate_bounds.lower ? result.duplicate_bounds.lower : null;
-}
-
 export function value(row: Row, metric: string): number | null {
   const v = row[metric];
   return typeof v === "number" ? v : null;
@@ -32,14 +22,6 @@ export function value(row: Row, metric: string): number | null {
 export function formatMetric(v: number | null, metric: string, catalog: Catalog | null): string {
   if (v === null) return "—";
   return num(v) + (percent(metric, catalog) ? " %" : "");
-}
-
-/** "390.944 – 702.572" for a bounded report count, or the plain value. */
-export function rangeText(row: Row, metric: string, result: GoldResult, catalog: Catalog | null): string {
-  const lower = lowerBound(result, metric);
-  const upper = value(row, metric);
-  if (lower && typeof row[lower] === "number") return `${num(row[lower])} – ${num(upper)}`;
-  return formatMetric(upper, metric, catalog);
 }
 
 export function groupLabel(row: Row, groups: string[]): string {
@@ -71,11 +53,6 @@ export function rampLegend(max: number, scale: "log" | "linear" = "log"): { colo
     color,
     from: i === 0 ? 1 : scale === "log" ? Math.ceil(Math.exp((i / RAMP.length) * Math.log(Math.max(max, 1)))) : Math.ceil((i / RAMP.length) * max),
   }));
-}
-
-/** Caption of a metric panel: a bounded report count is a range, not the upper bound alone. */
-export function panelTitle(result: GoldResult, metric: string, catalog: Catalog | null): string {
-  return lowerBound(result, metric) ? "Informes (rango por duplicados pendientes)" : metricLabel(catalog, metric);
 }
 
 /** Round, evenly spaced year ticks. */
@@ -123,16 +100,6 @@ export function useTooltip(fallbackWidth = 720) {
     </div>
   ) : null;
   return { ref, show, hide, layer, width };
-}
-
-export function BoundLegend({ result, metric }: { result: GoldResult; metric: string }) {
-  if (!lowerBound(result, metric)) return null;
-  return (
-    <div className="viz-legend" aria-label="Leyenda">
-      <span><i className="swatch" style={{ background: "var(--bound-upper)" }} />Todos los informes (cota superior)</span>
-      <span><i className="swatch" style={{ background: "var(--series-1)" }} />Sin candidatos de duplicado pendientes (cota inferior)</span>
-    </div>
-  );
 }
 
 export function DataTable({ result, catalog, caption }: { result: GoldResult; catalog: Catalog | null; caption?: string }) {

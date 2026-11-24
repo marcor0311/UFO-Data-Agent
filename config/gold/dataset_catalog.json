@@ -360,7 +360,7 @@
     },
     {
       "code": "pending_duplicates",
-      "text": "Hay pares candidatos de duplicado pendientes de evidencia: el número de informes se da como rango (report_count como cota superior y report_count_excl_candidates como cota inferior). Ninguno de los dos es un número de eventos."
+      "text": "Algunos informes tienen coincidencias por revisar con otros. No están confirmados como duplicados: cada uno cuenta como un informe."
     },
     {
       "code": "confirmed_events_only",

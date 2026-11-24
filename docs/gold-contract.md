@@ -71,18 +71,16 @@ pendientes (`needs_review`) afectan a **311.628** informes
 9.041 informes de grupos confirmados que además tienen un par pendiente:
 conservan su estado confirmado y `has_pending_candidate=1`.
 
-Toda métrica de conteo sensible a duplicados publica dos valores:
+Cada informe es una unidad de conteo. Un par pendiente no prueba que dos
+informes sean el mismo relato, así que **`report_count` es la única cifra de
+informes** (702.572 en total) y no se publica un rango. Solo los grupos
+confirmados (`fact_event`) se tratan como duplicados.
 
-| Métrica | Definición | Total |
-|---|---|---:|
-| `report_count` (cota superior) | Todos los informes que cumplen filtros y elegibilidad. | 702.572 |
-| `report_count_excl_candidates` (cota inferior) | Los mismos, sin los informes con algún par pendiente. | 390.944 |
-
-La diferencia es exactamente `pending_candidate_reports` del corte. El motor
-añade la cota inferior siempre que se pide `report_count`, y el catálogo lo
-declara con `duplicate_bound`. La cota inferior es conservadora: retira los dos
-informes de cada par, aunque al menos uno sea distinto. Ninguna de las dos es
-un número de eventos.
+`has_pending_candidate` queda como marca de calidad del registro, al estilo de
+una expectativa de tipo *warn* en Databricks: no excluye informes. Las métricas
+`pending_candidate_reports` y `report_count_excl_candidates` (390.944) siguen
+disponibles si se piden de forma explícita, pero el motor no las añade a las
+consultas y la interfaz no las presenta como un segundo conteo.
 
 ## Elegibilidad por análisis
 
@@ -201,7 +199,7 @@ Cada resultado incluye:
   límite, en español, para la opción «ver la consulta»;
 - `eligibility_applied`, con las implicadas, y `exclusions`: base, elegibles,
   excluidos y motivo;
-- `duplicate_bounds` y `external_evidence_reports`;
+- `external_evidence_reports`;
 - `provenance`: `gold_load_id` y los SHA-256 de Gold, Silver y Bronze, de las
   definiciones, del motor, de la caché y de la consulta;
 - `snapshot`: fecha de construcción y fecha de referencia de Silver;

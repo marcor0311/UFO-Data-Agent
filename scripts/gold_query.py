@@ -61,6 +61,14 @@ OP_SQL = {"eq": "=", "ne": "!=", "gte": ">=", "lte": "<="}
 SUMMED_RATIO = re.compile(r"^(sum|total|avg|mean|promedio|suma)_(.+)$")
 
 
+# Plain-language wording shown to people. The catalogs stay untouched because
+# they are part of the Gold definitions hash.
+PLAIN_LIMITATIONS = {
+    "confirmed_events_only": "Los eventos existen solo para los duplicados confirmados por coincidencia exacta. "
+                             "Los demás informes cuentan cada uno como un informe y no son eventos.",
+}
+
+
 class QueryError(ValueError):
     def __init__(self, code: str, message: str):
         super().__init__(message)
@@ -402,11 +410,6 @@ class Analytics:
             if q.dataset not in self.metrics[code]["datasets"]:
                 raise QueryError("metric_unavailable", f"La métrica {code} no está definida para {q.dataset}. Datasets: {sorted(self.metrics[code]['datasets'])}")
             metrics.append(code)
-        # Publish both duplicate bounds whenever one of them is requested.
-        for code in list(metrics):
-            bound = self.metrics[code].get("duplicate_bound")
-            if bound and bound["pair"] not in metrics and q.dataset in self.metrics[bound["pair"]]["datasets"]:
-                metrics.append(bound["pair"])
         if q.group_by and not metrics:
             raise QueryError("metrics_required", "Agrupar requiere al menos una métrica")
         if metrics and q.columns:
@@ -594,7 +597,6 @@ class Analytics:
             "view": q.view, "view_label": VIEWS[q.view]["label"], "title": q.title,
             "rows": rows, "total": total_row, "truncated": truncated, "row_count": len(rows),
             "matched_source_rows": matched, "empty": not rows,
-            "duplicate_bounds": self._bounds(metrics),
             "eligibility_applied": [{"code": c, "label": self.eligibility[c]["label"], "flag": self.eligibility[c]["flag"],
                                      "implied": c not in plan["applied"]} for c in plan["closure"]],
             "exclusions": exclusions,
@@ -612,14 +614,6 @@ class Analytics:
                          "label": f"Datos de la carga Gold {self.load_id[:12]} construida el {self.meta['manifest']['built_at'][:10]}"},
             "limitations": limitations,
         }
-
-    def _bounds(self, metrics):
-        if "report_count" in metrics and "report_count_excl_candidates" in metrics:
-            return {"upper": "report_count", "lower": "report_count_excl_candidates",
-                    "text": "El número de informes se publica como rango: la cota inferior retira los informes con pares candidatos pendientes."}
-        if "report_count" in metrics:
-            return {"upper": "report_count", "lower": None, "text": "Este dataset no tiene cota inferior: report_count es una cota superior."}
-        return None
 
     def _exclusions(self, con, q: Query, plan: dict):
         if not plan["applied"]:
@@ -673,8 +667,6 @@ class Analytics:
 
     def _limitations(self, q: Query, plan: dict, metrics: list, external) -> list:
         codes = ["reports_not_facts"]
-        if any(m in metrics for m in ("report_count", "report_count_excl_candidates", "pending_candidate_reports")):
-            codes.append("pending_duplicates")
         if q.dataset in ("fact_event", "event_report") or "event_count" in metrics:
             codes.append("confirmed_events_only")
         codes += [f"eligibility_{c}" for c in plan["applied"]]
@@ -683,7 +675,8 @@ class Analytics:
         if q.dataset == "report_model_output" or any(self.metrics[m].get("model_output") for m in metrics):
             codes.append("model_scores")
         codes.append("source_bias")
-        out = [dict(self.limitations[c]) for c in dict.fromkeys(codes) if c in self.limitations]
+        out = [dict(self.limitations[c], **({"text": PLAIN_LIMITATIONS[c]} if c in PLAIN_LIMITATIONS else {}))
+               for c in dict.fromkeys(codes) if c in self.limitations]
         if external:
             item = dict(self.limitations["external_evidence"])
             item["text"] += f" En esta consulta: {external} informes."

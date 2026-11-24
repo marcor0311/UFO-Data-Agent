@@ -1,9 +1,9 @@
 {
- "load_id": "cb34d85bf862a18b55466abb2b22fc6b96a9219a3d018a6e7ab372063e665cb4",
+ "load_id": "c5acb1eb49fb3c2e2c0ba29d582a2d2d75448b58a48de7252df28234d14103c6",
  "manifest": {
   "gold_version": 1,
-  "load_id": "cb34d85bf862a18b55466abb2b22fc6b96a9219a3d018a6e7ab372063e665cb4",
-  "built_at": "2026-11-23T02:55:25+00:00",
+  "load_id": "c5acb1eb49fb3c2e2c0ba29d582a2d2d75448b58a48de7252df28234d14103c6",
+  "built_at": "2026-11-24T00:51:57+00:00",
   "silver": {
    "path": "data/silver/ufo.db",
    "sha256": "72ada3670f79568025bc4f1c0184e4ae3b3c0236ece6f9f4a2483544a92aa25e",
@@ -20,14 +20,14 @@
    "path": "data/bronze/ufo.db",
    "sha256": "0200337eb1eadabd337ac4f479fceceb5a810eec8ab072cd7a206523703820e0"
   },
-  "definitions_sha256": "04657006a72b938cc9bfd231663a737a8477d309edcbd62b5ec54ab23c90de43",
+  "definitions_sha256": "fd58301e1d438193dc1c9c477ec21316dfd5b06ba6985865c172d6642324d8cd",
   "definitions": {
    "config/countries.json": "839e364587626cb417b37d18f2d57fdddccaa60a8aab2bfcfb607884b98288f2",
    "config/gold/country_names_es.json": "ac9030d7d9612815ce86c324fc985992484c658a4213bb07fac3f9f58a343bdc",
-   "config/gold/dataset_catalog.json": "510d7a6e023b5964d0e9e03973d103b61eea69ca6bbb999a0e84e26b00331172",
+   "config/gold/dataset_catalog.json": "5076626167df243ec98c73b626291eac10086ae96043fb9176e93d5364cc78f2",
    "config/gold/dimension_catalog.json": "4195232b1f812305f6362ee7fc7aea3e20754c931dae927200e5598ac8b219c6",
    "config/gold/gold.json": "d4ab2465ad9deb564e8779536de84423f52c20a5fbbbe1a2516b672cddcb513c",
-   "config/gold/metric_catalog.json": "63227b094892b425f86f9a6db5d671333418fc0bf61c70d5349f85824833906a",
+   "config/gold/metric_catalog.json": "cb3f7531f5cebc93dd9d4f38e9e207c20301475f7cf01c720b48ea073e7231a3",
    "scripts/build_gold.py": "0a53ebca5a5f01ed5ab9a3eb7cec7af4cf279e971f695c51adab2f247b1a0832",
    "scripts/gold_common.py": "41ce40b4c6a00793b4f91db039a3e6806b5560bd3a3ce4dbfa011cdb78424ce8"
   },
@@ -72,7 +72,7 @@
    "confirmed_group_reports": 17920
   },
   "validation": {
-   "checks": 515,
+   "checks": 513,
    "passed": true
   },
   "archived_previous": "data/gold/.history/4fa5cb9488638807e1fe0ba085bafa9ffe1e897982fdc8016d39623ec28ec03a"
@@ -432,15 +432,11 @@
  },
  "metric_catalog": {
   "report_count": {
-   "label": "Informes (cota superior)",
+   "label": "Informes",
    "definition": "Número de informes que cumplen filtros y elegibilidad, incluidos los que tienen pares candidatos pendientes de deduplicación.",
    "unit": "informes",
    "type": "additive",
    "grain": "informe",
-   "duplicate_bound": {
-    "role": "upper",
-    "pair": "report_count_excl_candidates"
-   },
    "requires": [],
    "datasets": {
     "fact_report": {
@@ -488,19 +484,15 @@
    },
    "warnings": [
     "Cuenta informes, no avistamientos ni eventos.",
-    "Incluye informes que podrían ser duplicados pendientes: es una cota superior."
+    "Cada informe es una unidad; las coincidencias por revisar no se restan."
    ]
   },
   "report_count_excl_candidates": {
-   "label": "Informes sin candidatos pendientes (cota inferior)",
+   "label": "Informes sin coincidencias por revisar",
    "definition": "Informes que cumplen filtros y elegibilidad y no participan en ningún par candidato pendiente (has_pending_candidate=0). La diferencia con report_count es exactamente pending_candidate_reports.",
    "unit": "informes",
    "type": "additive",
    "grain": "informe",
-   "duplicate_bound": {
-    "role": "lower",
-    "pair": "report_count"
-   },
    "requires": [],
    "datasets": {
     "fact_report": {
@@ -546,7 +538,7 @@
     }
    },
    "warnings": [
-    "Retira todos los informes con un par pendiente, aunque al menos uno de cada par sea un informe distinto; no es un conteo de eventos."
+    "Métrica de calidad: retira todos los informes con un par pendiente, aunque al menos uno de cada par sea distinto. No es la cifra de informes ni un conteo de eventos."
    ]
   },
   "pending_candidate_reports": {
@@ -2895,7 +2887,7 @@
   },
   {
    "code": "pending_duplicates",
-   "text": "Hay pares candidatos de duplicado pendientes de evidencia: el número de informes se da como rango (report_count como cota superior y report_count_excl_candidates como cota inferior). Ninguno de los dos es un número de eventos."
+   "text": "Algunos informes tienen coincidencias por revisar con otros. No están confirmados como duplicados: cada uno cuenta como un informe."
   },
   {
    "code": "confirmed_events_only",

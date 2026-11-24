@@ -7,10 +7,9 @@
   },
   "metrics": {
     "report_count": {
-      "label": "Informes (cota superior)",
+      "label": "Informes",
       "definition": "Número de informes que cumplen filtros y elegibilidad, incluidos los que tienen pares candidatos pendientes de deduplicación.",
       "unit": "informes", "type": "additive", "grain": "informe",
-      "duplicate_bound": {"role": "upper", "pair": "report_count_excl_candidates"},
       "requires": [],
       "datasets": {
         "fact_report": {"op": "count"}, "report_model_output": {"op": "count"},
@@ -20,13 +19,12 @@
         "agg_spatial_cell": {"op": "sum", "column": "report_count"}, "agg_nuclear_band": {"op": "sum", "column": "report_count"},
         "agg_coverage": {"op": "sum", "column": "report_count"}
       },
-      "warnings": ["Cuenta informes, no avistamientos ni eventos.", "Incluye informes que podrían ser duplicados pendientes: es una cota superior."]
+      "warnings": ["Cuenta informes, no avistamientos ni eventos.", "Cada informe es una unidad; las coincidencias por revisar no se restan."]
     },
     "report_count_excl_candidates": {
-      "label": "Informes sin candidatos pendientes (cota inferior)",
+      "label": "Informes sin coincidencias por revisar",
       "definition": "Informes que cumplen filtros y elegibilidad y no participan en ningún par candidato pendiente (has_pending_candidate=0). La diferencia con report_count es exactamente pending_candidate_reports.",
       "unit": "informes", "type": "additive", "grain": "informe",
-      "duplicate_bound": {"role": "lower", "pair": "report_count"},
       "requires": [],
       "datasets": {
         "fact_report": {"op": "sum", "column": "has_pending_candidate", "negate_flag": true},
@@ -36,7 +34,7 @@
         "agg_spatial_cell": {"op": "sum", "column": "report_count_excl_candidates"}, "agg_nuclear_band": {"op": "sum", "column": "report_count_excl_candidates"},
         "agg_coverage": {"op": "sum", "column": "report_count_excl_candidates"}
       },
-      "warnings": ["Retira todos los informes con un par pendiente, aunque al menos uno de cada par sea un informe distinto; no es un conteo de eventos."]
+      "warnings": ["Métrica de calidad: retira todos los informes con un par pendiente, aunque al menos uno de cada par sea distinto. No es la cifra de informes ni un conteo de eventos."]
     },
     "pending_candidate_reports": {
       "label": "Informes con par candidato pendiente",
