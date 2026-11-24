@@ -9,6 +9,8 @@ import { CatalogViews } from "./catalog-views";
 import { Composer } from "./composer";
 import { groupResults, ResultPanel, resultTitle } from "./result-panel";
 import { TurnView } from "./turn";
+import { ModelViewer } from "@/components/views/model-viewer";
+import { modelCatalogIntent, type ModelKind } from "@/lib/map-models";
 
 const STORAGE = "ufo-agent-conversation";
 const PANES = {
@@ -67,6 +69,8 @@ export default function AgentWorkspace() {
   const [turns, setTurns] = useState<Turn[]>([]);
   const [selectedTurn, setSelectedTurn] = useState<number | null>(null);
   const [view, setView] = useState<WorkspaceView>("chat");
+  const [modelsOpen, setModelsOpen] = useState(false);
+  const [modelsInitial, setModelsInitial] = useState<ModelKind | "all">("all");
   const [moreIdeas, setMoreIdeas] = useState(false);
   const [draft, setDraft] = useState("");
   const [pending, setPending] = useState<string | null>(null);
@@ -147,6 +151,7 @@ export default function AgentWorkspace() {
   }, [activeTurn, pending, selectedTurn]);
 
   function appendTurn(turn: Turn) {
+    setModelsOpen(false);
     setTurns((current) => [...current, turn]);
     setSelectedTurn(null);
     const count = turn.visualizations.length;
@@ -155,7 +160,16 @@ export default function AgentWorkspace() {
 
   async function ask() {
     const question = draft.trim();
-    if (!question || !authenticated || busy) return;
+    if (!question || busy) return;
+    // "ver modelos 3d": show the 3D model catalog inline in Resultados; no model call needed.
+    const catalogKind = modelCatalogIntent(question);
+    if (catalogKind) {
+      setDraft("");
+      setModelsInitial(catalogKind);
+      setModelsOpen(true);
+      return;
+    }
+    if (!authenticated) return;
     followLatest.current = true;
     setPending(question);
     setDraft("");
@@ -230,6 +244,7 @@ export default function AgentWorkspace() {
 
   function showResults(index: number) {
     setSelectedTurn(index);
+    setModelsOpen(false);
     const results = turns[index].visualizations;
     const primary = results.find((result) => result.view !== "table") ?? results[0];
     if (primary) setAnnouncement(`Mostrando ${resultTitle(primary, catalog)}, de la respuesta ${index + 1}.`);
@@ -326,7 +341,7 @@ export default function AgentWorkspace() {
                 <h2>{session && !authenticated ? "Conecta tu cuenta para conversar" : "¿Qué quieres saber sobre los informes UFO?"}</h2>
                 <p>{session && !authenticated
                   ? "La conversación usa el modelo de tu cuenta. Puedes probar las consultas públicas en Explorar datos."
-                  : "Gold reúne informes de fenómenos aéreos no identificados. Los recuentos se expresan como rangos por los duplicados pendientes."}</p>
+                  : "Gold reúne informes de fenómenos aéreos no identificados. Los recuentos se expresan como rangos: todos los informes y excluyendo los posibles duplicados pendientes de revisión."}</p>
                 {starters.length ? (
                   <>
                     <h3 id="starter-title">Para empezar</h3>
@@ -350,7 +365,9 @@ export default function AgentWorkspace() {
             {turns.map((turn, index) => (
               <TurnView key={index} turn={turn} index={index} active={index === activeIndex} onShowResults={() => showResults(index)} />
             ))}
-            {pending ? (
+            {modelsOpen && !pending ? (
+              <ModelViewer initial={modelsInitial} onClose={() => setModelsOpen(false)} />
+            ) : pending ? (
               <div className="turn">
                 <p className="turn-question"><span className="sr-only">Pregunta: </span>{pending}</p>
                 <p className="pending" role="status"><span aria-hidden="true" />Consultando los datos…</p>
@@ -375,6 +392,9 @@ export default function AgentWorkspace() {
                 <a className="explore-link" href={PANES.certified.hash} onClick={(event) => navigate("certified", event, true)}>
                   consultas de ejemplo
                 </a>.
+              </p>
+              <p>
+                <button type="button" className="explore-link" onClick={() => { setModelsInitial("all"); setModelsOpen(true); }}>Ver los modelos 3D de las 28 formas</button>
               </p>
               {catalog ? <CatalogViews views={catalog.views} /> : startupError
                 ? <p role="alert">{startupError}</p>
@@ -406,7 +426,9 @@ export default function AgentWorkspace() {
         <section className="results-panel" id="resultados" aria-label="Resultados">
           <p className="sr-only" role="status">{announcement}</p>
           <div className="results-body" ref={resultsBody}>
-            {pending ? (
+            {modelsOpen && !pending ? (
+              <ModelViewer initial={modelsInitial} onClose={() => setModelsOpen(false)} />
+            ) : pending ? (
               <div className="results-loading" role="status" aria-label="Consultando los datos">
                 <div className="skeleton-line" aria-hidden="true" />
                 <div className="skeleton-line skeleton-short" aria-hidden="true" />
