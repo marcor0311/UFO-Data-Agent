@@ -73,6 +73,24 @@ def test_chat_requires_session(client):
     assert client.get("/api/auth/status").json()["authenticated"] is False
 
 
+def test_oauth_callback_requires_cookie_from_loopback_host(client, monkeypatch):
+    callback = "http://127.0.0.1:8010/auth/callback"
+    monkeypatch.setenv("AGENT_CALLBACK", callback)
+    start = client.get("http://127.0.0.1:8010/api/auth/start", follow_redirects=False)
+    assert start.status_code == 307
+    state = start.cookies["ufo_oauth"]
+
+    missing_cookie = client.get("http://localhost:8010/auth/callback", params={"state": state})
+    assert missing_cookie.status_code == 400
+    assert missing_cookie.headers["content-type"] == "application/json; charset=utf-8"
+    assert missing_cookie.json()["detail"].startswith("Estado OAuth inválido.")
+
+    # A provider denial exercises the state check without a network request.
+    denied = client.get(callback, params={"state": state, "error": "access_denied"})
+    assert denied.status_code == 400
+    assert denied.json()["detail"] == "Autorización rechazada: access_denied"
+
+
 def test_chat_stores_owner_scoped_history(client):
     login(client)
     use_stream([call("run_certified", {"id": "CQ_TEST_SOURCES"})], [message("Hay entre 8 y 12 informes.")])

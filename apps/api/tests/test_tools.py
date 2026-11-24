@@ -225,3 +225,20 @@ def test_report_count_is_a_single_figure(gold):
     assert "duplicate_bounds" not in out and "duplicate_bounds" not in visuals[0]
     texts = " ".join(l["text"] for l in out["limitations"])
     assert "rango" not in texts and "cota" not in texts and "posibles duplicados" not in texts
+
+
+def test_report_listing_becomes_map_timeline_and_shapes():
+    """Runs on the real approved load; skipped where none is approved (CI, fresh clone)."""
+    from app.agent import tools
+    from app.gold import GoldUnavailable, get_analytics
+    try:
+        analytics = get_analytics()
+    except GoldUnavailable as exc:
+        pytest.skip(f"Sin carga Gold aprobada local: {exc}")
+    visuals = []
+    out = tools.execute(analytics, "query_gold", {
+        "dataset": "fact_report", "filters": [{"column": "country_iso2", "op": "eq", "value": "CR"}],
+        "eligibility": ["country"], "title": "Informes de Costa Rica", "limit": 500}, visuals)
+    assert [v["view"] for v in visuals] == ["points", "timeseries", "bars"]
+    assert "visualizations" in out
+    assert all(r["shape_code"] is not None for r in visuals[2]["rows"])
