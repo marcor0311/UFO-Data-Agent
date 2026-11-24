@@ -1,33 +1,56 @@
 # Biblioteca de propuestas gráficas
 
-Recuperación del prototipo **DB Test** y de su Sketchbook v2 para evaluación visual y técnica. La biblioteca agrupa 13 recuperaciones, cuatro propuestas experimentales y dos ideas. El mapa 3D de duración por forma conserva sus componentes reutilizables con el ensamblaje pendiente.
+Propuestas recuperadas del prototipo **DB Test** y de su Sketchbook v2, más las ideas nuevas. Solo hay dos estados:
 
-| Propuesta | Categoría | Estado |
+- [done/](done/): la propuesta ya es una vista o un análisis del Data Agent.
+- [pendientes/](pendientes/README.md): todavía no se puede responder con un gráfico del agente. Hoy no queda ninguna.
+
+Al implementar una propuesta, se mueve de `pendientes/` a `done/` y se actualiza su estado. Las preguntas que cada vista responde, y las que no tienen respuesta en los datos, están en [docs/preguntas-y-graficos.md](../docs/preguntas-y-graficos.md).
+
+## Done
+
+| Propuesta | Categoría | Vista o análisis del agente |
 | --- | --- | --- |
-| [Visualización de modelos 3D](modelos-3d/) | Modelos | Recuperada |
-| [Comparación de reportes](comparacion-reportes/) | Registros | Recuperada |
-| [Mapas 2D](mapas-2d/) | Cartografía | Recuperada |
-| [Mapa 3D de duración por forma](mapa-3d-duracion-por-forma/) | Cartografía | Recuperada (parcial) |
-| [Reportes por año](reportes-por-ano/) | Tiempo | Recuperada |
-| [Formas reportadas](formas-reportadas/) | Composición | Recuperada |
-| [Histograma de duración](histograma-duracion/) | Distribución | Recuperada |
-| [Región por año](region-por-ano/) | Tiempo y región | Recuperada |
-| [Calendario por meses del año](calendario-meses/) | Tiempo | Recuperada |
-| [Día de la semana por hora consignada](dia-semana-hora/) | Tiempo | Recuperada |
-| [Composición por archivo](composicion-por-archivo/) | Procedencia | Recuperada |
-| [Mapa 2D de clusters](mapa-2d-clusters/) | Cartografía | Recuperada |
-| [Mapa 3D de clusters](mapa-3d-clusters/) | Cartografía | Recuperada |
-| [Cronología](cronologia/) | Tiempo | Experimental |
-| [Cambios de composición entre períodos](cambios-composicion-periodos/) | Composición | Experimental |
-| [Duración acumulada](duracion-acumulada/) | Distribución | Experimental |
-| [Duración de testigos](duracion-testigos/) | Relación entre variables | Experimental |
-| [Machine Learning – Clustering](machine-learning-clustering/) | Método analítico | Solo idea |
-| [Perfiles de duración y K-means](perfiles-duracion-k-means/) | Método analítico | Solo idea |
+| [Reportes por año](done/reportes-por-ano/) | Tiempo | `timeseries` |
+| [Calendario por meses del año](done/calendario-meses/) | Tiempo | `month_calendar` |
+| [Día de la semana por hora consignada](done/dia-semana-hora/) | Tiempo | `hour_weekday` |
+| [Cronología](done/cronologia/) | Tiempo | `timeline` |
+| [Región por año](done/region-por-ano/) | Tiempo y región | `matrix` |
+| [Formas reportadas](done/formas-reportadas/) | Composición | `bars` |
+| [Composición por archivo](done/composicion-por-archivo/) | Procedencia | `stacked` |
+| [Cambios de composición entre períodos](done/cambios-composicion-periodos/) | Composición | `dumbbell` |
+| [Histograma de duración](done/histograma-duracion/) | Distribución | `histogram` |
+| [Duración acumulada](done/duracion-acumulada/) | Distribución | `ecdf` |
+| [Mapas 2D](done/mapas-2d/) | Cartografía | `points` |
+| [Globo 3D](done/globo-3d/) | Cartografía | `globe` |
+| [Visualización de modelos 3D](done/modelos-3d/) | Modelos | estilo “Modelos” de `points` |
+| [Mapa 3D de duración por forma](done/mapa-3d-duracion-por-forma/) | Cartografía | `boxplot` y `density` con `median_duration_min` |
+| [Mapa 2D de clusters](done/mapa-2d-clusters/) | Cartografía | análisis `clusters` |
+| [Mapa 3D de clusters](done/mapa-3d-clusters/) | Cartografía | análisis `clusters` en el mapa 3D |
+| [Duración de testigos](done/duracion-testigos/) | Relación entre variables | `scatter` (`duration_witnesses`) |
+| [Comparación de reportes](done/comparacion-reportes/) | Registros | análisis `compare_reports` |
+| [Machine Learning – Clustering](done/machine-learning-clustering/) | Método analítico | análisis `clusters` y `kmeans_profiles` |
+| [Perfiles de duración y K-means](done/perfiles-duracion-k-means/) | Método analítico | análisis `kmeans_profiles` |
 
-## Consultar las propuestas
+## Vistas nuevas sin ficha de DB Test
 
-Las carpetas reúnen los archivos originales, sus extractos, las fichas y los prompts de origen. Las láminas de `referencias/` proceden de DB Test. Para ver una interacción, sigue la ruta al prototipo original indicada en su ficha.
+Surgieron al cubrir las preguntas sin gráfico. Están en el [motor](../scripts/gold_query.py), los [análisis](../scripts/gold_analysis.py) y el [registro web](../apps/web/src/components/views/registry.tsx).
 
-[Recursos y datos compartidos](_compartido/README.md). Los snapshots grandes y la base SQLite están en [DB Test](../DB%20Test/).
+| Vista | Responde |
+| --- | --- |
+| `boxplot` | Medianas y cuantiles de duración, testigos, distancia o puntuaciones por grupo. |
+| `histogram` y `ecdf` con `measure` | Distribución de testigos, cola de duración, distancia, sentimiento y otras medidas, con un panel por fuente. |
+| `scatter` | Duración × testigos, VADER × RoBERTa y perfiles K-means. |
+| `waterfall` | Aporte de cada categoría al cambio entre dos períodos (`period_change`). |
+| `bump` | Entradas y salidas del top acumulado (`rank_over_time`). |
+| `curve` | Concentración de informes en las celdas más concurridas (`concentration`). |
+| `density` divergente y por años | Celdas que suben o bajan (`cell_change`) y primera aparición con deslizador (`first_appearance`). |
+| `links` | Celdas unidas con su instalación más cercana (`facility_links`). |
+| `funnel` y `upset` | Cobertura que se pierde de año a hora y datos que faltan juntos. |
+| `compare` | Dos informes campo a campo. |
 
-El código de montaje y exportación preparado durante la recuperación se conserva en [avance/](avance/README.md).
+## Recursos compartidos
+
+El código original de DB Test que comparten las fichas (extractos, estilos, MapLibre, deck.gl y Three.js) está en [_compartido/](_compartido/README.md). Los snapshots grandes y la base SQLite están en [DB Test](../DB%20Test/).
+
+El código de montaje y exportación preparado durante la recuperación está en [_compartido/reproduccion/](_compartido/reproduccion/README.md) y, para cada propuesta, en su carpeta `reproduccion/`.

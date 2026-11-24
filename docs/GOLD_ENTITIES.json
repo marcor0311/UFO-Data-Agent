@@ -1,7 +1,7 @@
 {
- "load_id": "3f1da0ee64350ecfbccd60e81f89722fcb69a21477de243c57c95d6b62be4714",
+ "load_id": "caca588120ee86fa0da4c802cf6613466444c07bd5b893af37e378b548422059",
  "description": "Entidades resolubles por el agente: ID real (código usado en filtros), nombre canónico, alias y nombre de visualización en español.",
- "regions_note": "Silver no publica regiones por informe; las etiquetas multinacionales del catálogo original solo detectan contradicciones. No hay entidades de región.",
+ "regions_note": "Estados y provincias solo de EE. UU., Canadá y Australia, normalizados desde el texto de la fuente (region_code). Las ciudades se filtran por city_name sin resolver.",
  "sources": [
   {
    "id": "Capella",
@@ -4746,5 +4746,820 @@
    "nearest_reports": 11977
   }
  ],
- "regions": []
+ "regions": [
+  {
+   "id": "AU-ACT",
+   "canonical_name": "Australian Capital Territory",
+   "display_name": "Australian Capital Territory (Australia)",
+   "aliases": [
+    "ACT",
+    "AU-ACT",
+    "Australian Capital Territory"
+   ],
+   "report_count": 153
+  },
+  {
+   "id": "AU-NSW",
+   "canonical_name": "New South Wales",
+   "display_name": "New South Wales (Australia)",
+   "aliases": [
+    "AU-NSW",
+    "NSW",
+    "New South Wales"
+   ],
+   "report_count": 2191
+  },
+  {
+   "id": "AU-NT",
+   "canonical_name": "Northern Territory",
+   "display_name": "Northern Territory (Australia)",
+   "aliases": [
+    "AU-NT",
+    "NT",
+    "Northern Territory"
+   ],
+   "report_count": 6
+  },
+  {
+   "id": "AU-QLD",
+   "canonical_name": "Queensland",
+   "display_name": "Queensland (Australia)",
+   "aliases": [
+    "AU-QLD",
+    "QLD",
+    "Queensland"
+   ],
+   "report_count": 1565
+  },
+  {
+   "id": "AU-SA",
+   "canonical_name": "South Australia",
+   "display_name": "South Australia (Australia)",
+   "aliases": [
+    "AU-SA",
+    "SA",
+    "South Australia"
+   ],
+   "report_count": 1554
+  },
+  {
+   "id": "AU-TAS",
+   "canonical_name": "Tasmania",
+   "display_name": "Tasmania (Australia)",
+   "aliases": [
+    "AU-TAS",
+    "TAS",
+    "Tasmania"
+   ],
+   "report_count": 1036
+  },
+  {
+   "id": "AU-VIC",
+   "canonical_name": "Victoria",
+   "display_name": "Victoria (Australia)",
+   "aliases": [
+    "AU-VIC",
+    "VIC",
+    "Victoria"
+   ],
+   "report_count": 1447
+  },
+  {
+   "id": "AU-WA",
+   "canonical_name": "Western Australia",
+   "display_name": "Western Australia (Australia)",
+   "aliases": [
+    "AU-WA",
+    "WA",
+    "Western Australia"
+   ],
+   "report_count": 716
+  },
+  {
+   "id": "CA-AB",
+   "canonical_name": "Alberta",
+   "display_name": "Alberta (Canadá)",
+   "aliases": [
+    "AB",
+    "Alberta",
+    "CA-AB"
+   ],
+   "report_count": 2633
+  },
+  {
+   "id": "CA-BC",
+   "canonical_name": "British Columbia",
+   "display_name": "British Columbia (Canadá)",
+   "aliases": [
+    "BC",
+    "British Columbia",
+    "CA-BC"
+   ],
+   "report_count": 4071
+  },
+  {
+   "id": "CA-MB",
+   "canonical_name": "Manitoba",
+   "display_name": "Manitoba (Canadá)",
+   "aliases": [
+    "CA-MB",
+    "MB",
+    "Manitoba"
+   ],
+   "report_count": 1392
+  },
+  {
+   "id": "CA-NB",
+   "canonical_name": "New Brunswick",
+   "display_name": "New Brunswick (Canadá)",
+   "aliases": [
+    "CA-NB",
+    "NB",
+    "New Brunswick"
+   ],
+   "report_count": 537
+  },
+  {
+   "id": "CA-NL",
+   "canonical_name": "Newfoundland and Labrador",
+   "display_name": "Newfoundland and Labrador (Canadá)",
+   "aliases": [
+    "CA-NL",
+    "NL",
+    "Newfoundland and Labrador"
+   ],
+   "report_count": 641
+  },
+  {
+   "id": "CA-NS",
+   "canonical_name": "Nova Scotia",
+   "display_name": "Nova Scotia (Canadá)",
+   "aliases": [
+    "CA-NS",
+    "NS",
+    "Nova Scotia"
+   ],
+   "report_count": 791
+  },
+  {
+   "id": "CA-NT",
+   "canonical_name": "Northwest Territories",
+   "display_name": "Northwest Territories (Canadá)",
+   "aliases": [
+    "CA-NT",
+    "NT",
+    "Northwest Territories"
+   ],
+   "report_count": 65
+  },
+  {
+   "id": "CA-NU",
+   "canonical_name": "Nunavut",
+   "display_name": "Nunavut (Canadá)",
+   "aliases": [
+    "CA-NU",
+    "NU",
+    "Nunavut"
+   ],
+   "report_count": 28
+  },
+  {
+   "id": "CA-ON",
+   "canonical_name": "Ontario",
+   "display_name": "Ontario (Canadá)",
+   "aliases": [
+    "CA-ON",
+    "ON",
+    "Ontario"
+   ],
+   "report_count": 6395
+  },
+  {
+   "id": "CA-PE",
+   "canonical_name": "Prince Edward Island",
+   "display_name": "Prince Edward Island (Canadá)",
+   "aliases": [
+    "CA-PE",
+    "PE",
+    "Prince Edward Island"
+   ],
+   "report_count": 117
+  },
+  {
+   "id": "CA-QC",
+   "canonical_name": "Quebec",
+   "display_name": "Quebec (Canadá)",
+   "aliases": [
+    "CA-QC",
+    "QC",
+    "Quebec"
+   ],
+   "report_count": 3156
+  },
+  {
+   "id": "CA-SK",
+   "canonical_name": "Saskatchewan",
+   "display_name": "Saskatchewan (Canadá)",
+   "aliases": [
+    "CA-SK",
+    "SK",
+    "Saskatchewan"
+   ],
+   "report_count": 1099
+  },
+  {
+   "id": "CA-YT",
+   "canonical_name": "Yukon",
+   "display_name": "Yukon (Canadá)",
+   "aliases": [
+    "CA-YT",
+    "YT",
+    "Yukon"
+   ],
+   "report_count": 224
+  },
+  {
+   "id": "US-AK",
+   "canonical_name": "Alaska",
+   "display_name": "Alaska (EE. UU.)",
+   "aliases": [
+    "AK",
+    "Alaska",
+    "US-AK"
+   ],
+   "report_count": 1220
+  },
+  {
+   "id": "US-AL",
+   "canonical_name": "Alabama",
+   "display_name": "Alabama (EE. UU.)",
+   "aliases": [
+    "AL",
+    "Alabama",
+    "US-AL"
+   ],
+   "report_count": 2495
+  },
+  {
+   "id": "US-AR",
+   "canonical_name": "Arkansas",
+   "display_name": "Arkansas (EE. UU.)",
+   "aliases": [
+    "AR",
+    "Arkansas",
+    "US-AR"
+   ],
+   "report_count": 1986
+  },
+  {
+   "id": "US-AZ",
+   "canonical_name": "Arizona",
+   "display_name": "Arizona (EE. UU.)",
+   "aliases": [
+    "AZ",
+    "Arizona",
+    "US-AZ"
+   ],
+   "report_count": 6064
+  },
+  {
+   "id": "US-CA",
+   "canonical_name": "California",
+   "display_name": "California (EE. UU.)",
+   "aliases": [
+    "CA",
+    "California",
+    "US-CA"
+   ],
+   "report_count": 25488
+  },
+  {
+   "id": "US-CO",
+   "canonical_name": "Colorado",
+   "display_name": "Colorado (EE. UU.)",
+   "aliases": [
+    "CO",
+    "Colorado",
+    "US-CO"
+   ],
+   "report_count": 5939
+  },
+  {
+   "id": "US-CT",
+   "canonical_name": "Connecticut",
+   "display_name": "Connecticut (EE. UU.)",
+   "aliases": [
+    "CT",
+    "Connecticut",
+    "US-CT"
+   ],
+   "report_count": 3108
+  },
+  {
+   "id": "US-DC",
+   "canonical_name": "District of Columbia",
+   "display_name": "District of Columbia (EE. UU.)",
+   "aliases": [
+    "DC",
+    "District of Columbia",
+    "US-DC"
+   ],
+   "report_count": 782
+  },
+  {
+   "id": "US-DE",
+   "canonical_name": "Delaware",
+   "display_name": "Delaware (EE. UU.)",
+   "aliases": [
+    "DE",
+    "Delaware",
+    "US-DE"
+   ],
+   "report_count": 503
+  },
+  {
+   "id": "US-FL",
+   "canonical_name": "Florida",
+   "display_name": "Florida (EE. UU.)",
+   "aliases": [
+    "FL",
+    "Florida",
+    "US-FL"
+   ],
+   "report_count": 11269
+  },
+  {
+   "id": "US-GA",
+   "canonical_name": "Georgia",
+   "display_name": "Georgia (EE. UU.)",
+   "aliases": [
+    "GA",
+    "Georgia",
+    "US-GA"
+   ],
+   "report_count": 4147
+  },
+  {
+   "id": "US-GU",
+   "canonical_name": "Guam",
+   "display_name": "Guam (EE. UU.)",
+   "aliases": [
+    "GU",
+    "Guam",
+    "US-GU"
+   ],
+   "report_count": 2
+  },
+  {
+   "id": "US-HI",
+   "canonical_name": "Hawaii",
+   "display_name": "Hawaii (EE. UU.)",
+   "aliases": [
+    "HI",
+    "Hawaii",
+    "US-HI"
+   ],
+   "report_count": 963
+  },
+  {
+   "id": "US-IA",
+   "canonical_name": "Iowa",
+   "display_name": "Iowa (EE. UU.)",
+   "aliases": [
+    "IA",
+    "Iowa",
+    "US-IA"
+   ],
+   "report_count": 2330
+  },
+  {
+   "id": "US-ID",
+   "canonical_name": "Idaho",
+   "display_name": "Idaho (EE. UU.)",
+   "aliases": [
+    "ID",
+    "Idaho",
+    "US-ID"
+   ],
+   "report_count": 2109
+  },
+  {
+   "id": "US-IL",
+   "canonical_name": "Illinois",
+   "display_name": "Illinois (EE. UU.)",
+   "aliases": [
+    "IL",
+    "Illinois",
+    "US-IL"
+   ],
+   "report_count": 7546
+  },
+  {
+   "id": "US-IN",
+   "canonical_name": "Indiana",
+   "display_name": "Indiana (EE. UU.)",
+   "aliases": [
+    "IN",
+    "Indiana",
+    "US-IN"
+   ],
+   "report_count": 5596
+  },
+  {
+   "id": "US-KS",
+   "canonical_name": "Kansas",
+   "display_name": "Kansas (EE. UU.)",
+   "aliases": [
+    "KS",
+    "Kansas",
+    "US-KS"
+   ],
+   "report_count": 2489
+  },
+  {
+   "id": "US-KY",
+   "canonical_name": "Kentucky",
+   "display_name": "Kentucky (EE. UU.)",
+   "aliases": [
+    "KY",
+    "Kentucky",
+    "US-KY"
+   ],
+   "report_count": 2577
+  },
+  {
+   "id": "US-LA",
+   "canonical_name": "Louisiana",
+   "display_name": "Louisiana (EE. UU.)",
+   "aliases": [
+    "LA",
+    "Louisiana",
+    "US-LA"
+   ],
+   "report_count": 1769
+  },
+  {
+   "id": "US-MA",
+   "canonical_name": "Massachusetts",
+   "display_name": "Massachusetts (EE. UU.)",
+   "aliases": [
+    "MA",
+    "Massachusetts",
+    "US-MA"
+   ],
+   "report_count": 5338
+  },
+  {
+   "id": "US-MD",
+   "canonical_name": "Maryland",
+   "display_name": "Maryland (EE. UU.)",
+   "aliases": [
+    "MD",
+    "Maryland",
+    "US-MD"
+   ],
+   "report_count": 2869
+  },
+  {
+   "id": "US-ME",
+   "canonical_name": "Maine",
+   "display_name": "Maine (EE. UU.)",
+   "aliases": [
+    "ME",
+    "Maine",
+    "US-ME"
+   ],
+   "report_count": 1738
+  },
+  {
+   "id": "US-MI",
+   "canonical_name": "Michigan",
+   "display_name": "Michigan (EE. UU.)",
+   "aliases": [
+    "MI",
+    "Michigan",
+    "US-MI"
+   ],
+   "report_count": 5392
+  },
+  {
+   "id": "US-MN",
+   "canonical_name": "Minnesota",
+   "display_name": "Minnesota (EE. UU.)",
+   "aliases": [
+    "MN",
+    "Minnesota",
+    "US-MN"
+   ],
+   "report_count": 3574
+  },
+  {
+   "id": "US-MO",
+   "canonical_name": "Missouri",
+   "display_name": "Missouri (EE. UU.)",
+   "aliases": [
+    "MO",
+    "Missouri",
+    "US-MO"
+   ],
+   "report_count": 4689
+  },
+  {
+   "id": "US-MS",
+   "canonical_name": "Mississippi",
+   "display_name": "Mississippi (EE. UU.)",
+   "aliases": [
+    "MS",
+    "Mississippi",
+    "US-MS"
+   ],
+   "report_count": 1545
+  },
+  {
+   "id": "US-MT",
+   "canonical_name": "Montana",
+   "display_name": "Montana (EE. UU.)",
+   "aliases": [
+    "MT",
+    "Montana",
+    "US-MT"
+   ],
+   "report_count": 1864
+  },
+  {
+   "id": "US-NC",
+   "canonical_name": "North Carolina",
+   "display_name": "North Carolina (EE. UU.)",
+   "aliases": [
+    "NC",
+    "North Carolina",
+    "US-NC"
+   ],
+   "report_count": 5214
+  },
+  {
+   "id": "US-ND",
+   "canonical_name": "North Dakota",
+   "display_name": "North Dakota (EE. UU.)",
+   "aliases": [
+    "ND",
+    "North Dakota",
+    "US-ND"
+   ],
+   "report_count": 1018
+  },
+  {
+   "id": "US-NE",
+   "canonical_name": "Nebraska",
+   "display_name": "Nebraska (EE. UU.)",
+   "aliases": [
+    "NE",
+    "Nebraska",
+    "US-NE"
+   ],
+   "report_count": 1500
+  },
+  {
+   "id": "US-NH",
+   "canonical_name": "New Hampshire",
+   "display_name": "New Hampshire (EE. UU.)",
+   "aliases": [
+    "NH",
+    "New Hampshire",
+    "US-NH"
+   ],
+   "report_count": 2230
+  },
+  {
+   "id": "US-NJ",
+   "canonical_name": "New Jersey",
+   "display_name": "New Jersey (EE. UU.)",
+   "aliases": [
+    "NJ",
+    "New Jersey",
+    "US-NJ"
+   ],
+   "report_count": 4993
+  },
+  {
+   "id": "US-NM",
+   "canonical_name": "New Mexico",
+   "display_name": "New Mexico (EE. UU.)",
+   "aliases": [
+    "NM",
+    "New Mexico",
+    "US-NM"
+   ],
+   "report_count": 5196
+  },
+  {
+   "id": "US-NV",
+   "canonical_name": "Nevada",
+   "display_name": "Nevada (EE. UU.)",
+   "aliases": [
+    "NV",
+    "Nevada",
+    "US-NV"
+   ],
+   "report_count": 3073
+  },
+  {
+   "id": "US-NY",
+   "canonical_name": "New York",
+   "display_name": "New York (EE. UU.)",
+   "aliases": [
+    "NY",
+    "New York",
+    "US-NY"
+   ],
+   "report_count": 9505
+  },
+  {
+   "id": "US-OH",
+   "canonical_name": "Ohio",
+   "display_name": "Ohio (EE. UU.)",
+   "aliases": [
+    "OH",
+    "Ohio",
+    "US-OH"
+   ],
+   "report_count": 10167
+  },
+  {
+   "id": "US-OK",
+   "canonical_name": "Oklahoma",
+   "display_name": "Oklahoma (EE. UU.)",
+   "aliases": [
+    "OK",
+    "Oklahoma",
+    "US-OK"
+   ],
+   "report_count": 2702
+  },
+  {
+   "id": "US-OR",
+   "canonical_name": "Oregon",
+   "display_name": "Oregon (EE. UU.)",
+   "aliases": [
+    "OR",
+    "Oregon",
+    "US-OR"
+   ],
+   "report_count": 5059
+  },
+  {
+   "id": "US-PA",
+   "canonical_name": "Pennsylvania",
+   "display_name": "Pennsylvania (EE. UU.)",
+   "aliases": [
+    "PA",
+    "Pennsylvania",
+    "US-PA"
+   ],
+   "report_count": 9181
+  },
+  {
+   "id": "US-PR",
+   "canonical_name": "Puerto Rico",
+   "display_name": "Puerto Rico (EE. UU.)",
+   "aliases": [
+    "PR",
+    "Puerto Rico",
+    "US-PR"
+   ],
+   "report_count": 98
+  },
+  {
+   "id": "US-RI",
+   "canonical_name": "Rhode Island",
+   "display_name": "Rhode Island (EE. UU.)",
+   "aliases": [
+    "RI",
+    "Rhode Island",
+    "US-RI"
+   ],
+   "report_count": 829
+  },
+  {
+   "id": "US-SC",
+   "canonical_name": "South Carolina",
+   "display_name": "South Carolina (EE. UU.)",
+   "aliases": [
+    "SC",
+    "South Carolina",
+    "US-SC"
+   ],
+   "report_count": 2796
+  },
+  {
+   "id": "US-SD",
+   "canonical_name": "South Dakota",
+   "display_name": "South Dakota (EE. UU.)",
+   "aliases": [
+    "SD",
+    "South Dakota",
+    "US-SD"
+   ],
+   "report_count": 921
+  },
+  {
+   "id": "US-TN",
+   "canonical_name": "Tennessee",
+   "display_name": "Tennessee (EE. UU.)",
+   "aliases": [
+    "TN",
+    "Tennessee",
+    "US-TN"
+   ],
+   "report_count": 3272
+  },
+  {
+   "id": "US-TX",
+   "canonical_name": "Texas",
+   "display_name": "Texas (EE. UU.)",
+   "aliases": [
+    "TX",
+    "Texas",
+    "US-TX"
+   ],
+   "report_count": 9620
+  },
+  {
+   "id": "US-UT",
+   "canonical_name": "Utah",
+   "display_name": "Utah (EE. UU.)",
+   "aliases": [
+    "US-UT",
+    "UT",
+    "Utah"
+   ],
+   "report_count": 5968
+  },
+  {
+   "id": "US-VA",
+   "canonical_name": "Virginia",
+   "display_name": "Virginia (EE. UU.)",
+   "aliases": [
+    "US-VA",
+    "VA",
+    "Virginia"
+   ],
+   "report_count": 4125
+  },
+  {
+   "id": "US-VT",
+   "canonical_name": "Vermont",
+   "display_name": "Vermont (EE. UU.)",
+   "aliases": [
+    "US-VT",
+    "VT",
+    "Vermont"
+   ],
+   "report_count": 717
+  },
+  {
+   "id": "US-WA",
+   "canonical_name": "Washington",
+   "display_name": "Washington (EE. UU.)",
+   "aliases": [
+    "US-WA",
+    "WA",
+    "Washington"
+   ],
+   "report_count": 9376
+  },
+  {
+   "id": "US-WI",
+   "canonical_name": "Wisconsin",
+   "display_name": "Wisconsin (EE. UU.)",
+   "aliases": [
+    "US-WI",
+    "WI",
+    "Wisconsin"
+   ],
+   "report_count": 4668
+  },
+  {
+   "id": "US-WV",
+   "canonical_name": "West Virginia",
+   "display_name": "West Virginia (EE. UU.)",
+   "aliases": [
+    "US-WV",
+    "WV",
+    "West Virginia"
+   ],
+   "report_count": 1759
+  },
+  {
+   "id": "US-WY",
+   "canonical_name": "Wyoming",
+   "display_name": "Wyoming (EE. UU.)",
+   "aliases": [
+    "US-WY",
+    "WY",
+    "Wyoming"
+   ],
+   "report_count": 847
+  }
+ ]
 }

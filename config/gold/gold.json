@@ -18,6 +18,7 @@
   "definitions": [
     "scripts/gold_common.py",
     "scripts/build_gold.py",
+    "scripts/gold_descriptors.py",
     "config/gold/gold.json",
     "config/gold/dataset_catalog.json",
     "config/gold/metric_catalog.json",

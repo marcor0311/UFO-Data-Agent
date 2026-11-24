@@ -154,6 +154,8 @@ class Chat(BaseModel):
     question: str = Field(min_length=1, max_length=4000)
     conversation_id: UUID | None = None
     model: str | None = Field(default=None, max_length=120)
+    # Area drawn on a map ([lng, lat] vertices); every query of the turn is limited to it.
+    area: list[list[float]] | None = Field(default=None, min_length=3, max_length=400)
 
 
 class ContinueExample(BaseModel):
@@ -217,14 +219,14 @@ def chat(body: Chat, user=Depends(identity), a: Analytics = Depends(get_analytic
         choices = catalog_fn(user[1])
         selected = body.model or choices[0]["slug"]
         if selected not in [m["slug"] for m in choices]:
-            raise HTTPException(422, "Modelo no disponible para esta cuenta")
+            raise HTTPException(422, {"code": "model_unavailable", "message": "El modelo seleccionado ya no está disponible. Elige otro modelo y vuelve a enviar tu pregunta."})
         cid = str(body.conversation_id or uuid4())
         previous = store.get(cid, user[0]) if body.conversation_id else []
         if previous is None:
             raise HTTPException(404, "Conversación no encontrada")
         if len(previous) >= MAX_TURNS:
             raise HTTPException(422, "Inicia una conversación nueva para continuar.")
-        turn = DataAgent(a, stream=stream).answer(user[1], body.question, previous, selected)
+        turn = DataAgent(a, stream=stream).answer(user[1], body.question, previous, selected, body.area)
         store.save(cid, user[0], [*previous, turn])
         return {"conversation_id": cid, "turn": turn}
     finally:

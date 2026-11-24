@@ -21,6 +21,7 @@ import argparse
 from collections import Counter
 from contextlib import closing
 from dataclasses import dataclass
+from functools import lru_cache
 from datetime import datetime, timezone
 import json
 import math
@@ -39,25 +40,145 @@ else:
     import releases
 
 CACHE_VERSION = 1
+DENSITY_MAX_CELLS = 20000  # density may draw every cell of the selection (1° worldwide is about 14.000)
+POINTS_MAX_REPORTS = 20000  # above this, the map groups reports by identical coordinates (as the globe does)
+STACKED_MAX_CATEGORIES = 12  # second dimension of stacked: top categories, the rest as "Otras"
 OPS = ("eq", "ne", "in", "gte", "lte", "is_null")
+MAX_CALENDAR_YEARS = 40
 TIME_DIMENSIONS = ("event_year", "decade", "year_month", "event_date")
+# Datasets added with the Silver registers and logs: every generic chart can group them.
+EXTRA_DATASETS = ["report_behavior_tag", "report_hoax_flag", "candidate_pair", "quality_issue_summary", "silver_change_summary",
+                  "fact_crash_retrieval", "fact_nuclear_encounter", "facility_catalog"]
 VIEWS = {
     "table": {"label": "Cifras y tabla", "datasets": "*",
               "description": "Cifras exactas: un total se muestra como tarjetas; un listado o agrupación, como tabla."},
     "bars": {"label": "Barras", "datasets": ["fact_report", "report_model_output", "fact_event", "agg_year", "agg_month",
-                                              "agg_weekday_hour", "agg_country", "agg_shape", "agg_source", "agg_nuclear_band", "agg_coverage"],
+                                              "agg_weekday_hour", "agg_country", "agg_shape", "agg_source", "agg_nuclear_band", "agg_coverage", *EXTRA_DATASETS],
              "description": "Compara categorías (fuentes, formas, países, bandas). Requiere métricas y una o dos dimensiones."},
-    "timeseries": {"label": "Serie temporal", "datasets": ["fact_report", "report_model_output", "fact_event", "agg_year", "agg_month"],
+    "timeseries": {"label": "Serie temporal", "datasets": ["fact_report", "report_model_output", "fact_event", "agg_year", "agg_month", "report_behavior_tag", "report_hoax_flag", "fact_crash_retrieval", "fact_nuclear_encounter"],
                    "description": "Evolución por año, década, mes o día; la primera dimensión debe ser temporal."},
-    "points": {"label": "Mapa de puntos", "datasets": ["fact_report"],
-               "description": "Un punto por informe con coordenadas aptas para mapa. Sin métricas."},
+    "points": {"label": "Mapa de puntos", "datasets": ["fact_report", "fact_crash_retrieval", "fact_nuclear_encounter"],
+               "description": "Todos los informes con coordenadas aptas, sin límite de filas: un punto por informe hasta "
+                              f"{POINTS_MAX_REPORTS} informes y, por encima, un punto por coordenada con su número de informes. Sin métricas."},
     "density": {"label": "Densidad espacial", "datasets": ["agg_spatial_cell", "fact_report"],
-                "description": "Informes por celda de la cuadrícula (1° o 5°). Cuenta informes, no área ni población."},
-    "choropleth": {"label": "Coropleta por país", "datasets": ["agg_country", "fact_report", "report_model_output"],
+                "description": "Informes (u otra métrica) por celda de la cuadrícula (1° o 5°). Admite limit hasta "
+                               f"{DENSITY_MAX_CELLS} para dibujar todas las celdas. Cuenta informes, no área ni población."},
+    "globe": {"label": "Globo 3D", "datasets": ["fact_report"],
+              "description": "Vista global de todos los informes con coordenadas, en su ubicación exacta, sobre un globo. Sin "
+                             "filtros: pide solo report_count, sin group_by y con eligibility map. Para un subconjunto "
+                             "(país, año, forma…) usa points."},
+    "choropleth": {"label": "Coropleta por país", "datasets": ["agg_country", "fact_report", "report_model_output", "report_behavior_tag", "report_hoax_flag", "fact_crash_retrieval", "fact_nuclear_encounter"],
                    "description": "Informes por país ISO2. No normaliza por población."},
     "hour_weekday": {"label": "Matriz hora × día de la semana", "datasets": ["agg_weekday_hour", "fact_report"],
                      "description": "Informes por día de la semana y hora local declarada; solo días y relojes fiables."},
+    "month_calendar": {"label": "Calendario año × mes", "datasets": ["agg_month", "fact_report"],
+                       "description": "Informes por año y mes, un año por fila. Exige filtrar event_year a un rango "
+                                      f"de hasta {MAX_CALENDAR_YEARS} años y un limit de 12 filas por año."},
+    "stacked": {"label": "Composición al 100 %", "datasets": ["fact_report", "report_model_output", "fact_event", "agg_year", "agg_month", "agg_weekday_hour", "agg_country", "agg_shape", "agg_source", "agg_nuclear_band", "agg_coverage", *EXTRA_DATASETS],
+                "description": "Barras apiladas al 100 %: cómo se reparte la segunda dimensión (fuente, forma…) dentro de cada "
+                               "valor de la primera (año, década…). Conserva los conteos detrás de cada porcentaje."},
+    "matrix": {"label": "Matriz de dos dimensiones", "datasets": ["fact_report", "report_model_output", "fact_event", "agg_year", "agg_month", "agg_weekday_hour", "agg_country", "agg_shape", "agg_source", "agg_nuclear_band", "agg_coverage", *EXTRA_DATASETS],
+               "description": "Matriz de conteos: filas por la primera dimensión (país, fuente…) y columnas por la segunda "
+                              "(década, año…). Una métrica."},
+    "dumbbell": {"label": "Cambio entre dos períodos", "datasets": ["fact_report", "agg_year", "agg_shape"],
+                 "description": "Puntos unidos con la proporción de cada categoría en dos períodos. Agrupa por "
+                                "[decade o event_year, categoría] y filtra el período con op in y exactamente dos valores."},
+    "timeline": {"label": "Cronología de informes", "datasets": ["fact_report"],
+                 "description": "Tarjetas de informes ordenadas por fecha con precisión diaria. Sin métricas; exige eligibility 'day'."},
+    "histogram": {"label": "Histograma", "datasets": ["fact_report", "report_model_output"],
+                  "description": "Informes por tramos de una medida (measure): duration (minutos hasta 60, por defecto), "
+                                 "duration_tail (más de una hora, tramos logarítmicos), witnesses, nuclear_distance, sentiment, "
+                                 "vader, roberta, richness, quality, hoax. Pide solo report_count; group_by opcional de una "
+                                 "dimensión (por ejemplo source_code) para un panel por valor."},
+    "ecdf": {"label": "Distribución acumulada", "datasets": ["fact_report"],
+             "description": "Porcentaje acumulado de informes hasta cada valor de la medida: duration (0–60 min, por defecto) o "
+                            "nuclear_distance (0–1.000 km). Pide solo report_count; group_by opcional de una dimensión."},
+    "boxplot": {"label": "Cajas y cuantiles", "datasets": ["fact_report", "report_model_output"],
+                "description": "Percentiles 5, 25, 50, 75 y 95 de una medida por grupo. Pide una métrica de cuantil "
+                               "(median_duration_min, median_witnesses, median_nuclear_distance_km, median_sentiment_score, "
+                               "median_richness_score) y group_by de una dimensión."},
+    "scatter": {"label": "Dispersión agregada", "datasets": ["fact_report", "report_model_output"],
+                "description": "Informes por celda de dos medidas (measure): duration_witnesses (fact_report, escalas "
+                               "logarítmicas) o vader_roberta (report_model_output). Pide solo report_count, sin group_by."},
+    # Views drawn by the analyses of gold_analysis.py (tool analyze); query_gold cannot request them.
+    "waterfall": {"label": "Cascada de cambios", "datasets": [], "description": "Aporte de cada categoría al cambio entre dos períodos (analyze period_change)."},
+    "bump": {"label": "Posiciones en el tiempo", "datasets": [], "description": "Ranking acumulado por año (analyze rank_over_time)."},
+    "curve": {"label": "Curva de concentración", "datasets": [], "description": "Parte de los informes en la parte más concurrida de las celdas (analyze concentration)."},
+    "clusters": {"label": "Agrupaciones espacio-temporales", "datasets": [], "description": "Grupos de informes cercanos en lugar y fecha, en mapa 2D/3D (analyze clusters)."},
+    "links": {"label": "Enlaces con instalaciones", "datasets": [], "description": "Celdas unidas con su instalación más cercana (analyze facility_links)."},
+    "funnel": {"label": "Embudo de cobertura", "datasets": [], "description": "Informes que conservan año, mes, día y hora (analyze funnel)."},
+    "upset": {"label": "Combinaciones de datos faltantes", "datasets": [], "description": "Qué campos faltan juntos (analyze missing_combinations)."},
+    "compare": {"label": "Comparación de dos informes", "datasets": [], "description": "Dos fichas alineadas campo a campo (analyze compare_reports)."},
 }
+ANALYSIS_VIEWS = ("waterfall", "bump", "curve", "clusters", "links", "funnel", "upset", "compare")
+PERIOD_DIMENSIONS = ("decade", "event_year")
+# Measures drawn by histogram, ecdf and scatter: column, dataset, unit, requirements and bin edges.
+def _edges(start, stop, step):
+    out, x = [], start
+    while x <= stop + 1e-9:
+        out.append(round(x, 6)); x += step
+    return out
+MEASURES = {
+    "duration": {"dataset": "fact_report", "column": "duration_seconds", "scale": 1 / 60, "unit": "min", "label": "Duración declarada",
+                 "edges": _edges(0, 60, 1), "positive_only": False},
+    "duration_tail": {"dataset": "fact_report", "column": "duration_seconds", "scale": 1 / 3600, "unit": "h", "label": "Duración de más de una hora",
+                      "edges": [1, 2, 4, 8, 24, 72, 168, 720, 8760], "positive_only": True, "min_exclusive": 1},
+    "witnesses": {"dataset": "fact_report", "column": "num_witnesses", "scale": 1, "unit": "testigos", "label": "Testigos consignados",
+                  "edges": [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 21, 51], "integer": True},
+    "nuclear_distance": {"dataset": "fact_report", "column": "nuclear_distance_km", "scale": 1, "unit": "km",
+                         "label": "Distancia a la instalación más cercana", "edges": _edges(0, 1000, 25), "requires": ["nuclear_proximity"]},
+    "sentiment": {"dataset": "report_model_output", "column": "sentiment_score", "scale": 1, "unit": "puntuación", "label": "Sentimiento heredado (modelo)",
+                  "edges": _edges(-1, 1, 0.1), "model_output": True},
+    "vader": {"dataset": "report_model_output", "column": "vader_compound", "scale": 1, "unit": "puntuación", "label": "VADER (modelo)",
+              "edges": _edges(-1, 1, 0.1), "model_output": True},
+    "roberta": {"dataset": "report_model_output", "column": "roberta_sentiment", "scale": 1, "unit": "puntuación", "label": "RoBERTa (modelo)",
+                "edges": _edges(-1, 1, 0.1), "model_output": True},
+    "richness": {"dataset": "report_model_output", "column": "richness_score", "scale": 1, "unit": "puntos", "label": "Riqueza del relato (heurística)",
+                 "edges": _edges(0, 12, 1), "integer": True, "model_output": True},
+    "quality": {"dataset": "report_model_output", "column": "quality_score", "scale": 1, "unit": "puntos", "label": "Calidad documental (heurística)",
+                "edges": _edges(0, 100, 5), "model_output": True},
+    "hoax": {"dataset": "report_model_output", "column": "hoax_likelihood", "scale": 1, "unit": "probabilidad", "label": "Probabilidad de engaño (modelo)",
+             "edges": _edges(0, 1, 0.05), "model_output": True},
+}
+ECDF_MEASURES = ("duration", "nuclear_distance")
+SCATTER_PAIRS = {
+    "duration_witnesses": {"dataset": "fact_report", "x": "duration", "y": "witnesses", "positive_only": True,
+                           "x_edges": [0, 0.25, 0.5, 1, 2, 5, 10, 20, 30, 60, 120, 240, 720, 1440, 10080],
+                           "y_edges": [1, 2, 3, 4, 5, 6, 8, 11, 16, 21, 51, 101]},
+    "vader_roberta": {"dataset": "report_model_output", "x": "vader", "y": "roberta", "x_edges": _edges(-1, 1, 0.1), "y_edges": _edges(-1, 1, 0.1)},
+}
+QUANTILES = (0.05, 0.25, 0.5, 0.75, 0.95)
+TIMELINE_COLUMNS = ["report_id", "event_date", "source_code", "shape_code", "country_iso2", "num_witnesses",
+                    "duration_seconds", "uses_external_evidence"]
+DURATION_MAX_MINUTES = 60
+AREA_MAX_VERTICES = 400
+
+
+@lru_cache(maxsize=32)
+def _polygon(text: str) -> tuple:
+    return tuple(tuple(p) for p in json.loads(text))
+
+
+def in_area(lng, lat, polygon: str) -> int:
+    """Ray casting in longitude/latitude: 1 if the point lies inside the drawn polygon.
+    The globe may give longitudes beyond ±180 when the shape crosses the antimeridian."""
+    if lng is None or lat is None:
+        return 0
+    poly = _polygon(polygon)
+    hit = 0
+    for shift in (0.0, 360.0, -360.0):
+        x, inside = lng + shift, False
+        j = len(poly) - 1
+        for i in range(len(poly)):
+            xi, yi = poly[i]
+            xj, yj = poly[j]
+            if (yi > lat) != (yj > lat) and x < (xj - xi) * (lat - yi) / (yj - yi) + xi:
+                inside = not inside
+            j = i
+        hit = hit or inside
+    return int(hit)
+
+FULL_FETCH = 100000  # row ceiling when every group is needed before sorting (still bounded by the instruction budget)
 POINT_COLUMNS = ["report_id", "lat", "lng", "source_code", "date_key", "shape_code", "coordinate_basis",
                  "uses_external_evidence", "duplicate_status"]
 DENSITY_GROUPS = {"agg_spatial_cell": [["cell_lat", "cell_lng"]],
@@ -72,6 +193,9 @@ PLAIN_LIMITATIONS = {
     "confirmed_events_only": "Los eventos existen solo para los duplicados confirmados por coincidencia exacta. "
                              "Los demás informes cuentan cada uno como un informe y no son eventos.",
 }
+
+
+OTHER = "__other__"
 
 
 class QueryError(ValueError):
@@ -137,9 +261,11 @@ class Query:
     descending: bool = True
     limit: int = 100
     rollup: bool = False
+    area: tuple | None = None  # polygon [(lng, lat), …] drawn on a map; only reports inside it
+    measure: str | None = None  # histogram, ecdf and scatter: what is binned (MEASURES / SCATTER_PAIRS)
 
     FIELDS = ("dataset", "filters", "group_by", "metrics", "columns", "eligibility", "view", "title",
-              "order_by", "descending", "limit", "rollup")
+              "order_by", "descending", "limit", "rollup", "area", "measure")
 
     @staticmethod
     def parse(raw, limits: dict) -> "Query":
@@ -179,10 +305,24 @@ class Query:
         descending, rollup = raw.get("descending", True), raw.get("rollup", False)
         if not isinstance(descending, bool) or not isinstance(rollup, bool):
             raise QueryError("contract", "descending y rollup deben ser booleanos")
+        view_name = raw.get("view", "table")
+        # A map of cells is complete or misleading: density may ask for every cell of the selection.
+        maximum = DENSITY_MAX_CELLS if view_name == "density" else limits["max_limit"]
         limit = raw.get("limit", limits["default_limit"])
-        if isinstance(limit, bool) or not isinstance(limit, int) or not 1 <= limit <= limits["max_limit"]:
-            raise QueryError("limit", f"limit debe ser un entero entre 1 y {limits['max_limit']}")
-        return Query(dataset=dataset, filters=tuple(Filter.parse(f) for f in filters),
+        if isinstance(limit, bool) or not isinstance(limit, int) or not 1 <= limit <= maximum:
+            raise QueryError("limit", f"limit debe ser un entero entre 1 y {maximum}" + (" (density admite hasta "
+                             f"{DENSITY_MAX_CELLS} celdas)" if view_name != "density" else ""))
+        area = raw.get("area")
+        if area is not None:
+            if (not isinstance(area, list) or not 3 <= len(area) <= AREA_MAX_VERTICES
+                    or not all(isinstance(p, list) and len(p) == 2 and all(isinstance(c, (int, float)) and not isinstance(c, bool) for c in p)
+                               and -540 <= p[0] <= 540 and -90 <= p[1] <= 90 for p in area)):
+                raise QueryError("contract", f"area debe ser un polígono de 3 a {AREA_MAX_VERTICES} vértices [lng, lat]")
+            area = tuple((float(p[0]), float(p[1])) for p in area)
+        measure = raw.get("measure")
+        if measure is not None and measure not in MEASURES and measure not in SCATTER_PAIRS:
+            raise QueryError("contract", f"measure desconocida: {measure!r}. Medidas: {sorted(MEASURES)}; pares: {sorted(SCATTER_PAIRS)}")
+        return Query(dataset=dataset, filters=tuple(Filter.parse(f) for f in filters), area=area, measure=measure,
                      group_by=strings("group_by", limits["max_group_by"]), metrics=strings("metrics", limits["max_metrics"]),
                      columns=strings("columns", 20), eligibility=tuple(sorted(strings("eligibility", 8))), view=view,
                      title=title, order_by=order_by, descending=descending, limit=limit, rollup=rollup)
@@ -193,7 +333,9 @@ class Query:
                 "filters": sorted((f.as_dict() for f in self.filters), key=lambda f: json.dumps(f, sort_keys=True)),
                 "group_by": list(self.group_by), "metrics": list(self.metrics), "columns": list(self.columns),
                 "eligibility": sorted(self.eligibility), "view": self.view, "order_by": self.order_by,
-                "descending": self.descending, "limit": self.limit, "rollup": self.rollup}
+                "descending": self.descending, "limit": self.limit, "rollup": self.rollup,
+                **({"area": [list(p) for p in self.area]} if self.area else {}),
+                **({"measure": self.measure} if self.measure else {})}
 
     def as_dict(self) -> dict:
         return {**self.canonical(), "title": self.title}
@@ -301,6 +443,7 @@ class Analytics:
             calls[0] += 1
             return int(calls[0] > limit)
         con.set_progress_handler(progress, step)
+        con.create_function("in_area", 3, in_area, deterministic=True)
         return con
 
     def _execute(self, con, sql, params):
@@ -378,10 +521,13 @@ class Analytics:
         for item in items:
             hit = sum(idf[t] for t in asked & vocab[item["id"]])
             if hit:
-                scored.append((hit / weight, item))
-        scored.sort(key=lambda t: (-t[0], t[1]["id"]))
-        return [{"id": i["id"], "title": i["title"], "score": round(s, 3), "status": self.certification_status(i)}
-                for s, i in scored[:limit]]
+                # Ties are common (short questions share every word with several queries): the
+                # certified query whose example question is closest wins, not the first by id.
+                closest = max((len(asked & set(tokens(e))) / len(asked | set(tokens(e))) for e in item["examples"]), default=0)
+                scored.append((round(hit / weight, 3), round(closest, 3), item))
+        scored.sort(key=lambda t: (-t[0], -t[1], t[2]["id"]))
+        return [{"id": i["id"], "title": i["title"], "score": s, "example_similarity": e, "status": self.certification_status(i)}
+                for s, e, i in scored[:limit]]
 
     def run_certified(self, certified_id: str) -> dict:
         items = {i["id"]: i for i in self.certified()["queries"]}
@@ -421,10 +567,22 @@ class Analytics:
         if kind == "enum" and value not in spec["values"]:
             raise QueryError("value", f"Valor no permitido para {column}: {value!r}. Permitidos: {sorted(spec['values'])}")
         if kind in ("categorical", "date_key") and column in self.values and value not in self.values[column]:
-            raise QueryError("value", f"Valor desconocido para {column}: {value!r}. Usa find_entities para resolverlo.")
+            raise QueryError("value", self._unknown_value(column, value))
         if kind == "text" and not re.fullmatch(r"\d{4}-\d{2}(-\d{2})?", value):
             raise QueryError("value", f"{column} requiere el formato {spec.get('format')}")
         return value
+
+    def _unknown_value(self, column: str, value) -> str:
+        """Repair hint for an unknown categorical value: the allowed codes when they are few."""
+        allowed = self.values[column]
+        head = f"Valor desconocido para {column}: {value!r}."
+        if column == "date_key":
+            return head + " Usa una fecha AAAA-MM-DD presente en Gold o filtra por event_year."
+        if len(allowed) <= 60:
+            labels = self.labels.get(column) or {}
+            listed = "; ".join(f"{v} ({labels[v]})" if labels.get(v) and labels[v] != v else str(v) for v in allowed)
+            return head + f" Permitidos: {listed}."
+        return head + " Usa find_entities para resolverlo."
 
     def _requirements(self, dataset: str, columns) -> set:
         spec = self.datasets[dataset]
@@ -442,6 +600,8 @@ class Analytics:
         spec = self.datasets[q.dataset]
         schema = spec["columns"]
         view = VIEWS[q.view]
+        if q.view in ANALYSIS_VIEWS:
+            raise QueryError("view_contract", f"La vista {q.view} la produce un análisis: usa la herramienta analyze. {view['description']}")
         if view["datasets"] != "*" and q.dataset not in view["datasets"]:
             raise QueryError("view_incompatible", f"La vista {q.view} no admite el dataset {q.dataset}. Admite: {view['datasets']}")
         for column in (*q.group_by, *(f.column for f in q.filters), *q.columns):
@@ -473,11 +633,17 @@ class Analytics:
             fixed = any(f.column == column and f.op == "eq" for f in q.filters)
             if not fixed and column not in q.group_by:
                 raise QueryError("partition_required", f"{q.dataset} repite todos los informes en cada {column}: filtra un valor (op eq) o agrupa por {column}")
+        declared_closure = set(q.eligibility) | {i for c in q.eligibility for i in self.eligibility.get(c, {}).get("implies", [])} | set(spec["eligibility"])
         for f in q.filters:
-            if f.op == "is_null" and self._requirements(q.dataset, [f.column]):
-                raise QueryError("gated_null_filter", f"{f.column} es nulo cuando el informe no es elegible; usa la columna *_exclusion para ver los motivos")
+            if f.op == "is_null" and not self._requirements(q.dataset, [f.column]) <= declared_closure:
+                raise QueryError("gated_null_filter", f"{f.column} es nulo cuando el informe no es elegible; declara su elegibilidad "
+                                                      "o usa la columna *_exclusion para ver los motivos")
         # Eligibility, enforced in code.
-        used = [*q.group_by, *(f.column for f in q.filters), *q.columns]
+        if q.area and not {"lat", "lng"} <= set(schema):
+            raise QueryError("area_unavailable", f"{q.dataset} no tiene coordenadas: para limitar al área seleccionada usa fact_report")
+        if q.area and q.view == "globe":
+            raise QueryError("view_contract", "El globo es solo la vista global: con un área seleccionada usa points o density")
+        used = [*q.group_by, *(f.column for f in q.filters), *q.columns, *(["lat"] if q.area else [])]
         need = self._requirements(q.dataset, used)
         for code in metrics:
             need |= set(self.metrics[code]["requires"])
@@ -513,8 +679,11 @@ class Analytics:
         for f in q.filters:
             gated = bool(self._requirements(q.dataset, [f.column]))
             if f.op == "is_null":
-                if gated:
-                    raise QueryError("gated_null_filter", f"{f.column} es nulo cuando el informe no es elegible; usa la columna *_exclusion para ver los motivos")
+                # Without its eligibility a gated column is null for every ineligible report: the filter would
+                # count exclusions. Declared, null means the value is unknown among eligible reports.
+                if gated and not self._requirements(q.dataset, [f.column]) <= closure(applied):
+                    raise QueryError("gated_null_filter", f"{f.column} es nulo cuando el informe no es elegible; declara su elegibilidad "
+                                                          "o usa la columna *_exclusion para ver los motivos")
                 if f.value not in (None, True, False):
                     raise QueryError("value", "is_null admite value true/false")
                 clause, values = f'"{f.column}"' + (" IS NOT NULL" if f.value is False else " IS NULL"), []
@@ -531,6 +700,10 @@ class Analytics:
             where.append(clause); params.extend(values)
             if not gated:
                 base_where.append(clause); base_params.extend(values)
+        if q.area:
+            lats = [p[1] for p in q.area]
+            where.append('"lat" BETWEEN ? AND ? AND in_area("lng", "lat", ?) = 1')
+            params.extend([min(lats), max(lats), json.dumps([list(p) for p in q.area])])
         # View contracts.
         if q.view == "points":
             if metrics:
@@ -543,8 +716,51 @@ class Analytics:
             raise QueryError("view_contract", "La coropleta agrupa solo por country_iso2")
         if q.view == "hour_weekday" and list(q.group_by) != ["weekday", "event_hour"]:
             raise QueryError("view_contract", "La matriz agrupa exactamente por weekday y event_hour")
+        if q.view == "month_calendar":
+            self._check_calendar(q)
+        if q.view in ("stacked", "matrix") and (len(metrics) != 1 or len(q.group_by) != 2):
+            raise QueryError("view_contract", f"La vista {q.view} requiere una métrica y exactamente dos dimensiones")
+        if q.view == "dumbbell":
+            periods = [f for f in q.filters if f.column == (q.group_by[0] if q.group_by else None) and f.op == "in"]
+            if (len(metrics) != 1 or len(q.group_by) != 2 or q.group_by[0] not in PERIOD_DIMENSIONS
+                    or len(periods) != 1 or not isinstance(periods[0].value, list) or len(set(periods[0].value)) != 2):
+                raise QueryError("view_contract", "El cambio entre períodos agrupa por [decade o event_year, categoría], "
+                                                  "con una métrica, y filtra ese período con op in y exactamente dos valores")
+        if q.view == "timeline" and metrics:
+            raise QueryError("view_contract", f"La vista {q.view} lista informes: no admite métricas")
+        if q.view == "timeline" and "day" not in closure(applied):
+            raise QueryError("eligibility_missing", "La cronología solo admite fechas con precisión diaria: declara eligibility 'day'")
+        if q.measure and q.view not in ("histogram", "ecdf", "scatter"):
+            raise QueryError("view_contract", "measure solo se admite en histogram, ecdf y scatter")
+        if q.view in ("histogram", "ecdf"):
+            measure = q.measure or "duration"
+            if measure not in MEASURES or (q.view == "ecdf" and measure not in ECDF_MEASURES):
+                raise QueryError("view_contract", f"La vista {q.view} admite measure en {list(MEASURES) if q.view == 'histogram' else list(ECDF_MEASURES)}")
+            if MEASURES[measure]["dataset"] != q.dataset:
+                raise QueryError("view_contract", f"La medida {measure} está en {MEASURES[measure]['dataset']}")
+            if list(metrics) != ["report_count"] or len(q.group_by) > 1:
+                raise QueryError("view_contract", f"La vista {q.view} pide solo report_count y como mucho un group_by: el servidor agrupa la medida")
+            missing = set(MEASURES[measure].get("requires", [])) - closure(applied)
+            if missing:
+                raise QueryError("eligibility_missing", f"La medida {measure} exige eligibility {sorted(missing)}")
+        if q.view == "scatter":
+            pair = SCATTER_PAIRS.get(q.measure or "")
+            if pair is None or pair["dataset"] != q.dataset:
+                raise QueryError("view_contract", f"La dispersión pide measure en {sorted(SCATTER_PAIRS)} con su dataset "
+                                                  f"({', '.join(f'{k}: {v['dataset']}' for k, v in SCATTER_PAIRS.items())})")
+            if list(metrics) != ["report_count"] or q.group_by:
+                raise QueryError("view_contract", "La dispersión pide solo report_count y sin group_by")
+        if q.view == "boxplot":
+            if len(metrics) != 1 or self.metrics[metrics[0]]["datasets"][q.dataset].get("op") != "quantile" or len(q.group_by) > 1:
+                raise QueryError("view_contract", "Las cajas piden una métrica de cuantil (median_…) y como mucho un group_by")
         if q.view == "density" and list(q.group_by) not in DENSITY_GROUPS.get(q.dataset, []):
             raise QueryError("view_contract", f"La densidad agrupa por {DENSITY_GROUPS.get(q.dataset)}")
+        if q.view == "globe" and (list(metrics) != ["report_count"] or q.group_by):
+            raise QueryError("view_contract", "El globo pide solo report_count y sin group_by: el servidor agrupa por ubicación")
+        if q.view == "globe" and q.filters:
+            raise QueryError("view_contract", "El globo es solo la vista global, sin filtros: para un subconjunto usa points")
+        if q.view == "globe" and "map" not in closure(applied):
+            raise QueryError("eligibility_missing", "El globo solo admite coordenadas aptas para mapa: declara eligibility 'map'")
         if q.view == "bars" and (not metrics or not 1 <= len(q.group_by) <= 2):
             raise QueryError("view_contract", "Las barras requieren métricas y una o dos dimensiones")
         if q.order_by is not None:
@@ -554,6 +770,42 @@ class Analytics:
         return {"spec": spec, "metrics": metrics, "applied": sorted(applied), "inherent": bool(inherent),
                 "closure": sorted(closure(applied)),
                 "where": where, "params": params, "base_where": base_where, "base_params": base_params}
+
+    def _globe_locations(self, con, table: str, plan: dict) -> list[dict]:
+        """Reports per exact coordinate pair, every location (no row limit): the globe draws
+        each point where it was reported. Reports at identical coordinates share one point."""
+        where = " WHERE " + " AND ".join(plan["where"]) if plan["where"] else ""
+        sql = (f"SELECT lat, lng, COUNT(*) AS report_count FROM {table}{where} GROUP BY lat, lng "
+               f"ORDER BY report_count DESC, lat, lng")
+        return [dict(r) for r in self._execute(con, sql, plan["params"])]
+
+    def _check_calendar(self, q: Query) -> None:
+        """A year × month matrix must fit in one result: bounded years, every cell within limit."""
+        if list(q.group_by) != ["event_year", "event_month"]:
+            raise QueryError("view_contract", "El calendario agrupa exactamente por event_year y event_month")
+        low = high = None
+        for f in q.filters:
+            if f.column != "event_year":
+                continue
+            values = f.value if f.op == "in" and isinstance(f.value, list) else [f.value]
+            if not all(isinstance(v, int) and not isinstance(v, bool) for v in values):
+                continue
+            if f.op in ("eq", "in"):
+                low = max(low, min(values)) if low is not None else min(values)
+                high = min(high, max(values)) if high is not None else max(values)
+            elif f.op == "gte":
+                low = max(low, values[0]) if low is not None else values[0]
+            elif f.op == "lte":
+                high = min(high, values[0]) if high is not None else values[0]
+        if low is None or high is None or high < low:
+            raise QueryError("view_contract", "El calendario exige filtrar event_year con gte y lte (o eq/in) "
+                                              f"a un rango de hasta {MAX_CALENDAR_YEARS} años")
+        span = high - low + 1
+        if span > MAX_CALENDAR_YEARS:
+            raise QueryError("view_contract", f"El calendario admite hasta {MAX_CALENDAR_YEARS} años; "
+                                              f"el filtro cubre {span} ({low}–{high})")
+        if q.limit < span * 12:
+            raise QueryError("limit", f"El calendario de {span} años necesita limit ≥ {span * 12}")
 
     def _metric_sql(self, dataset: str, code: str) -> str:
         metric = self.metrics[code]
@@ -567,6 +819,8 @@ class Analytics:
             raise QueryError("catalog", f"Columna de métrica inexistente: {column}")
         col = f'"{column}"' if column else None
         op = expr["op"]
+        if op == "quantile":
+            return "NULL"  # computed after the grouped query (_fill_quantiles): SQLite has no percentile
         if op == "count":
             return f"COUNT({col})" if col else "COUNT(*)"
         if op == "sum":
@@ -581,6 +835,43 @@ class Analytics:
 
     # -- execution ------------------------------------------------------
     def query(self, request) -> dict:
+        result = self._query(request)
+        return self._with_unknown_month(result) if result["view"] == "month_calendar" else result
+
+    def _with_unknown_month(self, result: dict) -> dict:
+        """Calendar: add, per year, the reports whose month cannot be known.
+
+        Each year gets one extra row with event_month = null (“Mes desconocido”):
+        reports of that year counted at year level (calendar eligibility) minus
+        the ones with a reliable month. Both counts come from Gold with the same
+        non-temporal filters, so the chart, the exact data and the totals agree.
+        """
+        q = result["query"]
+        if "report_count" not in q["metrics"] or any(f["column"] in ("event_month", "year_month") for f in q["filters"]):
+            return result
+        yearly = {"dataset": "agg_year" if q["dataset"] == "agg_month" else q["dataset"], "filters": q["filters"],
+                  "group_by": ["event_year"], "metrics": ["report_count"], "limit": self.limits["max_limit"],
+                  "eligibility": [] if q["dataset"] == "agg_month" else
+                                 sorted({e for e in q["eligibility"] if e not in ("month", "day", "hour")} | {"calendar"})}
+        per_year = {r["event_year"]: r["report_count"] for r in self._query(yearly)["rows"]}
+        known: dict = {}
+        for row in result["rows"]:
+            known[row["event_year"]] = known.get(row["event_year"], 0) + (row["report_count"] or 0)
+        rows = []
+        for year in sorted(set(per_year) | set(known)):
+            rows += [r for r in result["rows"] if r["event_year"] == year]
+            rows.append({"event_year": year, "event_month": None, "event_month_label": "Mes desconocido",
+                         "report_count": max(0, per_year.get(year, 0) - known.get(year, 0))})
+        with_month = sum(known.values())
+        reports = sum(per_year.values())
+        result.update(rows=rows, row_count=len(rows), empty=not rows,
+                      calendar_totals={"reports": reports, "with_month": with_month, "without_month": max(0, reports - with_month)})
+        result["limitations"] = [{"code": "unknown_month",
+                                  "text": "“Mes desconocido” reúne los informes del año cuyo mes no es fiable (solo consignan el año, "
+                                          "fecha aproximada o marcador de día); no se reparten entre los meses."}] + result["limitations"]
+        return result
+
+    def _query(self, request) -> dict:
         q = Query.parse(request, self.limits)
         plan = self._plan(q)
         spec, metrics = plan["spec"], plan["metrics"]
@@ -592,7 +883,7 @@ class Analytics:
             group = " GROUP BY " + ", ".join(groups) if groups else ""
             if q.order_by:
                 order = f' ORDER BY "{q.order_by}" {"DESC" if q.descending else "ASC"}'
-            elif q.view in ("timeseries", "hour_weekday", "density") or not groups:
+            elif q.view in ("timeseries", "hour_weekday", "month_calendar", "density", "stacked", "matrix", "dumbbell") or not groups:
                 order = " ORDER BY " + ", ".join(groups) if groups else ""
             else:
                 order = f' ORDER BY "{metrics[0]}" DESC, ' + ", ".join(groups)
@@ -603,10 +894,13 @@ class Analytics:
                 columns = list(q.columns)
             else:
                 # Defaults never widen the eligibility the caller declared.
-                defaults = POINT_COLUMNS if q.view == "points" else spec.get("default_columns", list(spec["columns"]))
-                columns = [c for c in defaults if self._requirements(q.dataset, [c]) <= set(plan["closure"])]
+                defaults = (POINT_COLUMNS if q.view == "points" and q.dataset == "fact_report"
+                            else TIMELINE_COLUMNS if q.view == "timeline"
+                            else spec.get("default_columns", list(spec["columns"])))
+                columns = [c for c in defaults if c in spec["columns"] and self._requirements(q.dataset, [c]) <= set(plan["closure"])]
             if q.view == "points":
-                columns = list(dict.fromkeys(["report_id", "lat", "lng", *columns]))
+                key = next(c for c, r in spec["columns"].items() if r == "key")
+                columns = list(dict.fromkeys([key, "lat", "lng", *columns]))
             for column in columns:
                 if column not in spec["columns"]:
                     raise QueryError("column_unknown", f"Columna desconocida: {column}")
@@ -616,24 +910,62 @@ class Analytics:
             select = [f'"{c}"' for c in columns]
             group = ""
             key = next((c for c, r in spec["columns"].items() if r == "key"), columns[0])
-            order = (f' ORDER BY "{q.order_by}" {"DESC" if q.descending else "ASC"}, "{key}"' if q.order_by else f' ORDER BY "{key}"')
+            order = (f' ORDER BY "{q.order_by}" {"DESC" if q.descending else "ASC"}, "{key}"' if q.order_by
+                     else f' ORDER BY "event_date", "{key}"' if q.view == "timeline" else f' ORDER BY "{key}"')
         sql = "SELECT " + ", ".join(select) + f" FROM {table}{where}{group}{order} LIMIT ?"
+        limit = q.limit
+        quantiles = [m for m in metrics if self._is_quantile(q.dataset, m)]
+        # Post-processed results need every group before sorting and cutting.
+        fetch = FULL_FETCH if quantiles or q.view == "stacked" else limit + 1
         matched_expr = "COALESCE(SUM(report_count),0)" if "report_count" in spec["columns"] else "COUNT(*)"
         external_expr = ("COALESCE(SUM(external_evidence_reports),0)" if "external_evidence_reports" in spec["columns"]
                          else "COALESCE(SUM(uses_external_evidence),0)" if "uses_external_evidence" in spec["columns"] else None)
+        extra: dict = {}
         with closing(self.connect()) as con:
-            rows = [dict(r) for r in self._execute(con, sql, [*plan["params"], q.limit + 1])]
             matched = self._execute(con, f"SELECT {matched_expr} FROM {table}{where}", plan["params"])[0][0]
+            if q.view == "points":
+                rows, grouped = self._points(con, q, plan, columns, matched)
+                extra["points"] = {"reports": matched, "grouped": grouped, "max_reports": POINTS_MAX_REPORTS}
+            else:
+                rows = [dict(r) for r in self._execute(con, sql, [*plan["params"], fetch])]
+            if quantiles:
+                self._fill_quantiles(con, q, plan, rows, quantiles, box=q.view == "boxplot")
+            distribution = None
+            if q.view in ("histogram", "ecdf"):
+                distribution = self._distribution(con, q, plan)
+            elif q.view == "scatter":
+                distribution = self._scatter(con, q, plan)
+            locations = self._globe_locations(con, table, plan) if q.view == "globe" else None
             external = self._execute(con, f"SELECT {external_expr} FROM {table}{where}", plan["params"])[0][0] if external_expr else None
             total_row = None
             if q.rollup:
                 total = self._execute(con, "SELECT " + ", ".join(f'{self._metric_sql(q.dataset, m)} AS "{m}"' for m in metrics)
                                       + f" FROM {table}{where}", plan["params"])[0]
                 total_row = dict(total)
+                if quantiles:
+                    total_q = Query(**{**q.__dict__, "group_by": ()})
+                    holder = [total_row]
+                    self._fill_quantiles(con, total_q, plan, holder, quantiles)
             exclusions = self._exclusions(con, q, plan)
-        truncated = len(rows) > q.limit
-        rows = rows[:q.limit]
-        self._add_labels(rows, q.group_by if metrics else [c for c in rows[0]] if rows else [])
+        if quantiles and q.order_by in quantiles:
+            known = [r for r in rows if r.get(q.order_by) is not None]
+            rows = sorted(known, key=lambda r: r[q.order_by], reverse=q.descending) + [r for r in rows if r.get(q.order_by) is None]
+        if q.view == "stacked":
+            rows = self._collapse_categories(rows, q, metrics)
+        truncated = len(rows) > limit and q.view != "points"
+        if q.view != "points":
+            rows = rows[:limit]
+        if distribution:
+            rows, truncated = distribution.pop("rows"), False
+        if locations is not None:
+            rows, truncated = locations, False
+        label_columns = q.group_by if metrics else [c for c in rows[0]] if rows else []
+        if q.view == "points":
+            # Thousands of points: label only what the map shows (source and shape), not every column.
+            label_columns = [c for c in ("source_code", "shape_code") if rows and c in rows[0]] if not extra["points"]["grouped"] else []
+        if q.view in ("histogram", "ecdf") and q.group_by:
+            label_columns = list(q.group_by)
+        self._add_labels(rows, label_columns)
         query_sha = text_digest(q.canonical())
         certified, status = self._certified_match(query_sha)
         result_type = "certified" if certified and status["valid"] else "composed"
@@ -663,7 +995,157 @@ class Analytics:
                          "silver_reference_date": self.meta["manifest"]["silver"].get("reference_date"),
                          "label": f"Datos de la carga Gold {self.load_id[:12]} construida el {self.meta['manifest']['built_at'][:10]}"},
             "limitations": limitations,
+            **({"distribution": distribution} if distribution else {}),
+            **extra,
         }
+
+    # -- post-processing helpers -----------------------------------------
+    def _is_quantile(self, dataset: str, code: str) -> bool:
+        return self.metrics[code]["datasets"].get(dataset, {}).get("op") == "quantile"
+
+    def _values_by_group(self, con, q: Query, plan: dict, column: str, positive_only: bool, scale: float) -> dict:
+        """Sorted values of ``column`` per group of ``q.group_by`` (same filters and eligibility)."""
+        groups = [f'"{g}"' for g in q.group_by]
+        where = plan["where"] + [f'"{column}" IS NOT NULL'] + ([f'"{column}" > 0'] if positive_only else [])
+        sql = (f'SELECT {", ".join(groups + [chr(34) + column + chr(34)])} FROM "{q.dataset}" WHERE ' + " AND ".join(where)
+               + " ORDER BY " + ", ".join(groups + [f'"{column}"']))
+        out: dict = {}
+        n = len(groups)
+        for row in self._execute(con, sql, plan["params"]):
+            out.setdefault(tuple(row[:n]), []).append(row[n] * scale)
+        return out
+
+    @staticmethod
+    def _quantile(values: list, q: float):
+        if not values:
+            return None
+        index = min(len(values) - 1, max(0, math.ceil(q * len(values)) - 1))
+        return round(values[index], 4)
+
+    def _fill_quantiles(self, con, q: Query, plan: dict, rows: list, metrics: list, box: bool = False) -> None:
+        for code in metrics:
+            expr = self.metrics[code]["datasets"][q.dataset]
+            values = self._values_by_group(con, q, plan, expr["column"], bool(expr.get("positive_only")), expr.get("scale", 1))
+            for row in rows:
+                found = values.get(tuple(row.get(g) for g in q.group_by), [])
+                row[code] = self._quantile(found, expr["q"])
+                if box:
+                    row["box"] = {"n": len(found), **{f"p{int(p * 100):02d}": self._quantile(found, p) for p in QUANTILES},
+                                  "min": round(found[0], 4) if found else None, "max": round(found[-1], 4) if found else None}
+
+    def _points(self, con, q: Query, plan: dict, columns: list, matched: int):
+        """Every report of the selection: one row per report up to POINTS_MAX_REPORTS, else one per coordinate."""
+        where = " WHERE " + " AND ".join(plan["where"]) if plan["where"] else ""
+        spec = self.datasets[q.dataset]
+        key = next(c for c, r in spec["columns"].items() if r == "key")
+        if matched <= POINTS_MAX_REPORTS:
+            sql = f'SELECT {", ".join(chr(34) + c + chr(34) for c in columns)} FROM "{q.dataset}"{where} ORDER BY "{key}" LIMIT ?'
+            return [dict(r) for r in self._execute(con, sql, [*plan["params"], POINTS_MAX_REPORTS])], False
+        shape = ', CASE WHEN COUNT(DISTINCT "shape_code") = 1 THEN MAX("shape_code") END AS shape_code' if "shape_code" in spec["columns"] else ""
+        external = ', MAX("uses_external_evidence") AS uses_external_evidence' if "uses_external_evidence" in spec["columns"] else ""
+        sql = (f'SELECT lat, lng, COUNT(*) AS report_count{shape}{external} FROM "{q.dataset}"{where} '
+               "GROUP BY lat, lng ORDER BY report_count DESC, lat, lng")
+        return [dict(r) for r in self._execute(con, sql, plan["params"])], True
+
+    def _collapse_categories(self, rows: list, q: Query, metrics: list) -> list:
+        """Stacked: keep the largest categories of the second dimension and join the rest as "Otras"."""
+        if len(q.group_by) != 2 or not metrics or self.metrics[metrics[0]]["type"] != "additive":
+            return rows
+        first, second = q.group_by
+        metric = metrics[0]
+        totals = Counter()
+        for r in rows:
+            totals[r[second]] += r.get(metric) or 0
+        if len(totals) <= STACKED_MAX_CATEGORIES:
+            return rows
+        keep = {k for k, _ in totals.most_common(STACKED_MAX_CATEGORIES - 1)}
+        merged: dict = {}
+        out = []
+        for r in rows:
+            if r[second] in keep:
+                out.append(r)
+            else:
+                slot = merged.setdefault(r[first], {first: r[first], second: OTHER, metric: 0})
+                slot[metric] += r.get(metric) or 0
+        out += list(merged.values())
+        order = {k: i for i, (k, _) in enumerate(totals.most_common())}
+        return sorted(out, key=lambda r: (r[first] is None, r[first], order.get(r[second], len(order))))
+
+    def _bin_case(self, expression: str, edges: list) -> str:
+        """Index of the bin of each value: -1 below the first edge, len(edges)-1 at or above the last."""
+        cases = " ".join(f"WHEN {expression} < {edges[i + 1]!r} THEN {i}" for i in range(len(edges) - 1))
+        return f"CASE WHEN {expression} < {edges[0]!r} THEN -1 {cases} ELSE {len(edges) - 1} END"
+
+    def _distribution(self, con, q: Query, plan: dict) -> dict:
+        """Histogram / ECDF bins of one measure, optionally one series per value of one dimension."""
+        code = q.measure or "duration"
+        m = MEASURES[code]
+        value = f'("{m["column"]}" * {m["scale"]!r})'
+        valid = [f'"{m["column"]}" IS NOT NULL'] + ([f'"{m["column"]}" > 0'] if m.get("positive_only") else []) \
+            + ([f"{value} > {m['min_exclusive']!r}"] if "min_exclusive" in m else [])
+        where = plan["where"]
+        facet = f'"{q.group_by[0]}"' if q.group_by else "NULL"
+        base = f' FROM "{q.dataset}"' + (" WHERE " + " AND ".join(where) if where else "")
+        sql = (f"SELECT {facet} AS facet, CASE WHEN NOT ({' AND '.join(valid)}) THEN NULL ELSE {self._bin_case(value, m['edges'])} END AS b, "
+               f"COUNT(*) AS n{base} GROUP BY 1, 2")
+        series: dict = {}
+        for r in self._execute(con, sql, plan["params"]):
+            item = series.setdefault(r["facet"], {"counts": [0] * (len(m["edges"]) - 1), "over_max": 0, "below_min": 0, "without_value": 0})
+            if r["b"] is None:
+                item["without_value"] += r["n"]
+            elif r["b"] == -1:
+                item["below_min"] += r["n"]
+            elif r["b"] >= len(m["edges"]) - 1:
+                item["over_max"] += r["n"]
+            else:
+                item["counts"][r["b"]] += r["n"]
+        ordered = sorted(series.items(), key=lambda kv: -sum(kv[1]["counts"]) - kv[1]["over_max"])[:8]
+        labels = self.labels.get(q.group_by[0], {}) if q.group_by else {}
+        out_series = []
+        for key, item in ordered:
+            item["with_value"] = sum(item["counts"]) + item["over_max"]
+            out_series.append({"key": key, "label": labels.get(str(key), "sin dato" if key is None else str(key)) if q.group_by else None, **item})
+        fmt = lambda x: f"{x:g}".replace(".", ",")
+        rows = []
+        for item in out_series:
+            facet_value = {q.group_by[0]: item["key"]} if q.group_by else {}
+            for i, n in enumerate(item["counts"]):
+                rows.append({**facet_value, "bin": f"{fmt(m['edges'][i])}–{fmt(m['edges'][i + 1])} {m['unit']}", "report_count": n})
+            rows.append({**facet_value, "bin": f"{fmt(m['edges'][-1])} {m['unit']} o más", "report_count": item["over_max"]})
+            rows.append({**facet_value, "bin": "Sin valor", "report_count": item["without_value"]})
+        out = {"rows": rows, "measure": code, "label": m["label"], "unit": m["unit"], "edges": m["edges"], "series": out_series,
+               "facet": q.group_by[0] if q.group_by else None}
+        if code == "duration" and len(out_series) == 1 and not q.group_by:
+            # Shape of the earlier contract (one-minute bins), kept for conversations already stored.
+            item = out_series[0]
+            out["rows"] = ([{"duration_bin": f"{i}–{i + 1} min", "report_count": n} for i, n in enumerate(item["counts"])]
+                           + [{"duration_bin": f"Más de {DURATION_MAX_MINUTES} min", "report_count": item["over_max"]},
+                              {"duration_bin": "Sin duración declarada", "report_count": item["without_value"]}])
+            out.update(bins=[{"from_s": i * 60, "to_s": (i + 1) * 60, "report_count": n} for i, n in enumerate(item["counts"])],
+                       over_max=item["over_max"], without_duration=item["without_value"], with_duration=item["with_value"],
+                       max_minutes=DURATION_MAX_MINUTES)
+        elif code == "duration" and not out_series:
+            out.update(bins=[], over_max=0, without_duration=0, with_duration=0, max_minutes=DURATION_MAX_MINUTES)
+        return out
+
+    def _scatter(self, con, q: Query, plan: dict) -> dict:
+        pair = SCATTER_PAIRS[q.measure]
+        mx, my = MEASURES[pair["x"]], MEASURES[pair["y"]]
+        vx, vy = f'("{mx["column"]}" * {mx["scale"]!r})', f'("{my["column"]}" * {my["scale"]!r})'
+        where = plan["where"] + [f'"{mx["column"]}" IS NOT NULL', f'"{my["column"]}" IS NOT NULL']
+        if pair.get("positive_only"):
+            where += [f'"{mx["column"]}" > 0', f'"{my["column"]}" > 0']
+        sql = (f"SELECT {self._bin_case(vx, pair['x_edges'])} AS bx, {self._bin_case(vy, pair['y_edges'])} AS by, COUNT(*) AS n "
+               f'FROM "{q.dataset}" WHERE ' + " AND ".join(where) + " GROUP BY 1, 2")
+        xe, ye = pair["x_edges"], pair["y_edges"]
+        edge = lambda e, i: e[i] if 0 <= i < len(e) else None
+        rows = [{"x_bin": r["bx"], "y_bin": r["by"], "x_from": edge(xe, r["bx"]), "x_to": edge(xe, r["bx"] + 1),
+                 "y_from": edge(ye, r["by"]), "y_to": edge(ye, r["by"] + 1), "report_count": r["n"]}
+                for r in self._execute(con, sql, plan["params"])]
+        rows.sort(key=lambda r: (r["x_bin"], r["y_bin"]))
+        return {"rows": rows, "measure": q.measure, "x": {"measure": pair["x"], "label": mx["label"], "unit": mx["unit"], "edges": xe},
+                "y": {"measure": pair["y"], "label": my["label"], "unit": my["unit"], "edges": ye},
+                "with_value": sum(r["report_count"] for r in rows)}
 
     def _exclusions(self, con, q: Query, plan: dict):
         if not plan["applied"]:
@@ -711,7 +1193,9 @@ class Analytics:
         for row in rows:
             for column in columns:
                 labels = self.labels.get(column)
-                if labels is not None and column in row:
+                if column in row and row[column] == OTHER:
+                    row[f"{column}_label"] = "Otras"
+                elif labels is not None and column in row:
                     value = row[column]
                     row[f"{column}_label"] = labels.get(str(value), "sin dato" if value is None else str(value))
 
@@ -746,6 +1230,8 @@ class Analytics:
                 filters.append(f"{name}: {'sin dato' if f.value is not False else 'con dato'}")
             else:
                 filters.append(f"{name} {ops[f.op]} {label(f.column, f.value)}")
+        if q.area:
+            filters.append("Dentro del área seleccionada en el mapa")
         parts = {
             "dataset": f"{self.datasets[q.dataset]['label']} ({q.dataset})",
             "filtros": filters or ["ninguno"],
@@ -755,9 +1241,9 @@ class Analytics:
             "orden": f"{q.order_by} {'desc' if q.descending else 'asc'}" if q.order_by else "predeterminado",
             "limite": q.limit,
         }
-        parts["texto"] = (f"{parts['dataset']} · filtros: {'; '.join(parts['filtros'])} · agrupado por: {', '.join(parts['agrupado_por'])}"
-                          f" · métricas: {', '.join(parts['metricas'])} · elegibilidad: {', '.join(parts['elegibilidad'])}"
-                          f" · límite {q.limit}")
+        parts["texto"] = (f"{parts['dataset']}, filtros: {'; '.join(parts['filtros'])}, agrupado por: {', '.join(parts['agrupado_por'])}"
+                          f", métricas: {', '.join(parts['metricas'])}, elegibilidad: {', '.join(parts['elegibilidad'])}"
+                          f", límite {q.limit}")
         return parts
 
 

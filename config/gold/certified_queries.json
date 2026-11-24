@@ -34,9 +34,9 @@
       "limitation": "Son informes, no avistamientos ni eventos; el total es un rango porque hay pares candidatos de duplicado pendientes.",
       "query_sha256": "fabeba9a0e2050f4261892bb18229c248467bbe0f1e0d6027b08047cef024c8c",
       "verification": {
-        "load_id": "3f1da0ee64350ecfbccd60e81f89722fcb69a21477de243c57c95d6b62be4714",
-        "verified_at": "2026-11-24T04:17:14+00:00",
-        "query_engine_sha256": "55cd10f8ff5e5b5fb4195cf8d7d6c63447f0bfc4dda1052136b90c8c84f94a03",
+        "load_id": "caca588120ee86fa0da4c802cf6613466444c07bd5b893af37e378b548422059",
+        "verified_at": "2026-11-24T19:03:21+00:00",
+        "query_engine_sha256": "b6900ecff9eb0c0768bd31c594fe86274ccb4b874a8bb32e20a7faddaacac12e",
         "independent_check": "scripts/verify_gold_independent.py"
       },
       "expected_result": {
@@ -106,9 +106,9 @@
       "limitation": "Solo informes con fecha apta para calendario; los picos reflejan también cómo y cuándo se recopilaron los informes.",
       "query_sha256": "a0e9370d87bc6bf7d9560c67769cb41aabead06c15948d709b491a6e8735b48d",
       "verification": {
-        "load_id": "3f1da0ee64350ecfbccd60e81f89722fcb69a21477de243c57c95d6b62be4714",
-        "verified_at": "2026-11-24T04:17:14+00:00",
-        "query_engine_sha256": "55cd10f8ff5e5b5fb4195cf8d7d6c63447f0bfc4dda1052136b90c8c84f94a03",
+        "load_id": "caca588120ee86fa0da4c802cf6613466444c07bd5b893af37e378b548422059",
+        "verified_at": "2026-11-24T19:03:21+00:00",
+        "query_engine_sha256": "b6900ecff9eb0c0768bd31c594fe86274ccb4b874a8bb32e20a7faddaacac12e",
         "independent_check": "scripts/verify_gold_independent.py"
       },
       "expected_result": {
@@ -649,9 +649,9 @@
       "limitation": "Las décadas antiguas proceden de compilaciones históricas; no son comparables con los sistemas de reporte modernos.",
       "query_sha256": "d7e46f5e139e5eda8b04a63a111b5fcab52d8c1d400b69c2bbcb0a0d685e76b5",
       "verification": {
-        "load_id": "3f1da0ee64350ecfbccd60e81f89722fcb69a21477de243c57c95d6b62be4714",
-        "verified_at": "2026-11-24T04:17:14+00:00",
-        "query_engine_sha256": "55cd10f8ff5e5b5fb4195cf8d7d6c63447f0bfc4dda1052136b90c8c84f94a03",
+        "load_id": "caca588120ee86fa0da4c802cf6613466444c07bd5b893af37e378b548422059",
+        "verified_at": "2026-11-24T19:03:21+00:00",
+        "query_engine_sha256": "b6900ecff9eb0c0768bd31c594fe86274ccb4b874a8bb32e20a7faddaacac12e",
         "independent_check": "scripts/verify_gold_independent.py"
       },
       "expected_result": {
@@ -1207,9 +1207,9 @@
       "limitation": "Excluye fechas de solo año y las 01-01 de fuentes con exceso de ese marcador.",
       "query_sha256": "2850d5f4f13e3a38bb896dbb1aaa4f9048099afed0e0fb3052dfb9ea7fe48f78",
       "verification": {
-        "load_id": "3f1da0ee64350ecfbccd60e81f89722fcb69a21477de243c57c95d6b62be4714",
-        "verified_at": "2026-11-24T04:17:14+00:00",
-        "query_engine_sha256": "55cd10f8ff5e5b5fb4195cf8d7d6c63447f0bfc4dda1052136b90c8c84f94a03",
+        "load_id": "caca588120ee86fa0da4c802cf6613466444c07bd5b893af37e378b548422059",
+        "verified_at": "2026-11-24T19:03:21+00:00",
+        "query_engine_sha256": "b6900ecff9eb0c0768bd31c594fe86274ccb4b874a8bb32e20a7faddaacac12e",
         "independent_check": "scripts/verify_gold_independent.py"
       },
       "expected_result": {
@@ -1314,9 +1314,9 @@
       "limitation": "Hora local declarada, sin zona horaria; UPDB no aporta horas, así que la matriz refleja sobre todo UFOCAT y UFO-search.",
       "query_sha256": "fbe5c5ed2ee03087ee015495e26d103d42d5c9af0c6ceb73d2a4a6bac4ca8e3d",
       "verification": {
-        "load_id": "3f1da0ee64350ecfbccd60e81f89722fcb69a21477de243c57c95d6b62be4714",
-        "verified_at": "2026-11-24T04:17:14+00:00",
-        "query_engine_sha256": "55cd10f8ff5e5b5fb4195cf8d7d6c63447f0bfc4dda1052136b90c8c84f94a03",
+        "load_id": "caca588120ee86fa0da4c802cf6613466444c07bd5b893af37e378b548422059",
+        "verified_at": "2026-11-24T19:03:21+00:00",
+        "query_engine_sha256": "b6900ecff9eb0c0768bd31c594fe86274ccb4b874a8bb32e20a7faddaacac12e",
         "independent_check": "scripts/verify_gold_independent.py"
       },
       "expected_result": {
@@ -2370,9 +2370,9 @@
       "limitation": "Hora local declarada, sin zona horaria; muchas horas están redondeadas a la hora en punto y UPDB no aporta horas.",
       "query_sha256": "fb33c7b11fd8028ec682a6bfc884ba7951c44e1433bf77365ab2822f0b556c96",
       "verification": {
-        "load_id": "3f1da0ee64350ecfbccd60e81f89722fcb69a21477de243c57c95d6b62be4714",
-        "verified_at": "2026-11-24T04:17:14+00:00",
-        "query_engine_sha256": "55cd10f8ff5e5b5fb4195cf8d7d6c63447f0bfc4dda1052136b90c8c84f94a03",
+        "load_id": "caca588120ee86fa0da4c802cf6613466444c07bd5b893af37e378b548422059",
+        "verified_at": "2026-11-24T19:03:21+00:00",
+        "query_engine_sha256": "b6900ecff9eb0c0768bd31c594fe86274ccb4b874a8bb32e20a7faddaacac12e",
         "independent_check": "scripts/verify_gold_independent.py"
       },
       "expected_result": {
@@ -2513,9 +2513,9 @@
       "limitation": "No se normaliza por población; Estados Unidos domina por la cobertura de las fuentes.",
       "query_sha256": "6dca8b3b4c2768538d92b0d308b0f5c92a4216ba463a2848f1c780cecf560b9a",
       "verification": {
-        "load_id": "3f1da0ee64350ecfbccd60e81f89722fcb69a21477de243c57c95d6b62be4714",
-        "verified_at": "2026-11-24T04:17:14+00:00",
-        "query_engine_sha256": "55cd10f8ff5e5b5fb4195cf8d7d6c63447f0bfc4dda1052136b90c8c84f94a03",
+        "load_id": "caca588120ee86fa0da4c802cf6613466444c07bd5b893af37e378b548422059",
+        "verified_at": "2026-11-24T19:03:21+00:00",
+        "query_engine_sha256": "b6900ecff9eb0c0768bd31c594fe86274ccb4b874a8bb32e20a7faddaacac12e",
         "independent_check": "scripts/verify_gold_independent.py"
       },
       "expected_result": {
@@ -2659,9 +2659,9 @@
       "limitation": "Solo informes con país canónico consistente; no se normaliza por población.",
       "query_sha256": "4d69e62393bd0bf8cb4d6938d3c6fe8730b5eed510e702a3eabb3ed007b233e5",
       "verification": {
-        "load_id": "3f1da0ee64350ecfbccd60e81f89722fcb69a21477de243c57c95d6b62be4714",
-        "verified_at": "2026-11-24T04:17:14+00:00",
-        "query_engine_sha256": "55cd10f8ff5e5b5fb4195cf8d7d6c63447f0bfc4dda1052136b90c8c84f94a03",
+        "load_id": "caca588120ee86fa0da4c802cf6613466444c07bd5b893af37e378b548422059",
+        "verified_at": "2026-11-24T19:03:21+00:00",
+        "query_engine_sha256": "b6900ecff9eb0c0768bd31c594fe86274ccb4b874a8bb32e20a7faddaacac12e",
         "independent_check": "scripts/verify_gold_independent.py"
       },
       "expected_result": {
@@ -3860,9 +3860,9 @@
       "limitation": "La forma es la clasificación de la fuente sobre el texto del testigo; la mayoría de los informes no tiene forma estandarizada.",
       "query_sha256": "0128c3f94d87dc56403ee809d30010c0e052087485e5eba821cbae5c27fbd549",
       "verification": {
-        "load_id": "3f1da0ee64350ecfbccd60e81f89722fcb69a21477de243c57c95d6b62be4714",
-        "verified_at": "2026-11-24T04:17:14+00:00",
-        "query_engine_sha256": "55cd10f8ff5e5b5fb4195cf8d7d6c63447f0bfc4dda1052136b90c8c84f94a03",
+        "load_id": "caca588120ee86fa0da4c802cf6613466444c07bd5b893af37e378b548422059",
+        "verified_at": "2026-11-24T19:03:21+00:00",
+        "query_engine_sha256": "b6900ecff9eb0c0768bd31c594fe86274ccb4b874a8bb32e20a7faddaacac12e",
         "independent_check": "scripts/verify_gold_independent.py"
       },
       "expected_result": {
@@ -4058,9 +4058,9 @@
       "limitation": "Cuenta informes con coordenadas aptas; una coordenada puede ser el centro de una ciudad y parte procede del catálogo externo de UFO-search.",
       "query_sha256": "dd77ac7dda3239edc79e23c24d53915e9bec5809e3b077badf45f09a08364477",
       "verification": {
-        "load_id": "3f1da0ee64350ecfbccd60e81f89722fcb69a21477de243c57c95d6b62be4714",
-        "verified_at": "2026-11-24T04:17:14+00:00",
-        "query_engine_sha256": "55cd10f8ff5e5b5fb4195cf8d7d6c63447f0bfc4dda1052136b90c8c84f94a03",
+        "load_id": "caca588120ee86fa0da4c802cf6613466444c07bd5b893af37e378b548422059",
+        "verified_at": "2026-11-24T19:03:21+00:00",
+        "query_engine_sha256": "b6900ecff9eb0c0768bd31c594fe86274ccb4b874a8bb32e20a7faddaacac12e",
         "independent_check": "scripts/verify_gold_independent.py"
       },
       "expected_result": {
@@ -6604,9 +6604,9 @@
       "limitation": "La distancia es a un catálogo local de instalaciones, no a todas las del mundo, y cercanía no implica relación; las bandas no tienen igual área.",
       "query_sha256": "098a6446b0a6ad86a982ed197402219e6623530cac030216b73da87b1a8a8705",
       "verification": {
-        "load_id": "3f1da0ee64350ecfbccd60e81f89722fcb69a21477de243c57c95d6b62be4714",
-        "verified_at": "2026-11-24T04:17:14+00:00",
-        "query_engine_sha256": "55cd10f8ff5e5b5fb4195cf8d7d6c63447f0bfc4dda1052136b90c8c84f94a03",
+        "load_id": "caca588120ee86fa0da4c802cf6613466444c07bd5b893af37e378b548422059",
+        "verified_at": "2026-11-24T19:03:21+00:00",
+        "query_engine_sha256": "b6900ecff9eb0c0768bd31c594fe86274ccb4b874a8bb32e20a7faddaacac12e",
         "independent_check": "scripts/verify_gold_independent.py"
       },
       "expected_result": {
@@ -6690,9 +6690,9 @@
       "limitation": "Ser la instalación más cercana del catálogo no significa estar cerca: incluye informes a miles de kilómetros.",
       "query_sha256": "53fe4b4dbf1df3535c3512312f29e092664efb252e81a53b0c0989c9919c7c16",
       "verification": {
-        "load_id": "3f1da0ee64350ecfbccd60e81f89722fcb69a21477de243c57c95d6b62be4714",
-        "verified_at": "2026-11-24T04:17:14+00:00",
-        "query_engine_sha256": "55cd10f8ff5e5b5fb4195cf8d7d6c63447f0bfc4dda1052136b90c8c84f94a03",
+        "load_id": "caca588120ee86fa0da4c802cf6613466444c07bd5b893af37e378b548422059",
+        "verified_at": "2026-11-24T19:03:21+00:00",
+        "query_engine_sha256": "b6900ecff9eb0c0768bd31c594fe86274ccb4b874a8bb32e20a7faddaacac12e",
         "independent_check": "scripts/verify_gold_independent.py"
       },
       "expected_result": {
@@ -6810,9 +6810,9 @@
       "limitation": "Solo se confirman coincidencias exactas; los candidatos pendientes no son eventos y no se sabe si son distintos.",
       "query_sha256": "5b014ff9901828e1ebb345d752db0376b3813995d331134568ad7a430a5c15c4",
       "verification": {
-        "load_id": "3f1da0ee64350ecfbccd60e81f89722fcb69a21477de243c57c95d6b62be4714",
-        "verified_at": "2026-11-24T04:17:14+00:00",
-        "query_engine_sha256": "55cd10f8ff5e5b5fb4195cf8d7d6c63447f0bfc4dda1052136b90c8c84f94a03",
+        "load_id": "caca588120ee86fa0da4c802cf6613466444c07bd5b893af37e378b548422059",
+        "verified_at": "2026-11-24T19:03:21+00:00",
+        "query_engine_sha256": "b6900ecff9eb0c0768bd31c594fe86274ccb4b874a8bb32e20a7faddaacac12e",
         "independent_check": "scripts/verify_gold_independent.py"
       },
       "expected_result": {
@@ -6861,9 +6861,9 @@
       "limitation": "Un candidato pendiente no es un duplicado demostrado ni un informe distinto demostrado.",
       "query_sha256": "3878c84d8caf3ecce0eee7bfa49c34cb90a557e7161f3e8fbcc3f6d0e1c4412b",
       "verification": {
-        "load_id": "3f1da0ee64350ecfbccd60e81f89722fcb69a21477de243c57c95d6b62be4714",
-        "verified_at": "2026-11-24T04:17:14+00:00",
-        "query_engine_sha256": "55cd10f8ff5e5b5fb4195cf8d7d6c63447f0bfc4dda1052136b90c8c84f94a03",
+        "load_id": "caca588120ee86fa0da4c802cf6613466444c07bd5b893af37e378b548422059",
+        "verified_at": "2026-11-24T19:03:21+00:00",
+        "query_engine_sha256": "b6900ecff9eb0c0768bd31c594fe86274ccb4b874a8bb32e20a7faddaacac12e",
         "independent_check": "scripts/verify_gold_independent.py"
       },
       "expected_result": {
@@ -6928,9 +6928,9 @@
       "limitation": "Cada análisis tiene su propia elegibilidad: no se suman los excluidos de análisis distintos.",
       "query_sha256": "c5e950f3fe274ed77de93519658cf2f722ec35e4da52bcb28cb709e82b36f276",
       "verification": {
-        "load_id": "3f1da0ee64350ecfbccd60e81f89722fcb69a21477de243c57c95d6b62be4714",
-        "verified_at": "2026-11-24T04:17:14+00:00",
-        "query_engine_sha256": "55cd10f8ff5e5b5fb4195cf8d7d6c63447f0bfc4dda1052136b90c8c84f94a03",
+        "load_id": "caca588120ee86fa0da4c802cf6613466444c07bd5b893af37e378b548422059",
+        "verified_at": "2026-11-24T19:03:21+00:00",
+        "query_engine_sha256": "b6900ecff9eb0c0768bd31c594fe86274ccb4b874a8bb32e20a7faddaacac12e",
         "independent_check": "scripts/verify_gold_independent.py"
       },
       "expected_result": {
@@ -7074,9 +7074,9 @@
       "limitation": "Bronze no puede confirmar los valores externos; para un análisis solo con Bronze, filtra uses_external_evidence=0 en fact_report.",
       "query_sha256": "c966ad835c87d4a419bf3a5398d66501543869fae554cdd4ceb2073a79b499d0",
       "verification": {
-        "load_id": "3f1da0ee64350ecfbccd60e81f89722fcb69a21477de243c57c95d6b62be4714",
-        "verified_at": "2026-11-24T04:17:14+00:00",
-        "query_engine_sha256": "55cd10f8ff5e5b5fb4195cf8d7d6c63447f0bfc4dda1052136b90c8c84f94a03",
+        "load_id": "caca588120ee86fa0da4c802cf6613466444c07bd5b893af37e378b548422059",
+        "verified_at": "2026-11-24T19:03:21+00:00",
+        "query_engine_sha256": "b6900ecff9eb0c0768bd31c594fe86274ccb4b874a8bb32e20a7faddaacac12e",
         "independent_check": "scripts/verify_gold_independent.py"
       },
       "expected_result": {
@@ -7149,9 +7149,9 @@
       "limitation": "Un mismo origen (p. ej., NUFORC) aparece en varias fuentes compiladas, por lo que hay solapamiento entre ellas.",
       "query_sha256": "eb121a74115dee5dbfd46c9937aa0d2bb7b3328303b3fb493debb9ed5e370a1d",
       "verification": {
-        "load_id": "3f1da0ee64350ecfbccd60e81f89722fcb69a21477de243c57c95d6b62be4714",
-        "verified_at": "2026-11-24T04:17:14+00:00",
-        "query_engine_sha256": "55cd10f8ff5e5b5fb4195cf8d7d6c63447f0bfc4dda1052136b90c8c84f94a03",
+        "load_id": "caca588120ee86fa0da4c802cf6613466444c07bd5b893af37e378b548422059",
+        "verified_at": "2026-11-24T19:03:21+00:00",
+        "query_engine_sha256": "b6900ecff9eb0c0768bd31c594fe86274ccb4b874a8bb32e20a7faddaacac12e",
         "independent_check": "scripts/verify_gold_independent.py"
       },
       "expected_result": {

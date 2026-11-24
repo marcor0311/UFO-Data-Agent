@@ -2,6 +2,57 @@
 
 Integra UFOCAT, UPDB, UFO-search y Capella / PhenomAInon en un data agent.
 
+## Inicio rápido
+
+Ejecuta los comandos desde la raíz del repositorio.
+
+### Demo con datos sintéticos
+
+| Entorno | Comando |
+| --- | --- |
+| Windows o Windows Sandbox x64 | `.\install_demo_windows.cmd` |
+| Debian o Ubuntu (x64 o ARM64) | `bash scripts/install_demo_linux.sh` |
+
+Los instaladores preparan Python y Node.js y llaman a `scripts/run_demo.py`.
+En Windows, el `.cmd` abre PowerShell y ejecuta `scripts/install_demo_windows.ps1`.
+El lanzador instala las dependencias de la app, genera o reutiliza la muestra en
+`data/demo/` y levanta la API y la web. Cuando aparezca **API y ejemplo verificados**,
+abre el enlace que imprime y selecciona **Informes por fuente**. La consulta de
+ejemplo se puede abrir sin iniciar sesión. [Guía de la demo](docs/arranque-muestra-gold.md).
+
+Si ya tienes los requisitos del sistema, puedes iniciar directamente con
+`python scripts/run_demo.py` en Windows o `python3 scripts/run_demo.py` en Linux.
+
+### Carga completa con datos reales
+
+Detén la demo con `Ctrl+C`. En Windows, con las dependencias de la app instaladas:
+
+```powershell
+.\run_full_windows.cmd
+```
+
+El `.cmd` ejecuta `scripts/build_all.py` con el Python del entorno de la API.
+Si el pipeline termina correctamente, ejecuta `npm.cmd --prefix apps/web run dev`.
+La app usa la carga Gold aprobada en el catálogo de versiones. El script descarta
+las variables que seleccionan la muestra para ese arranque.
+
+En Windows también puedes ejecutar los dos pasos manualmente:
+
+```powershell
+python scripts/build_all.py
+```
+
+Cuando el pipeline termine correctamente, arranca la API y la web:
+
+```powershell
+npm.cmd --prefix apps/web run dev
+```
+
+En Linux o macOS, usa `python3 scripts/build_all.py` y luego
+`npm --prefix apps/web run dev`. Si configuraste manualmente
+`AGENT_GOLD_SERVING` o `AGENT_CERTIFIED_QUERIES`, quítalas de la sesión antes
+del arranque manual con Gold completa.
+
 ## 1. Construir los datos (un solo comando)
 
 Requisitos: Python 3.11+ con SQLite, `curl` solo para la primera descarga de
@@ -12,6 +63,18 @@ fallo: [docs/pipeline-local.md](docs/pipeline-local.md).
 python3 scripts/build_all.py          # macOS / Linux
 py -3.12 scripts\build_all.py         # Windows (PowerShell)
 ```
+
+`build_all.py` llama a las funciones de estos módulos en orden:
+
+| Etapa | Módulo | Resultado |
+| --- | --- | --- |
+| Bronze | `scripts/build_bronze.py` | Descarga o reutiliza y valida la base original. |
+| Silver | `scripts/build_silver.py` | Construye y valida la capa normalizada desde Bronze. |
+| Gold | `scripts/build_gold.py` | Construye la base analítica desde Silver aprobada. |
+| Caché de servicio | `scripts/discover_gold.py` | Prepara los artefactos de consulta que usa la API. |
+
+El pipeline también verifica y certifica Gold antes de aprobar la carga. Para
+el flujo completo, basta con ejecutar `build_all.py`.
 
 Construye Bronze → Silver → Gold → `ready_for_agent` y se detiene en el primer
 paso que falle. Cada capa se construye en una versión nueva bajo
@@ -36,6 +99,9 @@ versionadas: los resultados de cada carga se guardan en su versión.
 
 ## 2. Ejecutar la aplicación
 
+Para probar la web y la API desde un clon limpio con datos sintéticos, sigue la
+[guía de arranque con una muestra Gold](docs/arranque-muestra-gold.md).
+
 ```bash
 python3.14 -m venv apps/api/.venv
 apps/api/.venv/bin/python -m pip install -e apps/api
@@ -49,6 +115,7 @@ reiniciarla, y `/api/health` muestra su `load_id`.
 
 ## Documentación
 
+- Producto y diseño: [PRODUCT.md](PRODUCT.md), [DESIGN.md](DESIGN.md)
 - Silver: [contrato](data/silver/README.md), [contrato analítico](docs/silver-contract.md), [revisión](docs/silver-review.md)
 - Pipeline local: [operación en macOS y Windows](docs/pipeline-local.md)
 - Gold: [contrato](docs/gold-contract.md), [catálogo](docs/GOLD_CATALOG.md), [guía de dominio](docs/gold-domain-guide.md), [verificación](docs/gold-verification.md)

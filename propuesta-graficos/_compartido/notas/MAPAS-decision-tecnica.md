@@ -1,4 +1,4 @@
-# Cartografía del prototipo local · 19 de octubre de 2026
+# Cartografía del prototipo local, 19 de octubre de 2026
 
 Se mantiene **MapLibre GL JS 5.24.0 + deck.gl 9.4.0**, OpenStreetMap vía OpenFreeMap y elevación Mapzen Terrarium. Mapterhorn queda como fuente alternativa de elevación. El archivo sigue siendo local; las teselas se consultan por internet.
 
@@ -40,6 +40,6 @@ Se usó la skill **Data / visualize-data** para conservar significado y trazabil
 
 El motor recibe el encuadre regional antes de cargar el estilo. La navegación queda limitada a la extensión investigada con un margen; se desactivan las copias mundiales. La caché se limita a 96 teselas por fuente y los DEM se acotan a ese margen geográfico. Las teselas activas dependen del encuadre y el zoom: el límite de caché no equivale a un límite fijo de memoria total. [Opciones oficiales de MapLibre](https://maplibre.org/maplibre-gl-js/docs/API/type-aliases/MapOptions/).
 
-Aplicar un rectángulo o lazo conserva sus IDs y límites geográficos. Ambos pasan de 2D a 3D en el archivo y los tres casos; las cámaras se guardan por área para evitar heredar encuadres de otra región. Una selección nueva desde gráficos calcula su propia extensión; quitar filtros devuelve el contexto regional. El botón «Volver al área» recupera el encuadre. Las referencias fuera de una selección siguen siendo consultables como contexto, sin ampliar automáticamente el área de trabajo.
+Aplicar un rectángulo o lazo conserva sus IDs y límites geográficos. Ambos pasan de 2D a 3D en el archivo y los tres casos; las cámaras se guardan por área para evitar heredar encuadres de otra región. Una selección nueva desde gráficos calcula su propia extensión; quitar filtros devuelve el contexto regional. El botón “Volver al área” recupera el encuadre. Las referencias fuera de una selección siguen siendo consultables como contexto, sin ampliar automáticamente el área de trabajo.
 
 `verificar-area-investigacion.cjs` comprueba ocho contratos de propagación y restablecimiento de área/IDs. `verificar-carga-mapas.cjs` comprueba ocho contratos de carga, encuadre inicial, caché, límites del DEM y fallos visibles. Son pruebas con adaptadores, sin certificar mapa visible ni rendimiento real.

@@ -121,7 +121,7 @@ evaluación cambiaron después de esa carga. En ese caso, reconstruye con
 
 ## 5. Recuperación tras un fallo
 
-1. Lee el mensaje `PIPELINE DETENIDO en «fase»`. Indica la causa y las versiones
+1. Lee el mensaje `PIPELINE DETENIDO en “fase”`. Indica la causa y las versiones
    que siguen vigentes, que no cambian.
 2. El candidato fallido se conserva para diagnosticarlo en
    `data/<capa>/versions/`. Su informe de esa fase está dentro del directorio,

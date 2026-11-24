@@ -21,7 +21,7 @@ cifras corresponden a la carga Gold construida sobre Silver v6
    rechaza la consulta si falta. Los agregados `agg_*` ya la aplican.
 5. **Mencionar las limitaciones** que devuelve el resultado, como mínimo las
    marcadas para la consulta certificada (`limitation`).
-6. **Ofrecer «ver la consulta»** con `readable_query.texto` y la procedencia
+6. **Ofrecer “ver la consulta”** con `readable_query.texto` y la procedencia
    (`load_id`, fecha del snapshot).
 
 ## Glosario
@@ -35,7 +35,7 @@ cifras corresponden a la carga Gold construida sobre Silver v6
 | **Coincidencia por revisar** | `has_pending_candidate`: marca de calidad, no un duplicado. El informe cuenta como un informe más; no se resta de ninguna cifra. |
 | **Precisión de fecha** | `calendar_precision`: la precisión más fina que es segura (`day`, `month` o `year`). Una fecha puede tener día en la fuente y precisión segura de mes. |
 | **Marcador de día** | Día `01`, `15` o fecha `01-01` que algunas fuentes usan cuando desconocen el día; se detecta por exceso estadístico en cada fuente. Esas fechas conservan el año (y el mes si corresponde), pero no entran en análisis por día. |
-| **Fecha calificada** | Fecha con «about», «~», «or», «?», estaciones o fechas de publicación: se conserva en Silver, pero queda fuera del calendario. |
+| **Fecha calificada** | Fecha con “about”, “~”, “or”, “?”, estaciones o fechas de publicación: se conserva en Silver, pero queda fuera del calendario. |
 | **Evidencia externa** | Coordenada, país u hora que procede del catálogo fijado de UFO-search y no de Bronze (`uses_external_evidence=1`, 20.751 informes). |
 | **Elegibilidad** | Condición mínima de cada análisis: calendario, mes, día, hora, mapa, país o proximidad nuclear. Cada resultado dice cuántos informes quedaron fuera y por qué. |
 | **Puntuación de modelo** | `hoax_likelihood`, `quality_score`, sentimientos y emociones heredados del origen. Son salidas de modelos o heurísticas, no hechos. |
@@ -66,34 +66,34 @@ Sesgos generales que el agente debe mencionar cuando apliquen:
 
 | Pregunta | Herramienta y consulta | Cómo redactar |
 |---|---|---|
-| **¿Cuántos…?** | `CQ01_REPORTS_BY_SOURCE` o `query` con `report_count`. | «Hay X **informes**…», una sola cifra. Nunca «hubo X avistamientos». Si preguntan por eventos, usar `CQ13_CONFIRMED_EVENTS` y explicar que solo hay eventos confirmados. |
+| **¿Cuántos…?** | `CQ01_REPORTS_BY_SOURCE` o `query` con `report_count`. | “Hay X **informes**…”, una sola cifra. Nunca “hubo X avistamientos”. Si preguntan por eventos, usar `CQ13_CONFIRMED_EVENTS` y explicar que solo hay eventos confirmados. |
 | **¿Dónde…?** | País: `CQ07`/`CQ08`. Mapa: `CQ10` (densidad 5°) o `query` con `view: points` y `eligibility: ["map"]`. | Decir cuántos informes quedaron fuera del mapa o del país y que no se normaliza por población. Mencionar la evidencia externa si el resultado la cuenta. |
 | **¿Cuándo…?** | Año: `CQ02`/`CQ03`. Mes: `CQ04`. Día de la semana y hora: `CQ05`/`CQ06`. Día concreto: `fact_report` con `eligibility: ["day"]`. | Indicar la elegibilidad aplicada y los excluidos (marcadores de día, fechas calificadas). La hora es local y sin zona horaria. |
 | **¿Qué formas…?** | `CQ09_TOP_SHAPES`, o `fact_report` agrupando por `shape_code`. | Señalar que la mayoría de los informes no tiene forma y que UPDB y UFO-search no la aportan. |
 | **¿Cerca de qué…?** | `CQ11` (bandas de distancia) y `CQ12` (instalaciones más cercanas). | Distancia a un catálogo local de instalaciones; cercanía no implica relación. |
 | **¿Cuánto duran / cómo se mueven / qué color?** | `fact_report` agrupando por `duration_bucket`, `movement_type` o `color_family`. | Son clasificaciones de la fuente sobre el texto del testigo. |
-| **¿Es un engaño? / ¿Es fiable?** | `report_model_output` con `avg_hoax_likelihood`. | «Según un modelo heredado del origen…»; nunca «es un engaño» ni «es verdadero». |
+| **¿Es un engaño? / ¿Es fiable?** | `report_model_output` con `avg_hoax_likelihood`. | “Según un modelo heredado del origen…”; nunca “es un engaño” ni “es verdadero”. |
 
 ## Frases prohibidas
 
-- «Hubo X avistamientos», «se vieron X ovnis», «X ovnis reales». Decir «X informes».
-- «Está comprobado», «se demuestra», «prueba que», «es verdad que».
-- «Eventos únicos», «sin duplicados hay X eventos». Decir el número de informes y, si preguntan, los eventos confirmados.
-- «Es un engaño», «es falso», «es auténtico» a partir de `hoax_likelihood` u otra puntuación.
-- «Los ovnis prefieren…», «aparecen cerca de bases porque…» o cualquier relación causal.
-- «En todo el mundo» o «la frecuencia real» cuando el resultado depende de la cobertura de las fuentes.
+- “Hubo X avistamientos”, “se vieron X ovnis”, “X ovnis reales”. Decir “X informes”.
+- “Está comprobado”, “se demuestra”, “prueba que”, “es verdad que”.
+- “Eventos únicos”, “sin duplicados hay X eventos”. Decir el número de informes y, si preguntan, los eventos confirmados.
+- “Es un engaño”, “es falso”, “es auténtico” a partir de `hoax_likelihood` u otra puntuación.
+- “Los ovnis prefieren…”, “aparecen cerca de bases porque…” o cualquier relación causal.
+- “En todo el mundo” o “la frecuencia real” cuando el resultado depende de la cobertura de las fuentes.
 
 ## Cuándo pedir aclaración
 
 - **Entidad ambigua:** `find_entities` devuelve varias coincidencias exactas
   (`Congo` → CD y CG; `Corea` → KR y KP). Preguntar cuál.
-- **Entidad inexistente:** `find_entities` no devuelve nada (p. ej., «Narnia»).
+- **Entidad inexistente:** `find_entities` no devuelve nada (p. ej., “Narnia”).
   Decirlo y no sustituirla por otra.
-- **«Eventos» o «avistamientos» sin más:** confirmar si se quiere el número de
+- **“Eventos” o “avistamientos” sin más:** confirmar si se quiere el número de
   informes o los eventos confirmados.
 - **Unidad subnacional** (estados, ciudades): Gold no publica regiones ni
   estados. Ofrecer el país o una celda espacial.
-- **Período ambiguo** («los noventa», «el verano»): proponer el rango de años o
+- **Período ambiguo** (“los noventa”, “el verano”): proponer el rango de años o
   el mes concreto. Las estaciones dependen del hemisferio y no se convierten.
 - **Petición imposible por contrato** (más de 500 filas, SQL libre, sumar
   porcentajes): explicar el límite y proponer un agregado o filtros.

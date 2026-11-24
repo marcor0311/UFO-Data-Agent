@@ -20,6 +20,7 @@ export function TurnView({ turn, index, active, onShowResults }: { turn: Turn; i
           {turn.question}<span className="sr-only"> (ver resultado)</span>
         </button>
       ) : <p className="turn-question"><span className="sr-only">Pregunta. </span>{turn.question}</p>}
+      {turn.area ? <span className="turn-area">Limitada al área seleccionada en el mapa</span> : null}
       <div className="turn-answer">
         <span className="sr-only">Respuesta.</span>
         <AnswerMarkdown text={turn.answer} />
@@ -36,7 +37,7 @@ export function TurnView({ turn, index, active, onShowResults }: { turn: Turn; i
                   {label ?? step.tool}
                   {label && step.tool !== "search_certified" && step.tool !== "run_certified"
                     ? <> <code>{step.tool}</code></> : null}
-                  {" · "}{step.ok ? "Completada" : "Con error"}
+                  {", "}{step.ok ? "Completada" : "Con error"}
                 </li>
               );
             })}

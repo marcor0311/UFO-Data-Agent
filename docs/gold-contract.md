@@ -38,7 +38,7 @@ el set de evaluación: registrar una verificación no cambia la carga verificada
 - Los **eventos** existen solo para grupos de duplicados **confirmados**:
   `fact_event` tiene **6.959** eventos y `event_report` enlaza sus **17.920**
   informes.
-- Un conteo de informes nunca se llama «avistamientos» ni «eventos».
+- Un conteo de informes nunca se llama “avistamientos” ni “eventos”.
 
 ## Modelo
 
@@ -55,6 +55,21 @@ el set de evaluación: registrar una verificación no cambia la carga verificada
 | `dim_weekday`, `dim_month`, `dim_duplicate_status`, `dim_exclusion_reason`, `dim_eligibility` | — | Vocabularios cerrados. |
 | `agg_year`, `agg_month`, `agg_weekday_hour`, `agg_country`, `agg_shape`, `agg_source`, `agg_spatial_cell`, `agg_nuclear_band` | Ver catálogo | Precalculados desde `fact_report` con su filtro de elegibilidad. |
 | `agg_coverage` | Agregado × estado × motivo × fuente | Informes incluidos y excluidos de cada agregado, con su motivo. |
+| `report_behavior_tag`, `report_hoax_flag` | Informe × etiqueta | Etiquetas de comportamiento y señales heurísticas de posible engaño de `sighting_analysis`; `report_count` cuenta informes distintos. |
+| `candidate_pair` | Par candidato | Pares por revisar de Silver con método, similitud (y su banda), par de fuentes y decisión. |
+| `quality_issue_summary`, `silver_change_summary` | Tabla × columna × regla (× fuente) | Registro de incidencias de calidad y de cambios de Silver sobre Bronze, resumido. |
+| `fact_crash_retrieval`, `fact_nuclear_encounter` | Caso | Registros especiales de relatos compilados (14 y 35 casos), con fecha, país y coordenadas aptas cuando son válidas. |
+| `facility_catalog` | Fila del catálogo | Las 75 filas físicas de instalaciones de Silver; `admitted=1` marca las que entran en la proximidad. |
+
+`fact_report` publica además códigos cerrados derivados de los descriptores de
+Silver ([scripts/gold_descriptors.py](../scripts/gold_descriptors.py)): estado o
+provincia (`region_code`, solo EE. UU., Canadá y Australia, y solo si el país es
+el canónico), ciudad (`city_name`, texto de la fuente), sonido, dirección,
+tiempo, entorno, Vallée y código de evento; la fecha y la hora originales en
+texto; bandas de testigos y de coincidencias por revisar; y banderas 0/1 que son
+el numerador de los porcentajes condicionados (`has_core_fields`,
+`map_without_country`, `within_10km`…). `report_model_output` añade las ocho
+puntuaciones NRC y las siete probabilidades del modelo de emociones.
 
 Lo nulo sigue nulo: no se imputan fechas, coordenadas, países ni formas. Gold
 publica un valor temporal o geográfico **solo si el informe es elegible** para
@@ -103,8 +118,8 @@ los datos.
 | `nuclear_proximity` | `usable_for_nuclear_proximity` | Silver `usable_for_nuclear_proximity=1` | 495.019 | 207.553 |
 
 La hora exige además calendario apto, porque Silver conserva la precisión de
-reloj de 61 informes de Capella con fecha calificada («approximately 1300
-hours», «Summer 67»). Esa hora no se usa. Los motivos de exclusión
+reloj de 61 informes de Capella con fecha calificada (“approximately 1300
+hours”, “Summer 67”). Esa hora no se usa. Los motivos de exclusión
 (`dim_exclusion_reason`, 24 códigos) son excluyentes por análisis. Sumar los
 excluidos de análisis distintos cuenta el mismo informe varias veces.
 
@@ -157,8 +172,11 @@ La puerta comprueba que el catálogo coincide con el esquema en ambos sentidos.
 
 - Campos desconocidos → rechazo (equivalente a `extra='forbid'`). No hay campo para SQL.
 - Operadores: `eq`, `ne`, `in` (1–100 valores), `gte`, `lte` e `is_null`.
-- Límites: 12 filtros, 4 dimensiones, 8 métricas y `limit` ≤ 500.
+- Límites: 12 filtros, 4 dimensiones, 8 métricas y `limit` ≤ 500 (`density` admite hasta 20.000 celdas).
+- `measure` (opcional, solo `histogram`, `ecdf` y `scatter`): la medida que se agrupa en tramos. Solo entra en el hash de la consulta cuando existe.
+- Métricas de cuantil (`op: quantile`): SQLite no tiene percentiles, así que el motor las calcula después de la consulta agrupada, por rango más cercano sobre los valores no nulos de cada grupo.
 - Valores escalares finitos; los booleanos no valen como enteros.
+- `area` (opcional): polígono de 3 a 400 vértices `[lng, lat]` dibujado en un mapa de la web. Limita la consulta a los informes dentro de la forma; exige coordenadas (`fact_report`, eligibility `map`) y no admite `globe`. El agente no lo envía: mientras hay un área activa, la API lo añade a cada `query_gold` y rechaza `run_certified` (`area_active`). Solo entra en el hash de la consulta cuando existe.
 - Identificadores validados contra el catálogo; valores validados contra los
   permitidos y ligados como parámetros.
 - Presupuesto de instrucciones SQLite: 400 millones de pasos de la VM,
@@ -169,11 +187,12 @@ Combinaciones prohibidas, con su código de error:
 | Caso | Código |
 |---|---|
 | Agrupar o filtrar por día, mes, año, hora, país, mapa o proximidad sin declarar la elegibilidad | `eligibility_missing` |
-| `is_null` sobre una columna sujeta a elegibilidad (usar `*_exclusion`) | `gated_null_filter` |
+| `is_null` sobre una columna sujeta a elegibilidad sin declararla (usar `*_exclusion`) | `gated_null_filter` |
+| Pedir con `query_gold` una vista de análisis (`waterfall`, `bump`, `curve`, `clusters`, `links`, `funnel`, `upset`, `compare`) | `view_contract` |
 | Sumar o promediar un porcentaje (`sum_*_pct`, `avg_*_pct`) | `ratio_not_summable` |
 | Sumar todas las resoluciones de celdas o todos los agregados de cobertura | `partition_required` |
 | Métrica fuera de su dataset (p. ej., `event_count` sobre informes) | `metric_unavailable` |
-| Métrica inexistente (p. ej., «ovnis reales») | `metric_unknown` |
+| Métrica inexistente (p. ej., “ovnis reales”) | `metric_unknown` |
 | Vista incompatible con el dataset o con la agrupación | `view_incompatible`, `view_contract` |
 | Elegibilidad no disponible en un agregado | `eligibility_unavailable` |
 
@@ -184,10 +203,36 @@ Combinaciones prohibidas, con su código de error:
 | `table` | todos | Tarjetas para un total y tabla para listados o grupos. |
 | `bars` | informes, eventos, modelo y agregados no espaciales | Métricas y una o dos dimensiones. |
 | `timeseries` | `fact_report`, `report_model_output`, `fact_event`, `agg_year`, `agg_month` | La primera dimensión es temporal (`event_year`, `decade`, `year_month` o `event_date`). |
-| `points` | `fact_report` | Filas sin métricas; exige `map`. |
+| `points` | `fact_report`, `fact_crash_retrieval`, `fact_nuclear_encounter` | Filas sin métricas; exige `map`. Sin `limit`: un punto por informe hasta 20.000 y, por encima, uno por coordenada idéntica con su número de informes (`points.grouped`). |
 | `density` | `agg_spatial_cell`, `fact_report` | Agrupa por celda de 1° o 5°. |
+| `globe` | `fact_report` | Vista global: solo `report_count`, sin filtros ni `group_by` y con `map`. El servidor agrupa por coordenadas idénticas y devuelve todas las ubicaciones, sin el `limit`. |
 | `choropleth` | `agg_country`, `fact_report`, `report_model_output` | Agrupa solo por `country_iso2`. |
 | `hour_weekday` | `agg_weekday_hour`, `fact_report` | Agrupa exactamente por `weekday` y `event_hour`. |
+| `stacked` | Los mismos que `bars` | Una métrica y exactamente dos dimensiones; 100 % por valor de la primera. |
+| `matrix` | Los mismos que `bars` | Una métrica y exactamente dos dimensiones (filas, columnas). |
+| `dumbbell` | `fact_report`, `agg_year`, `agg_shape` | Agrupa por `[decade` o `event_year`, categoría`]` y filtra el período con `in` y exactamente dos valores. |
+| `timeline` | `fact_report` | Listado sin métricas con eligibility `day`, ordenado por `event_date`. |
+| `histogram`, `ecdf` | `fact_report`, `report_model_output` | Solo `report_count` y como mucho un `group_by` (un panel por valor). `measure` elige la medida: `duration` (por defecto, tramos de un minuto hasta 60), `duration_tail`, `witnesses`, `nuclear_distance`, `sentiment`, `vader`, `roberta`, `richness`, `quality`, `hoax`; `ecdf` solo `duration` y `nuclear_distance`. La cola y los informes sin valor se cuentan aparte. |
+| `boxplot` | `fact_report`, `report_model_output` | Una métrica de cuantil y como mucho un `group_by`; cada fila lleva los percentiles 5, 25, 50, 75 y 95. |
+| `scatter` | `fact_report`, `report_model_output` | Solo `report_count`, sin `group_by`, con `measure` `duration_witnesses` o `vader_roberta`: conteos por celda de las dos medidas. |
+| `stacked` (cola) | — | Si la segunda dimensión tiene más de 12 valores, la cola se reúne en “Otras” conservando los totales. |
+| Vistas de análisis | — | `waterfall`, `bump`, `curve`, `clusters`, `links`, `funnel`, `upset` y `compare` solo las produce [scripts/gold_analysis.py](../scripts/gold_analysis.py) (herramienta `analyze`). |
+| `month_calendar` | `agg_month`, `fact_report` | Agrupa exactamente por `event_year` y `event_month`. Exige filtrar `event_year` a un rango de hasta 40 años y un `limit` de al menos 12 × años. |
+
+### Análisis (`scripts/gold_analysis.py`)
+
+Cálculos de varias etapas que una consulta agrupada no expresa. Cada análisis
+tiene parámetros tipados (rechazo de campos desconocidos, rangos y
+dimensiones validadas), valida sus filtros con el mismo contrato que
+`query_gold`, declara la elegibilidad de las columnas que usa y respeta el área
+seleccionada. Devuelve el mismo sobre de resultado, con `query.analysis`,
+`query.params`, `metric_labels` y `analysis` (totales, perfiles, fechas
+destacadas…). Análisis disponibles: `period_change`, `dominant_share`,
+`daily_anomalies`, `yoy_change`, `daily_distribution_by_month`,
+`hour_month_deviation`, `rank_over_time`, `concentration`, `cell_change`,
+`first_appearance`, `clusters`, `facility_links`, `funnel`,
+`missing_combinations`, `compare_reports`, `kmeans_profiles`, `retention`,
+`source_overlap`, `diversity` y `obs_expected`.
 
 ### Resultado
 
@@ -197,7 +242,7 @@ Cada resultado incluye:
   `matched_source_rows`, `empty` y `total` si se pidió `rollup`;
 - `result_type` (`certified` o `composed`) y `certified_query_id`;
 - `readable_query`: filtros, agrupación, métricas, elegibilidad, orden y
-  límite, en español, para la opción «ver la consulta»;
+  límite, en español, para la opción “ver la consulta”;
 - `eligibility_applied`, con las implicadas, y `exclusions`: base, elegibles,
   excluidos y motivo;
 - `external_evidence_reports`;

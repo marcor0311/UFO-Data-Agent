@@ -160,7 +160,7 @@ class Auth:
                  client_id: str | None = None, error: str | None = None) -> str:
         with self.lock:
             if not state or not browser_state or not secrets.compare_digest(state.encode(), browser_state.encode()):
-                raise HTTPException(400, "Estado OAuth inválido. Regresa al agente y selecciona «Continuar con ChatGPT» de nuevo.")
+                raise HTTPException(400, "Estado OAuth inválido. Regresa al agente y selecciona “Continuar con ChatGPT” de nuevo.")
             pending = self.state["pending"].pop(state, None)
             self.save()
             if not pending or pending["expires"] < time.time():

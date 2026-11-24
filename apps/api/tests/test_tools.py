@@ -9,15 +9,18 @@ from app.gold import QueryError
 def test_query_schema_is_generated_from_the_contract(gold):
     schema = tools.query_schema(gold)
     assert schema["additionalProperties"] is False
-    assert set(schema["properties"]) == set(__import__("gold_query").Query.FIELDS)
+    # area comes from the map selection in the web app; the server injects it, the model never sends it.
+    assert set(schema["properties"]) == set(__import__("gold_query").Query.FIELDS) - {"area"}
     assert schema["properties"]["dataset"]["enum"] == sorted(gold.datasets)
-    assert schema["properties"]["limit"]["maximum"] == gold.limits["max_limit"]
+    # The general ceiling is in the description; only density may ask for every cell.
+    assert str(gold.limits["max_limit"]) in schema["properties"]["limit"]["description"]
+    assert schema["properties"]["limit"]["maximum"] == __import__("gold_query").DENSITY_MAX_CELLS
     assert set(schema["properties"]["eligibility"]["items"]["enum"]) == set(gold.eligibility)
 
 
 def test_tool_names_and_certified_enum(gold):
     names = [t["name"] for t in tools.schemas(gold)]
-    assert names == ["search_certified", "run_certified", "query_gold", "find_entities", "describe_data"]
+    assert names == ["search_certified", "run_certified", "query_gold", "analyze", "find_entities", "describe_data"]
     run = next(t for t in tools.schemas(gold) if t["name"] == "run_certified")
     assert run["parameters"]["properties"]["id"]["enum"] == ["CQ_TEST_SOURCES"]
 
@@ -188,11 +191,38 @@ def test_certified_filter_is_replaced_not_stacked(coverage_gold):
 def test_full_match_keeps_the_certified_route(coverage_gold):
     found = tools.execute(coverage_gold, "search_certified",
                           {"question": "¿Cuántos informes hay por década?", "needs": {"group_by": ["decade"]}}, [])
-    assert found["decision"] == {"tool": "run_certified", "id": "CQ_TEST_DECADE"}
+    decision = found["decision"]
+    assert (decision["tool"], decision["id"], decision["executed"]) == ("run_certified", "CQ_TEST_DECADE", True)
     decade = next(c for c in found["candidates"] if c["id"] == "CQ_TEST_DECADE")
     assert decade["coverage"] == "total" and decade["missing"] == [] and "composed_query" not in decade
     out = tools.execute(coverage_gold, "run_certified", {"id": "CQ_TEST_DECADE"}, [])
     assert out["result_type"] == "certified"
+
+
+def test_certified_with_total_coverage_runs_in_the_search_step(coverage_gold):
+    """One round trip less: the search that finds a full match already shows it."""
+    visuals = []
+    found = tools.execute(coverage_gold, "search_certified",
+                          {"question": "¿Cuántos informes hay por década?", "needs": {"group_by": ["decade"]}}, visuals)
+    assert len(visuals) == 1 and visuals[0]["certified_query_id"] == "CQ_TEST_DECADE"
+    assert found["decision"]["result"]["result_type"] == "certified" and found["decision"]["result"]["rows"]
+    again = tools.execute(coverage_gold, "run_certified", {"id": "CQ_TEST_DECADE"}, visuals)
+    assert len(visuals) == 1 and "ya se muestra" in again["note"]
+
+
+def test_partial_coverage_is_not_executed(coverage_gold):
+    visuals = []
+    needs = {"filters": [{"column": "event_year", "op": "gte", "value": 1990}], "group_by": ["event_year"]}
+    found = tools.execute(coverage_gold, "search_certified", {"question": "serie anual desde 1990", "needs": needs}, visuals)
+    assert found["decision"]["tool"] == "query_gold" and "executed" not in found["decision"] and visuals == []
+
+
+def test_repeated_query_is_not_run_or_shown_twice(gold):
+    visuals = []
+    query = {"dataset": "agg_source", "group_by": ["source_code"], "metrics": ["report_count"], "view": "bars"}
+    tools.execute(gold, "query_gold", {**query, "title": "Fuentes"}, visuals)
+    out = tools.execute(gold, "query_gold", {**query, "title": "Otra vez"}, visuals)
+    assert len(visuals) == 1 and out["rows"] and "ya se muestra" in out["note"]
 
 
 def test_stale_certification_is_replaced_by_equivalent_composition(coverage_gold):
@@ -242,3 +272,110 @@ def test_report_listing_becomes_map_timeline_and_shapes():
     assert [v["view"] for v in visuals] == ["points", "timeseries", "bars"]
     assert "visualizations" in out
     assert all(r["shape_code"] is not None for r in visuals[2]["rows"])
+
+
+def test_selected_area_limits_every_query(gold):
+    world = [[-200, -80], [200, -80], [200, 80], [-200, 80]]
+    phoenix = [[-113, 33], [-111, 33], [-111, 34], [-113, 34]]      # 4 informes en 33.4, -112.1
+    nowhere = [[0, 0], [0.001, 0], [0.001, 0.001]]
+    base = {"dataset": "fact_report", "metrics": ["report_count"], "eligibility": ["map"]}
+    visuals = []
+    out = tools.execute(gold, "query_gold", base, visuals, area=phoenix)
+    assert out["rows"][0]["report_count"] == 4
+    assert "Dentro del área seleccionada en el mapa" in visuals[0]["readable_query"]["filtros"]
+    assert visuals[0]["query"]["area"] == phoenix
+    assert tools.execute(gold, "query_gold", base, [], area=nowhere)["rows"][0]["report_count"] == 0
+    with pytest.raises(QueryError) as certified:
+        tools.execute(gold, "run_certified", {"id": "CQ_TEST_SOURCES"}, [], area=world)
+    assert certified.value.code == "area_active"
+    with pytest.raises(QueryError) as aggregate:
+        tools.execute(gold, "query_gold", {"dataset": "agg_source", "group_by": ["source_code"], "metrics": ["report_count"]}, [], area=world)
+    assert aggregate.value.code == "area_unavailable"
+
+
+def test_eq_filter_over_a_certified_breakdown_is_covered_when_its_row_exists(coverage_gold):
+    years = [r["event_year"] for r in coverage_gold.run_certified("CQ_TEST_YEAR")["rows"]]
+    visuals = []
+    needs = {"filters": [{"column": "event_year", "op": "eq", "value": years[0]}], "group_by": []}
+    found = tools.execute(coverage_gold, "search_certified", {"question": "serie anual de informes", "needs": needs}, visuals)
+    year = next(c for c in found["candidates"] if c["id"] == "CQ_TEST_YEAR")
+    assert year["coverage"] == "total" and year["focus_rows"][0]["event_year"] == years[0]
+    assert found["decision"]["executed"] and len(visuals) == 1
+    absent = {"filters": [{"column": "event_year", "op": "eq", "value": 1901 if 1901 not in years else 1899}]}
+    found = tools.execute(coverage_gold, "search_certified", {"question": "serie anual de informes", "needs": absent}, [])
+    year = next(c for c in found["candidates"] if c["id"] == "CQ_TEST_YEAR")
+    assert year["coverage"] == "parcial" and "no está en el resultado" in year["missing"][0]["reason"]
+
+
+def test_a_total_is_covered_by_a_breakdown_with_its_total_row(gold):
+    item = {"query": {"dataset": "agg_source", "group_by": ["source_code"], "metrics": ["report_count"], "rollup": True}}
+    assert tools.coverage(gold, item, {"filters": [], "group_by": [], "metrics": []})["coverage"] == "total"
+    item["query"]["rollup"] = False
+    assert tools.coverage(gold, item, {"filters": [], "group_by": [], "metrics": []})["coverage"] == "parcial"
+
+
+def test_empty_needs_never_run_a_certified_query(coverage_gold):
+    """Empty needs “cover” any candidate: the server leaves the choice to the model."""
+    visuals = []
+    found = tools.execute(coverage_gold, "search_certified", {"question": "¿Cuántos informes hay por década?", "needs": {}}, visuals)
+    assert found["decision"]["tool"] == "run_certified" and found["decision"]["explicit"] is False
+    assert "executed" not in found["decision"] and visuals == []
+
+
+def test_reading_shown_data_sorted_is_not_drawn_again(gold):
+    visuals = []
+    base = {"dataset": "agg_year", "group_by": ["event_year"], "metrics": ["report_count"], "view": "timeseries", "limit": 500}
+    first = tools.execute(gold, "query_gold", base, visuals)
+    top = tools.execute(gold, "query_gold", {**base, "view": "table", "order_by": "report_count", "limit": 1}, visuals)
+    assert len(visuals) == 1 and len(top["rows"]) == 1 and "no se dibuja" in top["note"]
+    best = max(r["report_count"] for r in visuals[0]["rows"])
+    assert first["extremes"]["report_count"]["max"][0]["report_count"] == best
+    tools.execute(gold, "query_gold", {**base, "view": "bars"}, visuals)  # another full view is a new chart
+    assert len(visuals) == 2
+
+
+def test_unknown_small_category_lists_its_allowed_values(gold):
+    with pytest.raises(QueryError) as err:
+        tools.execute(gold, "query_gold", {"dataset": "agg_source", "filters": [{"column": "source_code", "value": "NOPE"}],
+                                           "group_by": ["source_code"], "metrics": ["report_count"]}, [])
+    assert "Permitidos:" in str(err.value) and "UFOCAT" in str(err.value) and "find_entities" not in str(err.value)
+
+
+def test_search_ties_go_to_the_closest_example(coverage_gold):
+    found = coverage_gold.search_certified("¿Cuántos informes hay por década?")
+    assert found[0]["id"] == "CQ_TEST_DECADE" and found[0]["example_similarity"] == 1.0
+
+
+def test_analyze_tool_runs_dedupes_and_counts_as_a_visualization(gold):
+    schema = next(t for t in tools.schemas(gold) if t["name"] == "analyze")["parameters"]
+    assert set(schema["properties"]["analysis"]["enum"]) == set(tools.gold_analysis.ANALYSES)
+    visuals = []
+    request = {"analysis": "period_change", "params": {"period": "decade", "from": 1950, "to": 1990}, "title": "Cambio"}
+    first = tools.execute(gold, "analyze", request, visuals)
+    assert first["view"] == "waterfall" and first["analysis"]["kind"] == "period_change"
+    assert first["metric_labels"]["change"] == "Cambio de informes"
+    again = tools.execute(gold, "analyze", {**request, "title": "Otro título"}, visuals)
+    assert "no se repite" in again["note"] and len(visuals) == 1
+    for kind in ("funnel", "missing_combinations", "source_overlap"):
+        tools.execute(gold, "analyze", {"analysis": kind}, visuals)
+    with pytest.raises(QueryError) as exc:
+        tools.execute(gold, "analyze", {"analysis": "diversity"}, visuals)
+    assert exc.value.code == "visual_limit"
+
+
+def test_measures_and_new_views_reach_the_model(gold):
+    schema = tools.query_schema(gold)["properties"]
+    assert "waterfall" not in schema["view"]["enum"] and "boxplot" in schema["view"]["enum"]
+    assert "duration_witnesses" in schema["measure"]["enum"]
+    visuals = []
+    out = tools.execute(gold, "query_gold", {"dataset": "fact_report", "view": "histogram", "metrics": ["report_count"],
+                                             "measure": "witnesses", "title": "Testigos"}, visuals)
+    assert out["distribution"]["measure"] == "witnesses" and "series" in out["distribution"]
+    points = tools.execute(gold, "query_gold", {"dataset": "fact_report", "view": "points", "eligibility": ["map"], "limit": 1}, visuals)
+    assert points["points"]["reports"] == points["row_count"] and not points["truncated"]
+
+
+def test_analysis_codes_never_reach_the_answer(gold):
+    from app.agent.graph import codes_of
+    codes = codes_of(gold)
+    assert {"period_change", "kmeans_profiles", "duration_witnesses", "region_code", "behavior_tag"} <= codes
