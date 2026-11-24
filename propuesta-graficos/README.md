@@ -33,4 +33,4 @@ Las carpetas reúnen los archivos originales, sus extractos, las fichas y los pr
 
 [Recursos y datos compartidos](_compartido/README.md). Los snapshots grandes y la base SQLite están en [DB Test](../DB%20Test/).
 
-El código de montaje y exportación preparado durante la recuperación se conserva en [avance/](avance/README.md).
+El código de montaje y exportación preparado durante la recuperación está en [_compartido/reproduccion/](_compartido/reproduccion/README.md) y, para cada propuesta, en su carpeta `reproduccion/`.

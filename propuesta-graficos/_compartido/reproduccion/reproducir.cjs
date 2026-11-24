@@ -2,7 +2,15 @@ const fs = require("node:fs");
 const path = require("node:path");
 const vm = require("node:vm");
 
-const biblioteca = path.resolve(__dirname, "..");
+const biblioteca = path.resolve(__dirname, "../..");
+/** A proposal lives in done/ or pendientes/; its reproduction files are in <slug>/reproduccion/. */
+function carpetaDe(slug) {
+  for (const estado of ["done", "pendientes"]) {
+    const carpeta = path.join(biblioteca, estado, slug, "reproduccion");
+    if (fs.existsSync(carpeta)) return carpeta;
+  }
+  return path.join(biblioteca, "pendientes", slug, "reproduccion");
+}
 const origenPredeterminado = path.resolve(biblioteca, "../DB Test");
 
 const camposComparacion = [
@@ -22,7 +30,7 @@ function leerDatos(origen, archivo) {
 
 function cargarPropuesta(slug, origen = origenPredeterminado) {
   if (!/^[a-z0-9-]+$/.test(slug)) throw new Error("Usa el nombre de una carpeta de la biblioteca.");
-  const carpeta = path.join(biblioteca, slug);
+  const carpeta = carpetaDe(slug);
   const manifiesto = path.join(carpeta, "propuesta.json");
   if (!fs.existsSync(manifiesto)) throw new Error("La propuesta no tiene un renderizador recuperado.");
   const config = JSON.parse(leer(manifiesto));
