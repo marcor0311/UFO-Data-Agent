@@ -84,7 +84,8 @@ export default function GeoMap({ reports, initialSelection = null }: { reports: 
     if (!host.current) return;
     const m = new maplibregl.Map({
       container: host.current, style: STYLE_URL, bounds: box, fitBoundsOptions: { padding: 40, maxZoom: 12 },
-      maxPitch: 0, dragRotate: false, attributionControl: { compact: true }, cooperativeGestures: true,
+      maxPitch: 0, dragRotate: false, attributionControl: { compact: true },
+      cooperativeGestures: false, // the wheel zooms directly, with no "use Cmd + scroll" hint
       renderWorldCopies: false, // one world: countries are not repeated
     });
     m.touchZoomRotate.disableRotation();
