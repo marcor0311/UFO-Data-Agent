@@ -65,7 +65,12 @@ export default function GeoMap({ reports, initialSelection = null }: { reports: 
   const [ready, setReady] = useState(false);
   const [mode, setMode] = useState<Mode>("2d");
   const [style, setStyle] = useState<Style>("points");
-  const [view, setView] = useState({ zoom: 3, revision: 0 });
+  // revision: camera changed (models rescale with zoom); settled: camera stopped or tiles arrived (re-read terrain).
+  const [view, setView] = useState({ zoom: 3, revision: 0, settled: 0 });
+  const styleRef = useRef<Style>(style);
+  useEffect(() => { styleRef.current = style; }, [style]);
+  // Terrain elevation per coordinate, read once per settled camera instead of on every frame of a move.
+  const heights = useRef<{ key: string; byCoord: Map<string, number> }>({ key: "", byCoord: new Map() });
   const [failed, setFailed] = useState<string | null>(null);
   const [catalogOpen, setCatalogOpen] = useState(false);
   const [tool, setTool] = useState<Tool>("move");
@@ -79,7 +84,8 @@ export default function GeoMap({ reports, initialSelection = null }: { reports: 
     if (!host.current) return;
     const m = new maplibregl.Map({
       container: host.current, style: STYLE_URL, bounds: box, fitBoundsOptions: { padding: 40, maxZoom: 12 },
-      maxPitch: 0, dragRotate: false, attributionControl: { compact: true }, cooperativeGestures: true,
+      maxPitch: 0, dragRotate: false, attributionControl: { compact: true },
+      cooperativeGestures: false, // the wheel zooms directly, with no "use Cmd + scroll" hint
       renderWorldCopies: false, // one world: countries are not repeated
     });
     m.touchZoomRotate.disableRotation();
@@ -89,10 +95,15 @@ export default function GeoMap({ reports, initialSelection = null }: { reports: 
     map.current = m;
     overlay.current = deck;
 
-    // Rebuild model scale at most every 100 ms while moving, immediately when the camera stops.
+    // While moving, only models need rebuilding (their scale follows zoom), at most every 100 ms.
+    // Points are drawn by the GPU as the camera moves: nothing to recompute until it stops.
     let timer: ReturnType<typeof setTimeout> | null = null;
-    const sync = () => setView((v) => ({ zoom: m.getZoom(), revision: v.revision + 1 }));
-    const throttled = () => { if (!timer) timer = setTimeout(() => { timer = null; sync(); }, 100); };
+    const step = () => setView((v) => ({ ...v, zoom: m.getZoom(), revision: v.revision + 1 }));
+    const sync = () => setView((v) => ({ zoom: m.getZoom(), revision: v.revision + 1, settled: v.settled + 1 }));
+    const throttled = () => {
+      if (styleRef.current !== "models" || timer) return;
+      timer = setTimeout(() => { timer = null; step(); }, 100);
+    };
     m.on("move", throttled);
     m.on("moveend", sync);
     m.on("idle", sync); // terrain tiles arrive asynchronously: re-query elevations
@@ -147,7 +158,17 @@ export default function GeoMap({ reports, initialSelection = null }: { reports: 
     const m = map.current, deck = overlay.current;
     if (!m || !deck || !ready) return;
     const three = mode === "3d";
-    const ground = (r: MapReport) => (three ? (m.queryTerrainElevation([r.lng, r.lat]) ?? 0) * 1.5 : 0);
+    const key = three ? `3d:${view.settled}` : "";
+    if (heights.current.key !== key) heights.current = { key, byCoord: new Map() };
+    const cache = heights.current.byCoord;
+    const ground = (r: MapReport) => {
+      if (!three) return 0;
+      const coord = `${r.lng},${r.lat}`;
+      let h = cache.get(coord);
+      if (h === undefined) { h = (m.queryTerrainElevation([r.lng, r.lat]) ?? 0) * 1.5; cache.set(coord, h); }
+      return h;
+    };
+    const modelKey = style === "models" ? view.revision : -1;
     const layers: Layer[] = [];
 
     let placed: Placed[] = [];
@@ -166,7 +187,7 @@ export default function GeoMap({ reports, initialSelection = null }: { reports: 
         selected && !selected.has(r.id) ? 70 : modelled.has(r.id) ? 140 : 235] as [number, number, number, number],
       getLineColor: [255, 255, 255, 230], getLineWidth: 1.2,
       parameters: { depthCompare: "always" },
-      updateTriggers: { getPosition: [three, view.revision], getRadius: [placed.length, view.revision], getFillColor: [placed.length, view.revision, selected] },
+      updateTriggers: { getPosition: [three, view.settled], getRadius: [placed.length, modelKey], getFillColor: [placed.length, modelKey, selected] },
     }));
 
     if (placed.length) {
@@ -184,7 +205,7 @@ export default function GeoMap({ reports, initialSelection = null }: { reports: 
         }));
       }
       const byKind = new Map<ModelKind, Placed[]>();
-      for (const r of placed) byKind.set(r.kind, [...(byKind.get(r.kind) ?? []), r]);
+      for (const r of placed) { const list = byKind.get(r.kind); if (list) list.push(r); else byKind.set(r.kind, [r]); }
       for (const [kind, data] of byKind) {
         layers.push(new SimpleMeshLayer<Placed>({
           id: `model-${kind}`, data, pickable: true, mesh: mesh(kind, detail) as never,
